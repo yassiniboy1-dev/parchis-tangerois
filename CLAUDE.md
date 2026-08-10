@@ -6,7 +6,7 @@ Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**
 ## Commandes
 
 ```bash
-node tests/moteur.test.js        # 29 tests des règles, exécutés contre index.html
+node tests/moteur.test.js        # 32 tests des règles, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie complète simulée entre 2 clients + 2 IA (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 node --check <(awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html)   # syntaxe du JS inline
@@ -51,9 +51,10 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 
 - 68 cases, sens anti-horaire. Salidas : bleu 5, jaune 22, vert 39, rouge 56. Entrées corridor : 68/17/34/51. Corridor 7 cases + boire. **71 pas exacts** de la salida à la boire.
 - Refuges (cases sombres à étoile) : {5,12,17,22,29,34,39,46,51,56,63,68}. Pas de capture sur refuge (barrage mixte à la place). Capture possible sur T2 {10,27,44,61}.
+- **Exception : la sortie mange.** En sortant de la maison, tout pion adverse posé sur la salida est mangé — même un barrage adverse de deux (les 2 rentrent, +20 chacun, joués en deux coups). Seul un barrage À SOI sur la salida bloque la 1re bille. La 2e bille (salida+5) suit les règles normales : un adverse seul est mangé, un barrage adverse la bloque (elle reste à la maison).
 - **Sortie sur 5 : deux pions** (salida + salida+5). Un seul pion restant → salida seule.
 - 6 → rejoue. Trois 6 → dernier pion déplacé rentre (sauf boire). **4 pions dehors → 6 vaut 12.**
-- Barrage = 2 pions même case (même couleur partout, mixte sur refuge) : bloque passage **et** arrêt. Sur 6/12 : **ouverture obligatoire** (repli à 6 si 12 impossible).
+- Barrage = 2 pions même case (même couleur partout, mixte sur refuge) : bloque passage **et** arrêt. Sur 6/12 : **ouverture obligatoire** (repli à 6 si 12 impossible) — **vaut aussi pour un barrage mixte** : sur un 6 il faut retirer son pion du refuge partagé. Pas de faute si aucune ouverture n'est réellement possible.
 - **Libre jeu** : l'app ne bloque pas les coups, elle punit après. FAUTE DE CAPTURE / DE SORTIE (off par défaut) / D'OUVERTURE → le pion joué rentre, flash rouge. Priorité capture > sortie > ouverture.
 - Capture hors refuge → **+20** (obligatoire si possible, chaînable). Boire sur compte exact → **+10**. Victoire = 4 pions dans la boire.
 - 8 interrupteurs dans `R` (modal « Personnaliser les règles ») ; en ligne seul l'hôte les modifie (nœud `regles`).
@@ -109,7 +110,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 ## Tests
 
 - `tests/charge.js` : charge le vrai script d'`index.html` dans un contexte VM avec DOM factice.
-- `tests/moteur.test.js` : 29 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, 6→12, obligations et replis, corridor, interrupteurs).
+- `tests/moteur.test.js` : 32 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, 6→12, obligations et replis, corridor, interrupteurs).
 - `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12. Plafond : 1500 pas de boucle (600 faisait échouer ~1 partie sur 10, légitimement longue).
 
 ## Backlog (propositions à discuter avec Yassine)

@@ -37,14 +37,22 @@ TT('refuge 12: barrage mixte, pas de capture', (r=simMove(0,0,4)) && !r.cap && r
 reset();
 let ex=exitMove(0);
 TT('sortie double bleu: 2 placements (5 et 10)', ex && ex.pl.length===2 && ex.pl[0].sq===5 && ex.pl[1].sq===10);
-// 8. Sortie : capture sur T2 mais pas sur salida
+// 8. Sortie : la sortie mange sur T2 ET sur la salida (le refuge ne protège pas contre une sortie)
 reset(); G.pawns[1][0]={z:'t',sq:10}; G.pawns[2][0]={z:'t',sq:5};
 ex=exitMove(0);
-TT('sortie: T2 capture, salida = barrage mixte', ex && ex.pl.length===2 && !ex.pl[0].cap && ex.pl[1].cap && ex.pl[1].cap.pi===1);
-// 9. Sortie bloquée par barrage sur salida => seul T2
+TT('sortie: mange sur T2 et sur la salida', ex && ex.pl.length===2 && ex.pl[0].caps.length===1 && ex.pl[0].caps[0].pi===2 && ex.pl[1].cap && ex.pl[1].cap.pi===1);
+// 9. Barrage ADVERSE sur la salida => nettoyé : les 2 mangés, 2 pions sortent
 reset(); G.pawns[1][0]={z:'t',sq:5}; G.pawns[1][1]={z:'t',sq:5};
 ex=exitMove(0);
-TT('salida barrée => un seul pion sort (T2)', ex && ex.pl.length===1 && ex.pl[0].sq===10);
+TT('barrage adverse sur salida => 2 mangés, 2 sorties', ex && ex.pl.length===2 && ex.pl[0].sq===5 && ex.pl[0].caps.length===2 && ex.pl[1].sq===10);
+// 9b. Barrage À SOI sur la salida => seule la 2e bille sort (T2)
+reset(); G.pawns[0][0]={z:'t',sq:5}; G.pawns[0][1]={z:'t',sq:5};
+ex=exitMove(0);
+TT('mon barrage sur salida => un seul sort (T2)', ex && ex.pl.length===1 && ex.pl[0].sq===10);
+// 9c. Barrage adverse sur T2 => la 2e bille reste à la maison (règles normales sur salida+5)
+reset(); G.pawns[1][0]={z:'t',sq:10}; G.pawns[1][1]={z:'t',sq:10};
+ex=exitMove(0);
+TT('barrage adverse sur T2 => un seul sort (salida)', ex && ex.pl.length===1 && ex.pl[0].sq===5);
 // 10. Un seul pion en maison => sortie sur salida uniquement
 reset(); G.pawns[0][0]={z:'t',sq:30}; G.pawns[0][1]={z:'t',sq:31}; G.pawns[0][2]={z:'t',sq:32};
 ex=exitMove(0);
@@ -65,6 +73,13 @@ G.pawns[1][0]={z:'t',sq:13}; G.pawns[1][1]={z:'t',sq:13}; // barrage jaune en 13
 computeTurnMoves();
 let ouv6=G.moves.filter(m=>G.obligOuv.has(m.id));
 TT('repli ouverture à 6', ouv6.length>=1 && ouv6.every(m=>m.v===6));
+// 12b. Barrage mixte sur refuge : ouverture aussi obligatoire sur un 6
+reset(); G.cur=0; G.face=6;
+G.pawns[0]=[{z:'t',sq:12},{z:'t',sq:30},{z:'h'},{z:'h'}];
+G.pawns[1][0]={z:'t',sq:12};
+computeTurnMoves();
+let mMix=G.moves.find(m=>G.obligOuv.has(m.id));
+TT('barrage mixte => ouverture obligatoire', G.obligOuv.size>=1 && mMix && mMix.pj===0);
 // 13. Corridor : barrage propre bloque ses propres pions
 reset(); G.pawns[0][0]={z:'c',s:2}; G.pawns[0][1]={z:'c',s:4}; G.pawns[0][2]={z:'c',s:4};
 TT('barrage en corridor bloque', simMove(0,0,3)===null);

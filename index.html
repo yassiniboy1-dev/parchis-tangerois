@@ -723,7 +723,9 @@ function simMove(pi,pj,v){
 }
 function isBarragePiece(pi,pj){
   const p=G.pawns[pi][pj];
-  if(p.z==='t') return occTrack(p.sq).filter(o=>o.pi===pi).length>=2;
+  /* barrage mixte compris : sur un 6, retirer son pion d'un refuge partagé
+     avec un adverse est aussi obligatoire (règle de Tanger, confirmée) */
+  if(p.z==='t') return occTrack(p.sq).length>=2;
   if(p.z==='c') return occCor(pi,p.s).length>=2;
   return false;
 }
@@ -743,15 +745,23 @@ function exitMove(pi){
   G.pawns[pi].forEach((p,j)=>{ if(p.z==='h') homeIdx.push(j); });
   if(!homeIdx.length) return null;
   const pl=[];
-  const c1=canLand(PLAYERS[pi].salida,pi);
-  if(c1) pl.push({pj:homeIdx[0],sq:PLAYERS[pi].salida,cap:c1.cap});
+  /* La sortie NETTOIE la salida : tout pion adverse dessus est mangé, même un
+     barrage de deux (+20 chacun) — le refuge ne protège pas contre une sortie.
+     Seul un barrage à soi bloque la 1re bille. (Règle de Tanger, confirmée.) */
+  const occ1=occTrack(PLAYERS[pi].salida);
+  if(occ1.filter(o=>o.pi===pi).length<2){
+    const caps1=occ1.filter(o=>o.pi!==pi);
+    pl.push({pj:homeIdx[0],sq:PLAYERS[pi].salida,cap:caps1.length?caps1[0]:null,caps:caps1});
+  }
   if(R.sortieDouble&&homeIdx.length>=2){
+    /* La 2e bille suit les règles normales sur salida+5 : un adversaire seul
+       est mangé, un barrage adverse la bloque (elle reste alors à la maison). */
     const c2=canLand(T2[pi],pi);
-    if(c2) pl.push({pj:homeIdx[1],sq:T2[pi],cap:c2.cap});
+    if(c2) pl.push({pj:pl.length?homeIdx[1]:homeIdx[0],sq:T2[pi],cap:c2.cap,caps:c2.cap?[c2.cap]:[]});
   }
   if(!pl.length) return null;
-  const capP=pl.find(p=>p.cap);
-  return {id:'exit',kind:'exit',v:5,pl,cap:capP?capP.cap:null,opens:false};
+  const capP=pl.find(p=>p.caps.length);
+  return {id:'exit',kind:'exit',v:5,pl,cap:capP?capP.caps[0]:null,opens:false};
 }
 function computeMoves(pi,v,opts){
   const o=opts||{}; const list=[];
@@ -983,7 +993,9 @@ function afterMove(mv,fault,movedPjs,enBonus){
     },1150);
     return;
   }
-  const caps=(mv.kind==='exit')?mv.pl.filter(p=>p.cap).map(p=>p.cap):(mv.cap?[mv.cap]:[]);
+  let caps;
+  if(mv.kind==='exit'){ caps=[]; mv.pl.forEach(p=>{ (p.caps||(p.cap?[p.cap]:[])).forEach(c=>caps.push(c)); }); }
+  else caps=mv.cap?[mv.cap]:[];
   caps.forEach(c=>{
     G.pawns[c.pi][c.pj]={z:'h'};
     let msg='🍽️ '+nomDe(pi)+' mange '+nomDe(c.pi)+' !';
