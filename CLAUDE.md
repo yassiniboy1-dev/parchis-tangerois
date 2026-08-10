@@ -96,7 +96,9 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 - Palette : violet `#5d2a63` / prune `#451d4e` (fond damassé WebP inliné, généré Nano Banana Pro), ambre `#ffc531` (boutons « juteux », épaisseur `#c07d0e`), crème `#fffaf0` (modals, texte sombre `#3a2a12`), ivoire.
 - Plateau SVG clair : tapis blanc cassé (`feltG`), cases blanches à liseré gris, refuges gris `#b9b3a6` à étoile blanche, numéros encre (`.cellnum.sur`), panneaux maison **pleine couleur** (`hg{pi}`, alvéoles ombrées cerclées de blanc), corridors bonbon (`cg{pi}` clair→vif), khatam en filigrane blanc + moyeu doré.
 - Cadre : chêne clair (WebP inliné) + filets crème en box-shadow inset — tout dans le bloc CSS final « habillage image » ; la première règle `#frame` ne garde que la géométrie.
-- Le dé est en CSS (`#die`, pips en grille 3×3, map `PIPMAP`).
+- Le dé est en CSS (`#die`, pips en grille 3×3, map `PIPMAP`), **flottant sur le cadre** : il glisse vers le coin du joueur courant (positionné dans `drawBanner` via `HOMEC`/`CTR`), cerclé de la couleur du joueur (`--dc`).
+- Pions sculptés en SVG (socle, corps galbé, tête brillante, liseré blanc) — dessinés dans `buildBoard`.
+- Modals façon jeu : titre en pastille ambrée, boutons `.btn.violet` / `.btn.danger` à épaisseur, icônes émoji.
 - Favicon + apple-touch-icon en data URI (dérivés de `visuels/icone.png`).
 - Transitions : fondu d'écran (`ecrIn`), entrée des modals (`boxIn`) — désactivées sous `prefers-reduced-motion`.
 - Bandeau de diagnostic (script séparé en tête de fichier) : affiche erreurs JS et ressources bloquées, transparent aux touches (croix cliquable seule).
