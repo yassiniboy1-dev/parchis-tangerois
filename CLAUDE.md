@@ -77,9 +77,9 @@ Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:
 ## Netlify (production)
 
 Site : **https://parchis-tangerois.netlify.app** — site id `0a34951c-7618-48a4-8671-74b11e42a50e`, compte de Yassine.
-Déploiement sans MCP possible via l'API avec un jeton personnel (`NETLIFY_AUTH_TOKEN`, jamais dans le dépôt) :
-`POST /api/v1/sites/{id}/deploys` avec `Content-Type: application/zip` et le zip en corps.
-Attention : les nouveaux sites des comptes gratuits naissent protégés (`sso: true` → 401 « Login Redirect ») ; rendre public via `PATCH /api/v1/sites/{id}` avec `{"sso_login":false}`.
+Déploiement sans MCP : `NETLIFY_AUTH_TOKEN=xxx bash outils/deployer-api.sh` (jeton jamais dans le dépôt).
+**PIÈGE VÉCU : ne jamais déployer le zip via l'API** (`Content-Type: application/zip`) — Netlify sert alors la page en `text/plain` et l'iPhone affiche le code source. Utiliser la méthode digest (manifest JSON + PUT du fichier), ce que fait `deployer-api.sh`, qui vérifie aussi le `content-type` servi à la fin. Le zip de `deployer.sh` reste valable pour le glisser-déposer manuel sur app.netlify.com.
+Autre piège : les nouveaux sites des comptes gratuits naissent protégés (`sso: true` → 401 « Login Redirect ») ; rendre public via `PATCH /api/v1/sites/{id}` avec `{"sso_login":false}`.
 
 ## Firebase
 
