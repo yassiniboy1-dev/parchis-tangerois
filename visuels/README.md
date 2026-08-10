@@ -26,3 +26,20 @@ The only diacritics are the acute accent on the "í" of "Parchís" and on the "�
 Below the title, smaller, in Arabic calligraphy: "البارشيس الطنجاوي"
 Luxurious, warm, inviting. No other text, no watermark.
 ```
+
+## fond-hero.png (9:16) — intégré en WebP dans l'accueil/menus
+```
+Vertical background photograph for a mobile game home screen, 9:16 portrait. Pure scenery only.
+A dark, atmospheric Moroccan salon in Tangier at night: deep emerald green wall with subtle zellige star tiles fading into shadow, one warm brass lantern glowing softly in the upper left corner casting gentle amber light and soft bokeh, and at the very bottom edge the corner of a low cedar game table with brass inlay and two small Moroccan tea glasses.
+The middle of the image stays nearly empty and very dark emerald, low contrast, so interface text can be overlaid later.
+Cinematic, luxurious, understated. Warm amber highlights against deep emerald shadow (#0e2b21).
+IMPORTANT: contains absolutely NO text, NO letters, NO words, NO numbers, NO captions, NO typography of any kind anywhere in the image. No people, no watermark.
+```
+
+## texture-bois.png (1:1) — intégré en WebP dans le cadre du plateau
+```
+Digitally painted wood surface for a board game frame, viewed flat from above, filling the whole image.
+Rich dark walnut with fine straight vertical grain, hand-painted feel, warm chestnut and espresso tones (#3a2312, #57351d, #6d4527), a satin sheen with two or three very subtle diagonal light streaks, tiny brass-colored flecks caught in the grain.
+Stylized realism, like the polished game tables in premium tabletop apps.
+Uniform coverage edge to edge, no vignette, no border, no objects, no text, no watermark.
+```
