@@ -89,18 +89,21 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 - Plateau SVG : tapis `feltG`, panneaux ivoire bordés couleur joueur (4px) + étoile filigrane, refuges sombres à **étoile dorée**, corridors en dégradé `cg{pi}`, **khatam** doré au centre, pions émaillés (`pg{pi}` + reflet + filtre `ombre`).
 - Cadre bois : noyer strié + **double filet de laiton** en box-shadow inset sur `#frame`.
 - Le dé est en CSS (`#die`, pips en grille 3×3, map `PIPMAP`).
+- Fond **zellige procédural** (SVG data URI dans `body::before`, quasi ton sur ton) + vignette radiale.
+- **Favicon + apple-touch-icon en data URI** (PNG 64/180 px, dérivés de `visuels/icone.png`).
+- Transitions : fondu d'écran (`ecrIn`), entrée des modals (`boxIn`), focus laiton sur `.champ` — désactivées sous `prefers-reduced-motion`.
 
 ## Tests
 
 - `tests/charge.js` : charge le vrai script d'`index.html` dans un contexte VM avec DOM factice.
 - `tests/moteur.test.js` : 29 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, 6→12, obligations et replis, corridor, interrupteurs).
-- `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12.
+- `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12. Plafond : 1500 pas de boucle (600 faisait échouer ~1 partie sur 10, légitimement longue).
 
 ## Backlog (propositions à discuter avec Yassine)
 
 1. Sons discrets + retour haptique (dé, capture, boire, faute).
-2. Icône + manifest PWA (« Ajouter à l'écran d'accueil ») — visuels générables via un serveur MCP d'images ou un script API.
+2. Manifest PWA (« Ajouter à l'écran d'accueil ») — l'icône est faite (`visuels/icone.png`, favicon/apple-touch déjà inlinés) ; reste le manifest, qui demandera un fichier à côté d'`index.html` dans le zip.
 3. Écran de fin enrichi : classement, captures, fautes, durée.
 4. Historique des coups repliable pendant la partie.
 5. Réactions rapides entre joueurs (👏 😂 😱) synchronisées via `action`.
-6. Fond d'accueil zellige subtil (SVG procédural, pas d'image lourde).
+6. ~~Fond d'accueil zellige subtil~~ — fait (SVG procédural dans `body::before`).

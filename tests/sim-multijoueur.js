@@ -135,7 +135,7 @@ async function principal(){
   console.log('magasin statut:',getAt(['parties','TEST','statut']),'| etat seq:',(getAt(['parties','TEST','etat'])||{}).seq);
 
   let clients=[A,B],actions=0,fautes=0,captures=0,repris=false,B2=null;
-  for(let step=0;step<600;step++){
+  for(let step=0;step<1500;step++){
     const ok=await settle(clients,9000);
     if(!ok){
       console.log('ÉCHEC: pas de convergence / blocage à l\'action',actions);
