@@ -486,8 +486,8 @@ body{
   <div class="rline"><div class="ic">🔁</div><div><b>Le 6 fait rejouer.</b> Trois 6 de suite&nbsp;: ton dernier pion déplacé rentre à la maison (sauf s'il est déjà dans le corridor ou la boire).</div></div>
   <div class="rline"><div class="ic">⚡</div><div><b>4 pions dehors&nbsp;:</b> chaque 6 vaut <b>12 cases</b>.</div></div>
   <div class="rline"><div class="ic">🧱</div><div><b>Barrage («&nbsp;ferme&nbsp;»)&nbsp;:</b> 2 pions sur une même case. Même couleur&nbsp;: partout. Couleurs différentes&nbsp;: sur refuge seulement. <b>Personne ne passe</b>, pas même toi.</div></div>
-  <div class="rline"><div class="ic">🔓</div><div><b>Sur un 6 (ou 12), si tu as un barrage, tu dois l'ouvrir</b> — un barrage <b>mixte</b> sur refuge compte aussi&nbsp;: retire ton pion. Si le 12 est bloqué, ouvre à 6. Sinon&nbsp;: <b>faute d'ouverture</b>.</div></div>
-  <div class="rline"><div class="ic">🍽️</div><div><b>Manger&nbsp;:</b> atterrir sur un pion adverse seul (hors refuge) le renvoie chez lui → <b>bonus +20</b> à jouer. Si tu peux manger et joues autre chose&nbsp;: <b>faute de capture</b> — le pion joué rentre à la maison. La capture est prioritaire, même sur le +20.</div></div>
+  <div class="rline"><div class="ic">🔓</div><div><b>Sur un 6 (ou 12), si tu as un barrage, tu dois l'ouvrir — avant même de manger.</b> Un barrage <b>mixte</b> sur refuge compte aussi&nbsp;: retire ton pion. Si le 12 est bloqué, ouvre à 6. Sinon&nbsp;: <b>faute d'ouverture</b>.</div></div>
+  <div class="rline"><div class="ic">🍽️</div><div><b>Manger&nbsp;:</b> atterrir sur un pion adverse seul (hors refuge) le renvoie chez lui → <b>bonus +20</b> à jouer. Si tu peux manger et joues autre chose&nbsp;: <b>faute de capture</b> — le pion joué rentre à la maison. N'importe quelle capture est valable, mais une capture au plein du dé (12) passe avant une capture au repli (6).</div></div>
   <div class="rline"><div class="ic">⭕</div><div><b>Refuges</b> (cases marquées d'une étoile)&nbsp;: pas de capture possible (sauf par une sortie), barrages mixtes autorisés.</div></div>
   <div class="rline"><div class="ic">🏁</div><div><b>La boire&nbsp;:</b> entrée sur compte exact → <b>bonus +10</b>. Premier à mettre ses 4 pions dans la boire gagne.</div></div>
   <div class="rline"><div class="ic">👁️</div><div><b>Libre jeu&nbsp;:</b> l'application ne prévient pas — c'est à toi de voir les coups. Une faute&nbsp;: le pion joué rentre à la maison <b>et le tour est perdu</b>.</div></div>
@@ -789,9 +789,27 @@ function computeTurnMoves(){
     }
   }
   G.moves=moves;
-  G.obligCap=R.fauteCapture?new Set(moves.filter(m=>m.cap).map(m=>m.id)):new Set();
-  G.obligOuv=(R.ouvertureObligatoire&&face===6)?new Set(moves.filter(m=>m.opens).map(m=>m.id)):new Set();
+  /* Priorités confirmées par Yassine : seules les captures au PLEIN du dé
+     comptent (une capture au repli 6 ne remplace pas une capture au 12) ;
+     sur un 6/12 l'ouverture passe avant tout, mais si l'ouverture au 12 est
+     impossible et qu'un 12 mange, c'est la capture au 12 qui s'impose. */
+  const capsPleines=moves.filter(m=>m.cap&&m.v===G.val);
+  G.obligCap=R.fauteCapture?new Set(capsPleines.map(m=>m.id)):new Set();
+  if(R.ouvertureObligatoire&&face===6){
+    const ouvPleines=moves.filter(m=>m.opens&&m.v===G.val);
+    if(ouvPleines.length) G.obligOuv=new Set(ouvPleines.map(m=>m.id));
+    else if(R.fauteCapture&&capsPleines.length) G.obligOuv=new Set();
+    else G.obligOuv=new Set(moves.filter(m=>m.opens&&m.v===6&&G.val===12).map(m=>m.id));
+  } else G.obligOuv=new Set();
   G.obligSortie=(R.sortieObligatoire&&face===5)?new Set(moves.filter(m=>m.kind==='exit').map(m=>m.id)):new Set();
+}
+/* Décide la faute d'un coup selon les obligations courantes (testable seul).
+   Ordre : ouverture (sur 6/12) > capture > sortie. */
+function fauteDuCoup(mv){
+  if(G.obligOuv.size) return G.obligOuv.has(mv.id)?null:'ouverture';
+  if(G.obligCap.size) return G.obligCap.has(mv.id)?null:'capture';
+  if(G.obligSortie.size&&mv.kind!=='exit') return 'sortie';
+  return null;
 }
 
 /* ---------- synchro réseau ---------- */
@@ -960,10 +978,7 @@ function execMove(mv){
   if(G.phase!=='move'&&G.phase!=='bonus') return;
   if(NET.on&&NET.myPi==null&&!NET.isHote) return;
   const pi=G.cur, enBonus=(G.phase==='bonus');
-  let fault=null;
-  if(G.obligCap.size&&!mv.cap) fault='capture';
-  else if(!G.obligCap.size&&G.obligSortie.size&&mv.kind!=='exit') fault='sortie';
-  else if(!G.obligCap.size&&!G.obligSortie.size&&G.obligOuv.size&&!G.obligOuv.has(mv.id)) fault='ouverture';
+  const fault=fauteDuCoup(mv);
   G.phase='anim';
   clearSel();
   const movedPjs=[];
@@ -1081,9 +1096,9 @@ function iaPlayMove(){
   setTimeout(()=>{
     if((G.phase!=='move'&&G.phase!=='bonus')||!isIA(G.cur)||!amAuth()) return;
     let pool=G.moves;
-    if(G.obligCap.size) pool=pool.filter(m=>G.obligCap.has(m.id));
+    if(G.obligOuv.size) pool=pool.filter(m=>G.obligOuv.has(m.id));
+    else if(G.obligCap.size) pool=pool.filter(m=>G.obligCap.has(m.id));
     else if(G.obligSortie.size) pool=pool.filter(m=>m.kind==='exit');
-    else if(G.obligOuv.size) pool=pool.filter(m=>G.obligOuv.has(m.id));
     let best=null,bs=-1e9;
     pool.forEach(m=>{ const s=scoreMove(m); if(s>bs){bs=s;best=m;} });
     if(best) execMove(best); else { G.phase='spect'; endOfAction(); }
@@ -1281,7 +1296,7 @@ function markSelectable(){
   clearSel();
   if(!canAct()) return;
   const pi=G.cur;
-  const oblig=G.obligCap.size?G.obligCap:(G.obligSortie.size?G.obligSortie:(G.obligOuv.size?G.obligOuv:null));
+  const oblig=G.obligOuv.size?G.obligOuv:(G.obligCap.size?G.obligCap:(G.obligSortie.size?G.obligSortie:null));
   G.moves.forEach(m=>{
     const isObl=G.training&&oblig&&oblig.has(m.id);
     if(m.kind==='exit'){

@@ -182,7 +182,7 @@ async function principal(){
       if(peut&&(g.phase==='move'||g.phase==='bonus')&&g.moves.length){
         const mv=g.moves[Math.floor(Math.random()*g.moves.length)];
         if(mv.cap)captures++;
-        const oblig=(g.obligCap.size&&!mv.cap)||((!g.obligCap.size)&&g.obligSortie.size&&mv.kind!=='exit')||((!g.obligCap.size)&&(!g.obligSortie.size)&&g.obligOuv.size&&!g.obligOuv.has(mv.id));
+        const oblig=(g.obligOuv.size&&!g.obligOuv.has(mv.id))||((!g.obligOuv.size)&&g.obligCap.size&&!g.obligCap.has(mv.id))||((!g.obligOuv.size)&&(!g.obligCap.size)&&g.obligSortie.size&&mv.kind!=='exit');
         if(oblig)fautes++;
         C.__X.execMove(mv);agi=true;actions++;break;
       }

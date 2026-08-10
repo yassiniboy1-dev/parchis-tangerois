@@ -80,6 +80,30 @@ G.pawns[1][0]={z:'t',sq:12};
 computeTurnMoves();
 let mMix=G.moves.find(m=>G.obligOuv.has(m.id));
 TT('barrage mixte => ouverture obligatoire', G.obligOuv.size>=1 && mMix && mMix.pj===0);
+// 12c. Sur un 6, l'ouverture passe avant la capture
+reset(); G.cur=0; G.face=6;
+G.pawns[0]=[{z:'t',sq:20},{z:'t',sq:20},{z:'t',sq:8},{z:'h'}];
+G.pawns[1][0]={z:'t',sq:14};
+computeTurnMoves();
+let mCap=G.moves.find(m=>m.pj===2&&m.cap);
+TT('ouverture avant capture sur un 6', G.obligOuv.size>=1 && mCap && fauteDuCoup(mCap)==='ouverture');
+// 12d. Le 12 qui mange passe avant le repli à 6
+reset(); G.cur=0; G.face=6;
+G.pawns[0]=[{z:'t',sq:1},{z:'t',sq:1},{z:'t',sq:14},{z:'g'}];
+G.pawns[1][0]={z:'t',sq:13}; G.pawns[1][1]={z:'t',sq:13}; // bloque le 12 du barrage (1->13)
+G.pawns[2][0]={z:'t',sq:26}; // capture au 12 : 14->26
+G.pawns[3][0]={z:'t',sq:7};  // capture au repli 6 : 1->7
+computeTurnMoves();
+let c12=G.moves.find(m=>m.pj===2&&m.v===12);
+let c6=G.moves.find(m=>m.opens&&m.v===6&&m.cap);
+TT('le 12 qui mange rend le repli 6 fautif', c12&&c12.cap&&fauteDuCoup(c12)===null && c6&&fauteDuCoup(c6)==='capture' && G.obligOuv.size===0);
+// 12e. N'importe quelle capture au plein du dé satisfait l'obligation
+reset(); G.cur=0; G.face=3;
+G.pawns[0]=[{z:'t',sq:8},{z:'t',sq:27},{z:'h'},{z:'h'}];
+G.pawns[1][0]={z:'t',sq:11}; G.pawns[2][0]={z:'t',sq:30};
+computeTurnMoves();
+let capA=G.moves.find(m=>m.pj===0&&m.cap), capB=G.moves.find(m=>m.pj===1&&m.cap);
+TT('deux captures possibles, chacune est valable', capA&&capB&&fauteDuCoup(capA)===null&&fauteDuCoup(capB)===null);
 // 13. Corridor : barrage propre bloque ses propres pions
 reset(); G.pawns[0][0]={z:'c',s:2}; G.pawns[0][1]={z:'c',s:4}; G.pawns[0][2]={z:'c',s:4};
 TT('barrage en corridor bloque', simMove(0,0,3)===null);

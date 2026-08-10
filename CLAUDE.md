@@ -6,7 +6,7 @@ Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**
 ## Commandes
 
 ```bash
-node tests/moteur.test.js        # 32 tests des règles, exécutés contre index.html
+node tests/moteur.test.js        # 35 tests des règles, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie complète simulée entre 2 clients + 2 IA (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 node --check <(awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html)   # syntaxe du JS inline
@@ -55,7 +55,7 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 - **Sortie sur 5 : deux pions** (salida + salida+5). Un seul pion restant → salida seule.
 - 6 → rejoue. Trois 6 → dernier pion déplacé rentre (**corridor et boire protégés**). **4 pions dehors → 6 vaut 12.**
 - Barrage = 2 pions même case (même couleur partout, mixte sur refuge) : bloque passage **et** arrêt. Sur 6/12 : **ouverture obligatoire** (repli à 6 si 12 impossible) — **vaut aussi pour un barrage mixte** : sur un 6 il faut retirer son pion du refuge partagé. Pas de faute si aucune ouverture n'est réellement possible.
-- **Libre jeu** : l'app ne bloque pas les coups, elle punit après. FAUTE DE CAPTURE / DE SORTIE (off par défaut) / D'OUVERTURE → le pion joué rentre, flash rouge, **et le tour est perdu** (pas de relance après un 6 fautif, bonus restants perdus). Priorité capture > sortie > ouverture.
+- **Libre jeu** : l'app ne bloque pas les coups, elle punit après. FAUTE DE CAPTURE / DE SORTIE (off par défaut) / D'OUVERTURE → le pion joué rentre, flash rouge, **et le tour est perdu** (pas de relance après un 6 fautif, bonus restants perdus). **Priorités (`fauteDuCoup`)** : sur un 6/12 l'ouverture passe avant tout ; sinon capture (n'importe laquelle, mais **au plein du dé** — si un 12 mange, le repli à 6 est fautif) > sortie.
 - Capture hors refuge → **+20** (obligatoire si possible, chaînable). Boire sur compte exact → **+10**. Victoire = 4 pions dans la boire.
 - 8 interrupteurs dans `R` (modal « Personnaliser les règles ») ; en ligne seul l'hôte les modifie (nœud `regles`).
 
@@ -110,7 +110,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 ## Tests
 
 - `tests/charge.js` : charge le vrai script d'`index.html` dans un contexte VM avec DOM factice.
-- `tests/moteur.test.js` : 32 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, 6→12, obligations et replis, corridor, interrupteurs).
+- `tests/moteur.test.js` : 35 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, priorités ouverture/capture/repli via `fauteDuCoup`, 6→12, obligations et replis, corridor, interrupteurs).
 - `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12. Plafond : 1500 pas de boucle (600 faisait échouer ~1 partie sur 10, légitimement longue).
 
 ## Backlog (propositions à discuter avec Yassine)
