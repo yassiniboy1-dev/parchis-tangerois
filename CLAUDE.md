@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.3)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.5)
 
 Jeu de Parchís aux règles traditionnelles de **Tanger**, pour Yassine.
 Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**, multijoueur en ligne via **Firebase Realtime Database**.
@@ -89,16 +89,19 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
   "parties":{".read":true,".indexOn":["creele"],"$code":{".write":true}}}}
 ```
 
-## Design system (v3.2 « table de cèdre et laiton »)
+## Design system (v3.5 « étoile de Tanger », thème clair)
 
-- Typo : **Marcellus** (titres, or dégradé) + **Manrope** (UI), import Google Fonts, fallbacks Georgia/système.
-- Laiton `#c9a24b` (clair `#ecd28c`, sombre `#8a6524`) ; feutre émeraude `#0e2b21`/`#1a4d3a` ; encre `#2b2318` ; ivoire `#f4ecd9`.
-- Plateau SVG : tapis `feltG`, panneaux ivoire bordés couleur joueur (4px) + étoile filigrane, refuges sombres à **étoile dorée**, corridors en dégradé `cg{pi}`, **khatam** doré au centre, pions émaillés (`pg{pi}` + reflet + filtre `ombre`).
-- Cadre bois : noyer strié + **double filet de laiton** en box-shadow inset sur `#frame`.
+- Style casual game lumineux (référence donnée par Yassine : Parchisi Star), identité tangéroise conservée (khatam, titre or, arabe). **Ne pas revenir au thème sombre.**
+- Typo : **Marcellus** (titres, or dégradé) + **Manrope** (UI), Google Fonts, fallbacks Georgia/système.
+- Palette : violet `#5d2a63` / prune `#451d4e` (fond damassé WebP inliné, généré Nano Banana Pro), ambre `#ffc531` (boutons « juteux », épaisseur `#c07d0e`), crème `#fffaf0` (modals, texte sombre `#3a2a12`), ivoire.
+- Plateau SVG clair : tapis blanc cassé (`feltG`), cases blanches à liseré gris, refuges gris `#b9b3a6` à étoile blanche, numéros encre (`.cellnum.sur`), panneaux maison **pleine couleur** (`hg{pi}`, alvéoles ombrées cerclées de blanc), corridors bonbon (`cg{pi}` clair→vif), khatam en filigrane blanc + moyeu doré.
+- Cadre : chêne clair (WebP inliné) + filets crème en box-shadow inset — tout dans le bloc CSS final « habillage image » ; la première règle `#frame` ne garde que la géométrie.
 - Le dé est en CSS (`#die`, pips en grille 3×3, map `PIPMAP`).
-- Fond **zellige procédural** (SVG data URI dans `body::before`, quasi ton sur ton) + vignette radiale.
-- **Favicon + apple-touch-icon en data URI** (PNG 64/180 px, dérivés de `visuels/icone.png`).
-- Transitions : fondu d'écran (`ecrIn`), entrée des modals (`boxIn`), focus laiton sur `.champ` — désactivées sous `prefers-reduced-motion`.
+- Favicon + apple-touch-icon en data URI (dérivés de `visuels/icone.png`).
+- Transitions : fondu d'écran (`ecrIn`), entrée des modals (`boxIn`) — désactivées sous `prefers-reduced-motion`.
+- Bandeau de diagnostic (script séparé en tête de fichier) : affiche erreurs JS et ressources bloquées, transparent aux touches (croix cliquable seule).
+- Tap targets ≥ 36 px partout (`.switch::before` étendu, `.seg button` et `.btn.mini` rembourrés).
+- Sources des images et prompts : `visuels/` (`fond-violet.png`, `texture-chene.png`, + anciens fonds sombres v3.4 conservés pour mémoire).
 
 ## Tests
 

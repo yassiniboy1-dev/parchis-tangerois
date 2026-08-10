@@ -43,3 +43,19 @@ Rich dark walnut with fine straight vertical grain, hand-painted feel, warm ches
 Stylized realism, like the polished game tables in premium tabletop apps.
 Uniform coverage edge to edge, no vignette, no border, no objects, no text, no watermark.
 ```
+
+## fond-violet.png (9:16) — v3.5, fond damassé de tous les écrans (WebP inliné)
+```
+Vertical background for a casual mobile board game, 9:16 portrait. Pure decorative pattern only.
+A rich royal purple wall (#5d2a63 to #6b3272), evenly lit and fairly bright, covered with a subtle tone-on-tone Moroccan zellige and damask ornament pattern in slightly lighter purple, barely visible, elegant and playful.
+Soft gentle vignette toward the edges only, the center stays clean and even for interface elements.
+Inspired by polished casual board game apps. Cheerful, premium, NOT dark.
+Absolutely NO text, NO letters, NO objects, NO people, NO watermark — only the flat patterned surface.
+```
+
+## texture-chene.png (1:1) — v3.5, cadre du plateau (WebP inliné)
+```
+Digitally painted light oak wood surface for a board game frame, viewed flat from above, filling the whole image.
+Warm honey and caramel tones (#d9a05b, #c8894a, #e8b877), fine straight vertical grain, hand-painted stylized realism like premium casual tabletop apps, satin finish with a soft even sheen.
+Bright and warm, uniform coverage edge to edge, no vignette, no border, no objects, no text, no watermark.
+```
