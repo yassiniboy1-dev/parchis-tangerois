@@ -80,7 +80,7 @@ Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:
 - `traiterPartie(snap)` (nommée, try/catch) traite chaque instantané : mapping sièges → `applyEtat` → `rafraichirJeu()` (statut, dé, sélection, `veillerIA`) → proposition de reprise de siège aux spectateurs.
 - **buildBoard** initialise `G.pawns` si vide (sinon le premier instantané en ligne crashe et l'écran fige — bug historique v3.0).
 - Anti-veille iOS : `forcerResync()` (goOnline + `once` → `traiterPartie`) sur `visibilitychange`/`pageshow`/`focus` ; wake lock `garderEcran()` ; badge `#chip-conn` via `.info/connected`.
-- Reprise de siège en pleine partie : modal `modal-reprise` (« C'est moi » → update uid) ; l'hôte peut remplacer un absent par l'IA (menu ⋯ → `#menu-sieges`).
+- Reprise de siège en pleine partie : modal `modal-reprise` (« C'est moi » → update uid ; sièges `l` proposés aussi : « S'asseoir » → set h/nom/uid). Toute LIBÉRATION de siège (`prendreSiege`, `quitterLigne`) passe par une transaction qui vérifie `uid===NET.uid` — un onglet périmé ne peut plus libérer le siège d'autrui ni un siège en pleine partie (bug vécu : l'hôte fantôme après lancement). L'hôte doit être assis pour lancer. L'hôte peut remplacer un absent par l'IA (menu ⋯ → `#menu-sieges`).
 - Purge des parties > 48 h à la création.
 
 ## Netlify (production)

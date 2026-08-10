@@ -1685,7 +1685,7 @@ function rejoindreRef(code){
   NET.ref.on('value',traiterPartie);
 }
 function aDesSiegesHumains(){
-  for(let pi=0;pi<4;pi++){ const sg=(NET.sieges||{})[pi]; if(sg&&sg.t==='h') return true; }
+  for(let pi=0;pi<4;pi++){ const sg=(NET.sieges||{})[pi]; if(sg&&(sg.t==='h'||sg.t==='l')) return true; }
   return false;
 }
 function traiterPartie(snap){
@@ -1724,15 +1724,17 @@ function ouvrirReprise(){
   let n=0;
   for(let pi=0;pi<4;pi++){
     const sg=(NET.sieges||{})[pi];
-    if(!sg||sg.t!=='h') continue; n++;
+    if(!sg||(sg.t!=='h'&&sg.t!=='l')) continue; n++;
+    const libre=(sg.t==='l');
     const row=document.createElement('div'); row.className='seat';
     row.innerHTML='<span class="pastille" style="background:'+PLAYERS[pi].hex+'"></span>'+
-      '<span class="nomj">'+(sg.nom||'Joueur')+'<span class="soustitre">'+PLAYERS[pi].nom+'</span></span>';
-    const b=document.createElement('button'); b.className='btn ghost mini'; b.textContent='C’est moi';
+      '<span class="nomj">'+(libre?'Siège libre':(sg.nom||'Joueur'))+'<span class="soustitre">'+PLAYERS[pi].nom+'</span></span>';
+    const b=document.createElement('button'); b.className='btn ghost mini'; b.textContent=libre?'S’asseoir':'C’est moi';
     b.addEventListener('click',()=>{
-      NET.ref.child('sieges/'+pi).update({uid:NET.uid});
+      if(libre) NET.ref.child('sieges/'+pi).set({t:'h',nom:NET.nom||lsGet('pt_nom')||'Joueur',uid:NET.uid});
+      else NET.ref.child('sieges/'+pi).update({uid:NET.uid});
       hideModals();
-      toast('Siège repris — à toi de jouer quand ce sera ton tour','ok');
+      toast('Siège pris — à toi de jouer quand ce sera ton tour','ok');
     });
     row.appendChild(b); zone.appendChild(row);
   }
@@ -1791,11 +1793,15 @@ function prendreSiege(pi){
     if(cur&&cur.t!=='l') return;
     return {t:'h',nom:NET.nom,uid:NET.uid};
   },(err,committed)=>{
-    if(committed&&ancien!=null&&ancien!==pi) NET.ref.child('sieges/'+ancien).set({t:'l'});
+    if(committed&&ancien!=null&&ancien!==pi) NET.ref.child('sieges/'+ancien).transaction(c=>{
+      if(c&&c.t==='h'&&c.uid===NET.uid) return {t:'l'};
+      return; /* le siège n'est plus à moi : ne rien toucher */
+    });
   });
 }
 function lancerEnLigne(){
   if(!NET.isHote) return;
+  if(NET.myPi==null){ toast('Assieds-toi d’abord sur une couleur','warn'); return; }
   const remplir=(NET.iaFill!==false)||R.mode==='equipes';
   let humains=0;
   for(let pi=0;pi<4;pi++){ const sg=NET.sieges[pi]||{t:'l'}; if(sg.t==='h') humains++; }
@@ -1818,7 +1824,10 @@ function lancerEnLigne(){
 }
 function quitterLigne(){
   if(NET.ref){
-    if(NET.statut==='lobby'&&NET.myPi!=null) NET.ref.child('sieges/'+NET.myPi).set({t:'l'});
+    if(NET.statut==='lobby'&&NET.myPi!=null) NET.ref.child('sieges/'+NET.myPi).transaction(c=>{
+      if(c&&c.t==='h'&&c.uid===NET.uid) return {t:'l'};
+      return;
+    });
     NET.ref.off();
   }
   NET.on=false; NET.ref=null; NET.code=null; NET.myPi=null; NET.appliedSeq=0; NET.reprisePropose=false;
