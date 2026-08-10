@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.6)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7)
 
 Jeu de Parchís aux règles traditionnelles de **Tanger**, pour Yassine.
 Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**, multijoueur en ligne via **Firebase Realtime Database**.
@@ -6,7 +6,7 @@ Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**
 ## Commandes
 
 ```bash
-node tests/moteur.test.js        # 35 tests des règles, exécutés contre index.html
+node tests/moteur.test.js        # 42 tests des règles, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie complète simulée entre 2 clients + 2 IA (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 node --check <(awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html)   # syntaxe du JS inline
@@ -47,6 +47,14 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 ### Écrans
 `scr-accueil` → `scr-setup` (local) ou `scr-ligne` (prénom + créer/rejoindre code 5 lettres) → `scr-lobby` (partage WhatsApp, sièges, l'hôte lance) → `scr-game`.
 
+## Modes de jeu (v3.7)
+
+`R.mode` = `classique` | `equipes` | `rapide` — choisi dans le setup local ou par l'hôte au lobby (seg `#mode-local`/`#mode-ligne`, synchro live via `regles.mode`, préservé par le reset des règles).
+
+- **Équipes (2 vs 2)** : diagonales fixes Bleu+Vert contre Jaune+Rouge (`partenaire=(pi+2)%4`). Jamais de capture entre partenaires, barrage d'équipe valable partout, la sortie épargne le partenaire (`memeEquipe` dans `simMove`/`canLand`/`exitMove`/`threat`). Victoire quand LES DEUX ont fini ; un joueur fini continue de lancer et joue les pions de son partenaire : **tout le tour joue les pions de `actif()`** (computeTurnMoves/execMove/afterMove/markSelectable/onPawnTap…). Se joue à 4 obligatoirement.
+- **Rapide (2 dés)** : `G.desRestants` (synchro `etat.des`, chaîne "a,b"), chaque dé joué séparément, dé actif en tête de file, toucher le 2e dé (`#die2`) échange l'ordre. Pas de rejouer sur 6 ni de triple 6 ; obligations et fautes calculées par dé actif ; sortie sur un dé de 5 normale. Un dé injouable est perdu.
+- **1 contre 1 / sièges vides** : siège `x` (« — ») dans le setup local ; en ligne, interrupteur hôte « Sièges vides → IA » (`NET.iaFill`, forcé en équipes) — désactivé, les sièges libres deviennent `t:'x'`. `nextPlayer` saute les sièges `x`, leurs pions sont masqués (`update`), minimum 2 joueurs actifs.
+
 ## Règles de Tanger (résumé moteur)
 
 - 68 cases, sens anti-horaire. Salidas : bleu 5, jaune 22, vert 39, rouge 56. Entrées corridor : 68/17/34/51. Corridor 7 cases + boire. **71 pas exacts** de la salida à la boire.
@@ -61,8 +69,8 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 
 ## Protocole réseau (CRITIQUE — lire avant toute modif)
 
-Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:{t:h|ia|l, nom, uid}}, regles, etat}`.
-`etat` = `{seq, w, pawns, cur, face, val, sixes, phase, bonus, bv, lastMoved, winner, action}`.
+Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:{t:h|ia|l|x, nom, uid}}, regles, etat}`.
+`etat` = `{seq, w, pawns, cur, face, val, sixes, phase, bonus, bv, lastMoved, winner, des, action}`.
 
 - **Autorité** : `amAuth()` = local → true ; en ligne → `isIA(cur) ? isHote : (myPi===cur)`. Seule l'autorité exécute la logique et les timers ; les autres rendent via `applyEtat` (phase `anim` → `spect`).
 - **Seq anti-collision** : `sync()` écrit `seq = Math.max(NET.appliedSeq+1, Date.now())` + `w = NET.uid`, et pose `NET.lastW = NET.uid`.
@@ -110,7 +118,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 ## Tests
 
 - `tests/charge.js` : charge le vrai script d'`index.html` dans un contexte VM avec DOM factice.
-- `tests/moteur.test.js` : 35 assertions règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, priorités ouverture/capture/repli via `fauteDuCoup`, 6→12, obligations et replis, corridor, interrupteurs).
+- `tests/moteur.test.js` : 42 assertions (dont mode équipes) règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, priorités ouverture/capture/repli via `fauteDuCoup`, 6→12, obligations et replis, corridor, interrupteurs).
 - `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12. Plafond : 1500 pas de boucle (600 faisait échouer ~1 partie sur 10, légitimement longue).
 
 ## Backlog (propositions à discuter avec Yassine)

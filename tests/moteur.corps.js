@@ -112,6 +112,27 @@ reset(); G.cur=0; G.face=3;
 G.pawns[0][0]={z:'t',sq:8}; G.pawns[1][0]={z:'t',sq:11}; G.pawns[0][1]={z:'t',sq:20};
 computeTurnMoves();
 TT('obligation de capture détectée', G.obligCap.size===1);
+// 15. Mode ÉQUIPES : diagonales, jamais de capture entre partenaires
+R.mode='equipes';
+reset(); G.pawns[0][0]={z:'t',sq:8}; G.pawns[2][0]={z:'t',sq:11};
+r=simMove(0,0,3);
+TT('équipes: partenaire jamais mangé, barrage possible', r && !r.cap && r.barr);
+reset(); G.pawns[0][0]={z:'t',sq:8}; G.pawns[1][0]={z:'t',sq:11};
+r=simMove(0,0,3);
+TT('équipes: l adversaire se mange toujours', r && r.cap && r.cap.pi===1);
+reset(); G.pawns[2][0]={z:'t',sq:5};
+ex=exitMove(0);
+TT('équipes: partenaire sur salida épargné à la sortie', ex && ex.pl.length===2 && ex.pl[0].caps.length===0);
+reset(); G.pawns[2][0]={z:'t',sq:5}; G.pawns[2][1]={z:'t',sq:5};
+ex=exitMove(0);
+TT('équipes: barrage partenaire sur salida bloque la 1re bille', ex && ex.pl.length===1 && ex.pl[0].sq===10);
+reset(); G.cur=0; G.pawns[0]=[{z:'g'},{z:'g'},{z:'g'},{z:'g'}];
+TT('équipes: le fini joue pour son partenaire', actif()===2);
+G.pawns[2]=[{z:'g'},{z:'g'},{z:'g'},{z:'g'}];
+TT('équipes: équipe finie => actif reste le courant', actif()===0);
+R.mode='classique';
+reset(); G.cur=0; G.pawns[0]=[{z:'g'},{z:'g'},{z:'g'},{z:'g'}];
+TT('classique: actif = joueur courant', actif()===0);
 console.log('\nRésultat tests moteur:', ok+' OK, '+ko+' KO');
 /* ===== TESTS RÈGLES PERSONNALISÉES ===== */
 // R.sortieDouble OFF => un 5 sort un seul pion

@@ -259,7 +259,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
   border-top:1px solid rgba(255,255,255,.16);
   background:linear-gradient(180deg,rgba(38,10,44,.25),rgba(38,10,44,.45));
 }
-#die{
+#die,#die2{
   width:58px;height:58px;border-radius:15px;border:none;
   position:absolute;left:-6px;top:-6px;z-index:6;
   transition:left .55s cubic-bezier(.35,.8,.35,1), top .55s cubic-bezier(.35,.8,.35,1);
@@ -271,7 +271,8 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
   display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
   padding:10px;gap:2px;
 }
-#die:active{transform:translateY(3px);box-shadow:0 0 0 3px var(--dc,#ffffff), 0 2px 0 #a8996f, 0 6px 12px rgba(30,6,36,.45),
+#die2{display:none;filter:saturate(.75) brightness(.92);z-index:5}
+#die:active,#die2:active{transform:translateY(3px);box-shadow:0 0 0 3px var(--dc,#ffffff), 0 2px 0 #a8996f, 0 6px 12px rgba(30,6,36,.45),
     inset 0 1.5px 0 #fff, inset 0 -3px 6px rgba(120,100,60,.28)}
 #die.off{opacity:.45;pointer-events:none}
 #die.pulse{animation:dpulse 1.15s ease infinite}
@@ -385,7 +386,7 @@ body{
 <div class="ecran on" id="scr-accueil">
   <div class="haut-accueil">
     <button class="chip-profil" id="btn-profil"><span class="cp-ico">👤</span><span id="profil-nom">Joueur</span></button>
-    <span class="chip-ver">v3.6</span>
+    <span class="chip-ver">v3.7</span>
   </div>
   <div class="brand">
     <svg class="orn" width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
@@ -412,6 +413,15 @@ body{
 <!-- ================= RÉGLAGES LOCAL ================= -->
 <div class="ecran" id="scr-setup">
   <div class="card">
+    <div class="optrow">
+      <div>
+        <div class="lbl">Mode de jeu</div>
+        <div class="sub" id="mode-sub-local">Chacun pour soi</div>
+      </div>
+      <div class="seg" id="mode-local">
+        <button data-m="classique">Classique</button><button data-m="equipes">2 vs 2</button><button data-m="rapide">Rapide</button>
+      </div>
+    </div>
     <div id="seats"></div>
     <div class="optrow">
       <div>
@@ -446,6 +456,22 @@ body{
     <div class="lblchamp" style="text-align:center">Code de la partie</div>
     <div id="code-affiche">·····</div>
     <button class="btn ghost" id="btn-whatsapp" style="margin-top:4px">💬 Inviter sur WhatsApp</button>
+    <div class="optrow" id="row-mode-ligne">
+      <div>
+        <div class="lbl">Mode de jeu</div>
+        <div class="sub" id="mode-sub-ligne">Chacun pour soi</div>
+      </div>
+      <div class="seg" id="mode-ligne">
+        <button data-m="classique">Classique</button><button data-m="equipes">2 vs 2</button><button data-m="rapide">Rapide</button>
+      </div>
+    </div>
+    <div class="optrow" id="row-iafill" style="display:none">
+      <div>
+        <div class="lbl">Sièges vides → IA</div>
+        <div class="sub">Désactive pour jouer à 2 ou 3 sans IA (1 contre 1…)</div>
+      </div>
+      <button class="switch on" id="sw-iafill" aria-label="Sièges vides IA"></button>
+    </div>
     <div class="lblchamp">Joueurs — touche une couleur libre pour t'asseoir</div>
     <div id="lobby-seats"></div>
     <div class="notice" id="lobby-notice"></div>
@@ -468,6 +494,7 @@ body{
   <div id="board-zone"><div id="frame">
     <svg id="board" viewBox="0 0 728 728" xmlns="http://www.w3.org/2000/svg"></svg>
     <button id="die" aria-label="Lancer le dé"></button>
+    <button id="die2" aria-label="Second dé"></button>
   </div></div>
   <div id="bottombar">
     <div id="stat">
@@ -563,6 +590,7 @@ const FIREBASE_CONFIG={
 
 /* ---------- règles modifiables ---------- */
 const R={
+  mode:'classique', /* classique | equipes (2v2 diagonales) | rapide (2 dés) */
   sortieDouble:true,
   sortieObligatoire:false,
   sixVaut12:true,
@@ -639,6 +667,7 @@ const G={
   bonus:[], bonusVal:0,
   moves:[], obligCap:new Set(), obligOuv:new Set(), obligSortie:new Set(),
   seats:['h','ia','ia','ia'], noms:['','','',''], training:false,
+  desRestants:[],
   pawns:[], lastMoved:[null,null,null,null], winner:null,
 };
 /* réseau */
@@ -663,6 +692,16 @@ function amAuth(){
 function canAct(){
   if(!NET.on) return !isIA(G.cur);
   return NET.myPi===G.cur && !isIA(G.cur);
+}
+/* ---- équipes (2 vs 2, diagonales fixes : Bleu+Vert contre Jaune+Rouge) ---- */
+const partenaire=pi=>(pi+2)%4;
+const memeEquipe=(a,b)=>a===b||(R.mode==='equipes'&&partenaire(a)===b);
+const aFini=pi=>G.pawns.length>0&&G.pawns[pi].every(p=>p.z==='g');
+/* le joueur dont on joue les pions ce tour-ci : en équipes, un joueur qui a
+   fini continue de lancer et déplace les pions de son partenaire */
+function actif(){
+  if(R.mode==='equipes'&&G.pawns.length&&aFini(G.cur)&&!aFini(partenaire(G.cur))) return partenaire(G.cur);
+  return G.cur;
 }
 
 /* ---------- moteur ---------- */
@@ -710,7 +749,7 @@ function simMove(pi,pj,v){
       if(occ.length>=2) return null;
       if(occ.length===1){
         const o=occ[0];
-        if(o.pi===pi) return {dest:nxt,cap:null,barr:true};
+        if(memeEquipe(o.pi,pi)) return {dest:nxt,cap:null,barr:true};
         if(nxt.z==='t'&&SAFE.has(nxt.sq)) return {dest:nxt,cap:null,barr:true};
         if(nxt.z==='t') return {dest:nxt,cap:o};
         return null;
@@ -734,7 +773,7 @@ function canLand(sq,pi){
   if(occ.length>=2) return null;
   if(occ.length===1){
     const o=occ[0];
-    if(o.pi===pi) return {cap:null};
+    if(memeEquipe(o.pi,pi)) return {cap:null};
     if(SAFE.has(sq)) return {cap:null};
     return {cap:o};
   }
@@ -749,8 +788,8 @@ function exitMove(pi){
      barrage de deux (+20 chacun) — le refuge ne protège pas contre une sortie.
      Seul un barrage à soi bloque la 1re bille. (Règle de Tanger, confirmée.) */
   const occ1=occTrack(PLAYERS[pi].salida);
-  if(occ1.filter(o=>o.pi===pi).length<2){
-    const caps1=occ1.filter(o=>o.pi!==pi);
+  if(occ1.filter(o=>memeEquipe(o.pi,pi)).length<2){
+    const caps1=occ1.filter(o=>!memeEquipe(o.pi,pi));
     pl.push({pj:homeIdx[0],sq:PLAYERS[pi].salida,cap:caps1.length?caps1[0]:null,caps:caps1});
   }
   if(R.sortieDouble&&homeIdx.length>=2){
@@ -776,7 +815,7 @@ function computeMoves(pi,v,opts){
   return list;
 }
 function computeTurnMoves(){
-  const pi=G.cur, face=G.face;
+  const pi=actif(), face=G.face;
   const allOut=G.pawns[pi].every(p=>p.z!=='h');
   G.val=(face===6&&allOut&&R.sixVaut12)?12:face;
   let moves=computeMoves(pi,G.val,{face});
@@ -847,6 +886,7 @@ function sync(action){
     bv:G.bonusVal||0,
     lastMoved:G.lastMoved.map(x=>x==null?-1:x),
     winner:G.winner==null?-1:G.winner,
+    des:(R.mode==='rapide'&&G.desRestants.length)?G.desRestants.join(','):null,
     action:action||null,
   };
   NET.ref.child('etat').set(etat);
@@ -865,8 +905,9 @@ function applyEtat(v){
   G.lastMoved=Object.values(v.lastMoved||{}).map(x=>x<0?null:x);
   G.winner=(v.winner==null||v.winner<0)?null:v.winner;
   G.phase=(v.phase==='anim')?'spect':v.phase;
+  G.desRestants=(typeof v.des==='string'&&v.des)?v.des.split(',').map(Number):[];
   clearSel(); update();
-  drawDie(G.face); drawSixes();
+  drawDie(G.face); drawSixes(); drawDes();
   chip12.style.display=(G.val===12&&(G.phase==='move'||G.phase==='bonus'))?'inline-block':'none';
   const a=v.action||{};
   if(a.t==='de'){ if(a.aucun) toast('Aucun coup possible pour '+nomDe(G.cur),'warn'); }
@@ -920,8 +961,9 @@ function majStatutTexte(){
     if(canAct()) setStatus('À toi, '+n+' — lance le dé');
     else setStatus(ia?(n+' (IA) réfléchit…'):(n+' lance le dé sur son iPhone…'));
   }else if(G.phase==='move'||G.phase==='spect'){
-    if(canAct()) setStatus(n+' joue '+G.val+(G.val===12?' (6 doublé)':''));
-    else setStatus(ia?(n+' (IA) joue…'):(n+' choisit un pion… ('+G.val+')'));
+    const pour=(R.mode==='equipes'&&actif()!==G.cur)?(' pour '+nomDe(actif())):'';
+    if(canAct()) setStatus(n+' joue '+G.val+pour+(G.val===12?' (6 doublé)':''));
+    else setStatus(ia?(n+' (IA) joue'+pour+'…'):(n+' choisit un pion… ('+G.val+')'));
   }else if(G.phase==='bonus'){
     if(canAct()) setStatus('Bonus +'+G.bonusVal+' — choisis un pion');
     else setStatus(n+' joue son bonus…');
@@ -935,6 +977,32 @@ function doRoll(){
   G.phase='anim';
   dieEl.classList.remove('pulse');
   animDice(()=>{
+    if(R.mode==='rapide'){
+      /* deux dés, joués séparément (l'ordre se change en touchant le 2e dé) */
+      G.desRestants=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
+      G.sixes=0;
+      G.face=G.desRestants[0];
+      computeTurnMoves();
+      if(!G.moves.length&&G.desRestants.length===2){
+        G.desRestants.reverse(); G.face=G.desRestants[0]; computeTurnMoves();
+        if(!G.moves.length) G.desRestants.reverse();
+      }
+      G.face=G.desRestants[0]; drawDes(); drawDie(G.face);
+      chip12.style.display=(G.val===12)?'inline-block':'none';
+      if(!G.moves.length){
+        toast('Aucun coup possible','warn');
+        G.desRestants.length=0; drawDes();
+        G.phase='spect'; sync({t:'de',face:G.face,aucun:true});
+        setTimeout(nextPlayer,950);
+        return;
+      }
+      G.phase='move';
+      majStatutTexte();
+      sync({t:'de',face:G.face});
+      markSelectable();
+      if(isIA(G.cur)) iaPlayMove();
+      return;
+    }
     const f=1+Math.floor(Math.random()*6);
     G.face=f;
     G.sixes=(f===6)?G.sixes+1:0;
@@ -961,7 +1029,7 @@ function doRoll(){
 function tripleSix(){
   flash('ambrefx','TROIS 6 !','Le dernier pion déplacé rentre à la maison');
   G.phase='anim'; sync({t:'trois6'});
-  const pi=G.cur, pj=G.lastMoved[pi];
+  const pi=actif(), pj=G.lastMoved[pi];
   setTimeout(()=>{
     if(pj!=null){
       const p=G.pawns[pi][pj];
@@ -977,8 +1045,10 @@ function pickMoveForPawn(pi,pj){
 function execMove(mv){
   if(G.phase!=='move'&&G.phase!=='bonus') return;
   if(NET.on&&NET.myPi==null&&!NET.isHote) return;
-  const pi=G.cur, enBonus=(G.phase==='bonus');
+  const pi=actif(), enBonus=(G.phase==='bonus');
   const fault=fauteDuCoup(mv);
+  /* rapide : le coup consomme le dé actif (toujours en tête de file) */
+  if(R.mode==='rapide'&&!enBonus&&G.desRestants.length) G.desRestants.shift();
   G.phase='anim';
   clearSel();
   const movedPjs=[];
@@ -998,7 +1068,7 @@ const FAUTES={
   ouverture:["FAUTE D'OUVERTURE",'Le barrage devait s’ouvrir — le pion rentre à la maison'],
 };
 function afterMove(mv,fault,movedPjs,enBonus){
-  const pi=G.cur;
+  const pi=actif();
   if(fault){
     flash('rougefx',FAUTES[fault][0],FAUTES[fault][1]);
     sync({t:'faute',ft:fault});
@@ -1026,7 +1096,11 @@ function afterMove(mv,fault,movedPjs,enBonus){
     if(R.bonusBoire){ G.bonus.push(10); msg+=' Bonus +10'; }
     toast(msg,'ok');
     sync({t:'boire',qui:pi,b:R.bonusBoire});
-    if(G.pawns[pi].every(p=>p.z==='g')){ update(); win(pi); return; }
+    if(G.pawns[pi].every(p=>p.z==='g')){
+      if(R.mode==='equipes'&&!aFini(partenaire(pi))){
+        toast('🏆 '+nomDe(pi)+' a fini — il joue maintenant pour '+nomDe(partenaire(pi))+' !','ok');
+      }else{ update(); win(pi); return; }
+    }
   }
   update();
   setTimeout(endOfAction,caps.length?520:140);
@@ -1034,7 +1108,7 @@ function afterMove(mv,fault,movedPjs,enBonus){
 function endOfAction(){
   if(G.winner!=null) return;
   if(G.phase!=='anim'&&G.phase!=='spect') return; /* évite toute double fin de tour */
-  const pi=G.cur;
+  const pi=actif();
   if(G.bonus.length){
     const v=G.bonus.shift();
     const moves=computeMoves(pi,v,{bonus:true});
@@ -1053,6 +1127,27 @@ function endOfAction(){
     if(isIA(pi)) iaPlayMove();
     return;
   }
+  if(R.mode==='rapide'){
+    if(G.desRestants.length){
+      G.face=G.desRestants[0];
+      computeTurnMoves(); drawDes(); drawDie(G.face);
+      if(!G.moves.length){
+        toast('Aucun coup possible pour le second dé','warn');
+        G.desRestants.length=0; drawDes();
+        G.phase='spect'; sync({t:'de',face:G.face,aucun:true});
+        setTimeout(nextPlayer,900);
+        return;
+      }
+      G.phase='move';
+      majStatutTexte();
+      sync({t:'de',face:G.face});
+      markSelectable();
+      if(isIA(G.cur)) iaPlayMove();
+      return;
+    }
+    nextPlayer();
+    return;
+  }
   if(G.face===6){
     G.phase='roll';
     majStatutTexte();
@@ -1064,8 +1159,8 @@ function endOfAction(){
   nextPlayer();
 }
 function nextPlayer(){
-  G.sixes=0; G.face=0; G.val=0; G.bonus.length=0;
-  G.cur=(G.cur+1)%4;
+  G.sixes=0; G.face=0; G.val=0; G.bonus.length=0; G.desRestants.length=0; drawDes();
+  do{ G.cur=(G.cur+1)%4; }while(G.seats[G.cur]==='x');
   G.phase='roll';
   chip12.style.display='none';
   drawDie(0); drawSixes(); drawBanner();
@@ -1077,8 +1172,13 @@ function nextPlayer(){
 function showWin(pi){
   const p=PLAYERS[pi];
   document.getElementById('win-pastille').style.background=p.hex;
-  document.getElementById('win-titre').textContent=nomDe(pi)+' gagne !';
-  document.getElementById('win-sub').textContent='Les 4 pions '+p.nom.toLowerCase()+'s sont dans la boire. Machallah.';
+  if(R.mode==='equipes'){
+    document.getElementById('win-titre').textContent=nomDe(pi)+' & '+nomDe(partenaire(pi))+' gagnent !';
+    document.getElementById('win-sub').textContent='Les 8 pions de l’équipe sont dans la boire. Machallah.';
+  }else{
+    document.getElementById('win-titre').textContent=nomDe(pi)+' gagne !';
+    document.getElementById('win-sub').textContent='Les 4 pions '+p.nom.toLowerCase()+'s sont dans la boire. Machallah.';
+  }
   const rj=document.getElementById('btn-rejouer');
   rj.style.display=(!NET.on||NET.isHote)?'block':'none';
   document.getElementById('win-sub').textContent+= (NET.on&&!NET.isHote)?' L’hôte peut relancer une partie.':'';
@@ -1107,7 +1207,7 @@ function iaPlayMove(){
 function threat(sq,pi){
   for(let d=1;d<=6;d++){
     const q=((sq-1-d)+68)%68+1;
-    if(occTrack(q).some(o=>o.pi!==pi)) return true;
+    if(occTrack(q).some(o=>!memeEquipe(o.pi,pi))) return true;
   }
   return false;
 }
@@ -1118,7 +1218,7 @@ function progressOf(pos,pi){
   return 0;
 }
 function scoreMove(m){
-  const pi=G.cur; let s=Math.random()*4;
+  const pi=actif(); let s=Math.random()*4;
   if(m.cap) s+=120;
   if(m.kind==='exit') return s+60+m.pl.length*15;
   if(m.dest.z==='g') s+=100;
@@ -1139,6 +1239,7 @@ function scoreMove(m){
 const svg=document.getElementById('board');
 const NS='http://www.w3.org/2000/svg';
 const dieEl=document.getElementById('die');
+const die2El=document.getElementById('die2');
 const chip12=document.getElementById('chip12');
 const pawnNodes=[]; const homePanelNodes=[];
 
@@ -1281,6 +1382,10 @@ function pawnXY(pi,pj){
 }
 function update(){
   for(let pi=0;pi<4;pi++)for(let pj=0;pj<4;pj++){
+    const abs=(G.seats[pi]==='x');
+    pawnNodes[pi][pj].style.display=abs?'none':'';
+    if(homePanelNodes[pi]) homePanelNodes[pi].style.opacity=abs?'.35':'';
+    if(abs) continue;
     const [x,y,sc]=pawnXY(pi,pj);
     pawnNodes[pi][pj].style.transform='translate('+x+'px,'+y+'px) scale('+sc+')';
   }
@@ -1295,7 +1400,7 @@ function clearSel(){
 function markSelectable(){
   clearSel();
   if(!canAct()) return;
-  const pi=G.cur;
+  const pi=actif();
   const oblig=G.obligOuv.size?G.obligOuv:(G.obligCap.size?G.obligCap:(G.obligSortie.size?G.obligSortie:null));
   G.moves.forEach(m=>{
     const isObl=G.training&&oblig&&oblig.has(m.id);
@@ -1310,22 +1415,33 @@ function markSelectable(){
   });
 }
 function onPawnTap(pi,pj){
-  if((G.phase!=='move'&&G.phase!=='bonus')||pi!==G.cur||!canAct()) return;
+  if((G.phase!=='move'&&G.phase!=='bonus')||pi!==actif()||!canAct()) return;
   const mv=pickMoveForPawn(pi,pj);
   if(mv) execMove(mv);
 }
 function onHomeTap(pi){
-  if(G.phase!=='move'||pi!==G.cur||!canAct()) return;
+  if(G.phase!=='move'||pi!==actif()||!canAct()) return;
   const mv=G.moves.find(m=>m.kind==='exit');
   if(mv) execMove(mv);
 }
 
 /* ---------- dé, bannière, statut ---------- */
 const PIPMAP={0:[],1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
-(function initDie(){ for(let i=0;i<9;i++){ const s=document.createElement('span'); s.className='pip'; dieEl.appendChild(s);} })();
+(function initDie(){ for(let i=0;i<9;i++){ const s=document.createElement('span'); s.className='pip'; dieEl.appendChild(s);}
+  for(let i=0;i<9;i++){ const s=document.createElement('span'); s.className='pip'; die2El.appendChild(s);} })();
 function drawDie(f){
   const on=PIPMAP[f]||[];
   dieEl.querySelectorAll('.pip').forEach((p,i)=>p.classList.toggle('on',on.includes(i)));
+}
+function drawDie2(f){
+  const on=PIPMAP[f]||[];
+  die2El.querySelectorAll('.pip').forEach((p,i)=>p.classList.toggle('on',on.includes(i)));
+}
+/* affiche le ou les dés restants du mode rapide (le dé actif est le principal) */
+function drawDes(){
+  if(R.mode!=='rapide'||G.desRestants.length<2){ die2El.style.display='none'; return; }
+  die2El.style.display='grid';
+  drawDie2(G.desRestants[1]);
 }
 function animDice(cb){
   let n=0;
@@ -1346,9 +1462,12 @@ function drawBanner(){
   const P=PLAYERS[G.cur];
   /* le dé rejoint le coin du joueur courant, cerclé de sa couleur */
   const hc=HOMEC[G.cur];
-  dieEl.style.left=(hc[0]<CTR)?'-6px':'calc(100% - 52px)';
-  dieEl.style.top =(hc[1]<CTR)?'-6px':'calc(100% - 52px)';
+  dieEl.style.left=(hc[0]<CTR)?'-2px':'calc(100% - 56px)';
+  dieEl.style.top =(hc[1]<CTR)?'-2px':'calc(100% - 56px)';
+  die2El.style.left=(hc[0]<CTR)?'60px':'calc(100% - 118px)';
+  die2El.style.top =dieEl.style.top;
   if(dieEl.style.setProperty) dieEl.style.setProperty('--dc',P.hex);
+  if(die2El.style.setProperty) die2El.style.setProperty('--dc',P.hex);
   document.getElementById('banner').style.background='linear-gradient(180deg,'+P.hex+','+P.dark+')';
   document.getElementById('tourpastille').style.background=P.hex;
   const moi=(NET.on&&NET.myPi===G.cur)?' (toi)':'';
@@ -1395,7 +1514,7 @@ function buildPerso(){
   });
 }
 document.getElementById('btn-perso-reset').addEventListener('click',()=>{
-  Object.assign(R,RDEFAUT); buildPerso();
+  const m=R.mode; Object.assign(R,RDEFAUT); R.mode=m; buildPerso();
   toast('Règles de Tanger rétablies','ok');
 });
 document.getElementById('btn-perso-ok').addEventListener('click',()=>{
@@ -1406,13 +1525,35 @@ document.getElementById('btn-perso-ok').addEventListener('click',()=>{
 /* ==========================================================
    MODE LOCAL
    ========================================================== */
+const MODESUB={classique:'Chacun pour soi',equipes:'Bleu+Vert contre Jaune+Rouge — le fini aide son partenaire',rapide:'Deux dés par tour, joués séparément'};
+function majModeSub(){
+  const a=document.getElementById('mode-sub-local'), b=document.getElementById('mode-sub-ligne');
+  if(a) a.textContent=MODESUB[R.mode]||'';
+  if(b) b.textContent=MODESUB[R.mode]||'';
+}
+function bindModeSeg(id,actifOk){
+  const seg=document.getElementById(id); if(!seg) return;
+  seg.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',R.mode===b.dataset.m);
+    b.disabled=!actifOk;
+    b.onclick=()=>{
+      if(!actifOk) return;
+      R.mode=b.dataset.m;
+      seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+      majModeSub();
+      if(NET.on&&NET.isHote&&NET.ref) NET.ref.child('regles').update({mode:R.mode});
+    };
+  });
+  majModeSub();
+}
 function buildSeats(){
+  bindModeSeg('mode-local',true);
   const zone=document.getElementById('seats'); zone.innerHTML='';
   PLAYERS.forEach((P,pi)=>{
     const row=document.createElement('div'); row.className='seat';
     row.innerHTML='<span class="pastille" style="background:'+P.hex+'"></span>'+
       '<span class="nomj">'+P.nom+'</span>'+
-      '<div class="seg"><button data-t="h">Humain</button><button data-t="ia">IA</button></div>';
+      '<div class="seg"><button data-t="h">Humain</button><button data-t="ia">IA</button><button data-t="x">—</button></div>';
     row.querySelectorAll('.seg button').forEach(b=>{
       b.classList.toggle('on',G.seats[pi]===b.dataset.t);
       b.addEventListener('click',()=>{
@@ -1424,6 +1565,9 @@ function buildSeats(){
   });
 }
 function startLocal(){
+  const actifs=G.seats.filter(s=>s!=='x').length;
+  if(actifs<2){ toast('Il faut au moins 2 joueurs — remets un siège','warn'); return; }
+  if(R.mode==='equipes'&&actifs<4){ toast('Le 2 vs 2 se joue à 4 — pas de siège « — »','warn'); return; }
   hideModals();
   NET.on=false; NET.myPi=null;
   document.getElementById('chip-code').style.display='none';
@@ -1436,6 +1580,7 @@ function demarrerJeu(){
   G.bonus.length=0; G.sixes=0; G.face=0; G.val=0; G.winner=null;
   G.obligCap=new Set(); G.obligOuv=new Set(); G.obligSortie=new Set();
   G.cur=Math.max(0,G.seats.indexOf('h'));
+  if(G.seats[G.cur]==='x') G.cur=Math.max(0,G.seats.findIndex(s=>s!=='x'));
   showEcran('scr-game');
   buildBoard();
   G.phase='roll';
@@ -1554,7 +1699,7 @@ function traiterPartie(snap){
     NET.myPi=null;
     for(let pi=0;pi<4;pi++){
       const sg=NET.sieges[pi]||{t:'l'};
-      G.seats[pi]=(sg.t==='ia'||sg.t==='l')?'ia':'h';
+      G.seats[pi]=(sg.t==='h')?'h':(sg.t==='x'?'x':'ia');
       G.noms[pi]=(sg.t==='h')?(sg.nom||PLAYERS[pi].nom):PLAYERS[pi].nom;
       if(sg.t==='h'&&sg.uid===NET.uid) NET.myPi=pi;
     }
@@ -1595,6 +1740,12 @@ function ouvrirReprise(){
 }
 function renderLobby(){
   document.getElementById('code-affiche').textContent=NET.code;
+  bindModeSeg('mode-ligne',NET.isHote);
+  const ri=document.getElementById('row-iafill');
+  ri.style.display=NET.isHote?'flex':'none';
+  const sw=document.getElementById('sw-iafill');
+  sw.classList.toggle('on',NET.iaFill!==false);
+  sw.onclick=()=>{ NET.iaFill=(NET.iaFill===false); sw.classList.toggle('on',NET.iaFill!==false); };
   const zone=document.getElementById('lobby-seats'); zone.innerHTML='';
   for(let pi=0;pi<4;pi++){
     const sg=NET.sieges[pi]||{t:'l'}, P=PLAYERS[pi];
@@ -1645,10 +1796,14 @@ function prendreSiege(pi){
 }
 function lancerEnLigne(){
   if(!NET.isHote) return;
+  const remplir=(NET.iaFill!==false)||R.mode==='equipes';
+  let humains=0;
+  for(let pi=0;pi<4;pi++){ const sg=NET.sieges[pi]||{t:'l'}; if(sg.t==='h') humains++; }
+  if(!remplir&&humains<2){ toast('Il faut au moins 2 joueurs assis','warn'); return; }
   const maj={};
   for(let pi=0;pi<4;pi++){
     const sg=NET.sieges[pi]||{t:'l'};
-    if(sg.t==='l') maj['sieges/'+pi]={t:'ia'};
+    if(sg.t==='l') maj['sieges/'+pi]={t:remplir?'ia':'x'};
   }
   maj['statut']='jeu';
   maj['regles']=Object.assign({},R);
@@ -1719,6 +1874,16 @@ document.getElementById('btn-lancer').addEventListener('click',lancerEnLigne);
 document.getElementById('btn-perso-lobby').addEventListener('click',()=>{ buildPerso(); showModal('modal-perso'); });
 document.getElementById('btn-quitter-lobby').addEventListener('click',quitterLigne);
 document.getElementById('btn-menu').addEventListener('click',()=>{ construireMenu(); showModal('modal-menu'); });
+/* rapide : toucher le 2e dé échange l'ordre des deux dés */
+die2El.addEventListener('click',()=>{
+  if(R.mode!=='rapide'||G.phase!=='move'||!canAct()||G.desRestants.length<2) return;
+  G.desRestants.reverse();
+  G.face=G.desRestants[0];
+  computeTurnMoves();
+  drawDie(G.face); drawDes();
+  chip12.style.display=(G.val===12)?'inline-block':'none';
+  majStatutTexte(); markSelectable();
+});
 function construireMenu(){
   const br=document.getElementById('btn-reprise');
   br.style.display=(NET.on&&NET.myPi==null&&aDesSiegesHumains())?'block':'none';
