@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.5)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.6)
 
 Jeu de Parchís aux règles traditionnelles de **Tanger**, pour Yassine.
 Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**, multijoueur en ligne via **Firebase Realtime Database**.
@@ -91,7 +91,8 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ## Design system (v3.5 « étoile de Tanger », thème clair)
 
-- Style casual game lumineux (référence donnée par Yassine : Parchisi Star), identité tangéroise conservée (khatam, titre or, arabe). **Ne pas revenir au thème sombre.**
+- Style casual game lumineux (référence donnée par Yassine : Parchisi Star), identité tangéroise conservée (khatam, arabe). **Ne pas revenir au thème sombre.**
+- Accueil façon lobby de jeu : chip profil (prénom `pt_nom`, modal `modal-profil`), chip version, logo épais crème à ombre chaude (Manrope 800), **deux cartes de mode illustrées** (Nano Banana Pro, WebP inlinés, classes `.carte-mode .cm-local/.cm-ligne`), bouton d'aide violet.
 - Typo : **Marcellus** (titres, or dégradé) + **Manrope** (UI), Google Fonts, fallbacks Georgia/système.
 - Palette : violet `#5d2a63` / prune `#451d4e` (fond damassé WebP inliné, généré Nano Banana Pro), ambre `#ffc531` (boutons « juteux », épaisseur `#c07d0e`), crème `#fffaf0` (modals, texte sombre `#3a2a12`), ivoire.
 - Plateau SVG clair : tapis blanc cassé (`feltG`), cases blanches à liseré gris, refuges gris `#b9b3a6` à étoile blanche, numéros encre (`.cellnum.sur`), panneaux maison **pleine couleur** (`hg{pi}`, alvéoles ombrées cerclées de blanc), corridors bonbon (`cg{pi}` clair→vif), khatam en filigrane blanc + moyeu doré.

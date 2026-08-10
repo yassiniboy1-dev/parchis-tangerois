@@ -59,3 +59,21 @@ Digitally painted light oak wood surface for a board game frame, viewed flat fro
 Warm honey and caramel tones (#d9a05b, #c8894a, #e8b877), fine straight vertical grain, hand-painted stylized realism like premium casual tabletop apps, satin finish with a soft even sheen.
 Bright and warm, uniform coverage edge to edge, no vignette, no border, no objects, no text, no watermark.
 ```
+
+## carte-local.png (4:5) — v3.6, carte de mode « Sur cet iPhone » (WebP inliné)
+```
+Game mode card illustration for a casual mobile board game, portrait 4:5, full-bleed.
+Two big glossy 3D dice (one red, one ivory) tumbling above a corner of a bright parchís board, surrounded by four chunky glossy ludo pawns in vivid blue (#1f7fd0), yellow (#f0b400), green (#1d8a4a) and red (#d3352b).
+Warm amber-orange radial background (#ffc531 to #f7a91c) with subtle soft rays, playful premium 3D toy style like top casual games.
+Leave the bottom fifth of the image calm and simple for a label overlay.
+Absolutely NO text, NO letters, NO numbers anywhere. No watermark.
+```
+
+## carte-ligne.png (4:5) — v3.6, carte de mode « En ligne » (WebP inliné)
+```
+Game mode card illustration for a casual mobile board game, portrait 4:5, full-bleed.
+Two smartphones facing each other with a tiny colorful parchís board glowing between them, chat bubbles (empty, no text inside) floating around, one glossy blue pawn and one glossy red pawn standing beside the phones, small sparkles.
+Fresh teal-green radial background (#2fb express... use #2fbd77 to #1d8a4a) with subtle soft rays, playful premium 3D toy style like top casual games.
+Leave the bottom fifth of the image calm and simple for a label overlay.
+Absolutely NO text, NO letters, NO numbers anywhere — chat bubbles must be empty shapes. No watermark.
+```
