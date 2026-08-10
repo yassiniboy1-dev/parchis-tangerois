@@ -74,6 +74,13 @@ Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:
 - Reprise de siège en pleine partie : modal `modal-reprise` (« C'est moi » → update uid) ; l'hôte peut remplacer un absent par l'IA (menu ⋯ → `#menu-sieges`).
 - Purge des parties > 48 h à la création.
 
+## Netlify (production)
+
+Site : **https://parchis-tangerois.netlify.app** — site id `0a34951c-7618-48a4-8671-74b11e42a50e`, compte de Yassine.
+Déploiement sans MCP possible via l'API avec un jeton personnel (`NETLIFY_AUTH_TOKEN`, jamais dans le dépôt) :
+`POST /api/v1/sites/{id}/deploys` avec `Content-Type: application/zip` et le zip en corps.
+Attention : les nouveaux sites des comptes gratuits naissent protégés (`sso: true` → 401 « Login Redirect ») ; rendre public via `PATCH /api/v1/sites/{id}` avec `{"sso_login":false}`.
+
 ## Firebase
 
 Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règles RTDB publiées :
