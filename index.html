@@ -1,0 +1,1591 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Parchís Tangérois — Le Jeu des Dangereux</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@500;600;700;800&display=swap');
+:root{
+  --feutre:#0e2b21;
+  --feutre2:#1a4d3a;
+  --ivoire:#f4ecd9;
+  --encre:#2b2318;
+  --laiton:#c9a24b;
+  --laiton-clair:#ecd28c;
+  --laiton-sombre:#8a6524;
+  --bois1:#6d4527;
+  --bois2:#331d0e;
+  --rouge:#c8402f;
+  --vert:#2e9a5e;
+  --jaune:#e2a71f;
+  --bleu:#2f6db6;
+  --display:'Marcellus','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --ui:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:
+    radial-gradient(120% 85% at 50% -8%, #1d4a38 0%, var(--feutre) 48%, #071811 100%);
+  color:var(--ivoire);
+  font-family:var(--ui);
+  touch-action:manipulation;
+  -webkit-user-select:none;user-select:none;
+  overflow:hidden;
+}
+:focus-visible{outline:2px solid rgba(236,210,140,.85);outline-offset:2px}
+.serif{font-family:var(--display)}
+.ecran{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;padding:18px calc(14px + env(safe-area-inset-left)) calc(18px + env(safe-area-inset-bottom));
+  overflow:auto}
+.ecran.on{display:flex}
+.brand{text-align:center;margin-bottom:18px}
+.brand h1{
+  font-family:var(--display);font-weight:400;
+  font-size:36px;letter-spacing:.045em;margin:0;line-height:1.12;
+  background:linear-gradient(176deg,#f6e6b0 8%,#d9b45e 46%,#c9a24b 62%,#96722d 94%);
+  -webkit-background-clip:text;background-clip:text;
+  color:#e3c273;-webkit-text-fill-color:transparent;
+}
+.brand .ar{font-size:18px;color:var(--laiton);margin-top:5px;letter-spacing:.1em;opacity:.95}
+.brand .tag{
+  font-size:11px;color:rgba(244,236,217,.55);margin-top:10px;letter-spacing:.34em;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.brand .tag::before,.brand .tag::after{content:"";height:1px;width:34px;
+  background:linear-gradient(90deg,transparent,rgba(201,162,75,.7));}
+.brand .tag::after{background:linear-gradient(90deg,rgba(201,162,75,.7),transparent)}
+.card{
+  width:min(420px,100%);
+  background:linear-gradient(180deg,rgba(16,32,25,.66),rgba(9,20,15,.66));
+  border:1px solid rgba(201,162,75,.42);
+  border-radius:22px;padding:18px;
+  box-shadow:0 22px 55px rgba(0,0,0,.5), inset 0 1px 0 rgba(244,236,217,.09);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.seat{display:flex;align-items:center;gap:11px;padding:10px 4px;border-bottom:1px solid rgba(244,236,217,.08)}
+.seat:last-of-type{border-bottom:none}
+.pastille{width:23px;height:23px;border-radius:50%;flex:none;
+  border:2px solid rgba(255,255,255,.9);
+  background-image:radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%);
+  box-shadow:0 3px 6px rgba(0,0,0,.45), inset 0 -3px 5px rgba(0,0,0,.28)}
+.seat .nomj{flex:1;font-size:15.5px;font-weight:700;letter-spacing:.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat .soustitre{display:block;font-size:11px;font-weight:600;color:rgba(244,236,217,.5);letter-spacing:.03em}
+.seg{display:flex;background:rgba(0,0,0,.4);border-radius:11px;padding:3px;gap:3px;border:1px solid rgba(244,236,217,.07)}
+.seg button{
+  border:none;background:transparent;color:rgba(244,236,217,.6);
+  font-size:13px;font-weight:700;padding:7px 13px;border-radius:8px;font-family:inherit;
+}
+.seg button.on{
+  background:linear-gradient(180deg,var(--laiton-clair),var(--laiton) 60%,#b08a37);
+  color:#2a1d07;box-shadow:0 2px 5px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.5)}
+.optrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 4px;
+  border-bottom:1px solid rgba(244,236,217,.08)}
+.optrow:last-of-type{border-bottom:none}
+.optrow .lbl{font-size:14.5px;font-weight:700}
+.optrow .sub{font-size:11.5px;color:rgba(244,236,217,.52);margin-top:2px;line-height:1.4}
+.switch{width:50px;height:29px;border-radius:16px;background:rgba(0,0,0,.45);position:relative;border:1px solid rgba(244,236,217,.12);flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;
+  background:linear-gradient(180deg,#efe6cd,#cabf9f);transition:transform .22s;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+.switch.on{background:linear-gradient(180deg,#dcb662,#b08a37);border-color:rgba(236,210,140,.5)}
+.switch.on::after{transform:translateX(21px);background:linear-gradient(180deg,#fff,#f0e6ce)}
+.btn{
+  display:block;width:100%;border:none;border-radius:15px;padding:15px;
+  font-size:16.5px;font-weight:800;font-family:inherit;letter-spacing:.02em;
+  transition:transform .08s ease;
+}
+.btn.primary{
+  background:linear-gradient(180deg,var(--laiton-clair) 0%,#d5ad55 45%,var(--laiton) 62%,#a37c2e 100%);
+  color:#2a1d07;margin-top:16px;
+  box-shadow:0 7px 18px rgba(0,0,0,.5), 0 1.5px 0 #6f5320, inset 0 1.5px 0 rgba(255,252,240,.75);
+  text-shadow:0 1px 0 rgba(255,255,255,.3);
+}
+.btn.ghost{
+  background:linear-gradient(180deg,rgba(236,210,140,.06),rgba(236,210,140,.02));
+  color:#e3c273;border:1px solid rgba(201,162,75,.5);margin-top:10px;
+}
+.btn.mini{width:auto;padding:8px 14px;font-size:13px;margin:0;border-radius:11px;flex:none}
+.btn:disabled{opacity:.45}
+.btn:active{transform:scale(.975)}
+.champ{
+  width:100%;border:1px solid rgba(201,162,75,.42);border-radius:13px;background:rgba(0,0,0,.4);
+  color:var(--ivoire);font-size:17px;font-weight:700;padding:13px 14px;font-family:inherit;
+  -webkit-user-select:text;user-select:text;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.35);
+}
+.champ.code{letter-spacing:.4em;text-transform:uppercase;text-align:center;font-size:23px;font-family:var(--display);font-weight:400}
+.champ::placeholder{color:rgba(244,236,217,.32);letter-spacing:normal}
+.lblchamp{font-size:11.5px;color:rgba(244,236,217,.6);margin:13px 0 6px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+#code-affiche{
+  font-family:var(--display);
+  font-size:44px;letter-spacing:.32em;text-align:center;
+  background:linear-gradient(176deg,#f6e6b0 10%,#c9a24b 60%,#96722d 95%);
+  -webkit-background-clip:text;background-clip:text;color:#e3c273;-webkit-text-fill-color:transparent;
+  padding:10px 0 4px;text-indent:.32em;
+}
+.notice{font-size:12.5px;line-height:1.55;color:rgba(244,236,217,.6);margin-top:10px;text-align:center}
+.err{color:#ffb3ab;font-size:13px;font-weight:700;margin-top:10px;text-align:center;min-height:18px}
+
+/* ---------- ECRAN JEU ---------- */
+#scr-game{position:fixed;inset:0;display:none;flex-direction:column}
+#scr-game.on{display:flex}
+#banner{
+  padding:calc(10px + env(safe-area-inset-top)) 12px 10px;
+  display:flex;align-items:center;gap:10px;
+  color:#fff;font-weight:800;font-size:16px;letter-spacing:.02em;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+  transition:background .35s;
+  border-bottom:1px solid rgba(236,210,140,.35);
+  box-shadow:0 3px 14px rgba(0,0,0,.35);
+}
+#banner .tourtxt{flex:1;font-family:var(--display);font-weight:400;font-size:19px;letter-spacing:.03em;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chip-code,#chip-conn{display:none;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;padding:4px 9px;font-size:12px;letter-spacing:.15em;flex:none;font-weight:700}
+#btn-menu{border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);color:#fff;width:36px;height:36px;border-radius:11px;
+  font-size:20px;line-height:1;font-family:inherit;flex:none}
+#toasts{position:absolute;top:calc(60px + env(safe-area-inset-top));left:0;right:0;
+  display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:40}
+.toast{
+  background:linear-gradient(180deg,rgba(26,20,12,.96),rgba(16,12,7,.96));
+  color:var(--ivoire);border:1px solid rgba(201,162,75,.45);
+  border-radius:13px;padding:9px 15px;font-size:13.5px;font-weight:700;max-width:88%;
+  box-shadow:0 8px 22px rgba(0,0,0,.55), inset 0 1px 0 rgba(244,236,217,.08);
+  animation:tin .25s ease, tout .4s ease 2.3s forwards;
+}
+.toast.cap{border-color:rgba(200,64,47,.85);color:#ffd9d3}
+.toast.ok{border-color:rgba(46,154,94,.85);color:#d9ffe6}
+.toast.warn{border-color:rgba(226,167,31,.85);color:#ffefc4}
+@keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateY(-6px)}}
+
+#board-zone{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:5px}
+#frame{
+  width:min(100vw - 10px, 100%, 584px);
+  aspect-ratio:1;
+  max-height:100%;
+  padding:clamp(10px,2.6vw,15px);border-radius:24px;
+  background:
+    linear-gradient(148deg, rgba(255,246,224,.17), rgba(0,0,0,0) 26%, rgba(0,0,0,.35) 58%, rgba(255,241,214,.08) 82%, rgba(0,0,0,.42)),
+    repeating-linear-gradient(94deg, var(--bois1) 0 9px, #57351d 9px 13px, #7a4f2c 13px 22px, var(--bois2) 22px 30px);
+  box-shadow:
+    0 26px 60px rgba(0,0,0,.66),
+    0 4px 12px rgba(0,0,0,.5),
+    inset 0 0 0 1.5px rgba(0,0,0,.55),
+    inset 0 0 0 3px rgba(236,210,140,.85),
+    inset 0 0 0 4.5px rgba(74,45,24,.95),
+    inset 0 0 0 6px rgba(201,162,75,.5),
+    inset 0 2px 3px rgba(255,255,255,.22);
+}
+#board{width:100%;height:100%;display:block;border-radius:10px;background:#0f2f24;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.45), inset 0 0 0 1.5px rgba(24,15,7,.75)}
+
+#bottombar{
+  padding:9px 14px calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:15px;
+}
+#die{
+  width:66px;height:66px;border-radius:17px;border:none;flex:none;
+  background:
+    radial-gradient(90% 70% at 30% 22%, rgba(255,255,255,.95), rgba(255,255,255,0) 55%),
+    linear-gradient(155deg,#fffdf3 0%,#efe5c9 55%,#ddcfab 100%);
+  box-shadow:0 6px 0 #a8996f, 0 11px 22px rgba(0,0,0,.55),
+    inset 0 1.5px 0 #fff, inset 0 -3px 6px rgba(120,100,60,.28);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  padding:12px;gap:2px;position:relative;
+}
+#die:active{transform:translateY(3px);box-shadow:0 3px 0 #a8996f, 0 6px 12px rgba(0,0,0,.5),
+    inset 0 1.5px 0 #fff, inset 0 -3px 6px rgba(120,100,60,.28)}
+#die.off{opacity:.45;pointer-events:none}
+#die.pulse{animation:dpulse 1.15s ease infinite}
+@keyframes dpulse{
+  0%,100%{box-shadow:0 6px 0 #a8996f,0 11px 22px rgba(0,0,0,.55),inset 0 1.5px 0 #fff,inset 0 -3px 6px rgba(120,100,60,.28),0 0 0 0 rgba(226,190,101,.6)}
+  50%{box-shadow:0 6px 0 #a8996f,0 11px 22px rgba(0,0,0,.55),inset 0 1.5px 0 #fff,inset 0 -3px 6px rgba(120,100,60,.28),0 0 0 11px rgba(226,190,101,0)}}
+.pip{border-radius:50%;visibility:hidden;align-self:center;justify-self:center;width:10px;height:10px;
+  background:radial-gradient(circle at 34% 30%, #4a3d28, #241a08 65%);
+  box-shadow:inset 0 1.5px 2px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.5)}
+.pip.on{visibility:visible}
+#stat{flex:1;min-width:0}
+#status{font-size:14.5px;font-weight:700;line-height:1.35;letter-spacing:.01em}
+#substatus{margin-top:4px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(244,236,217,.6)}
+#chip12{display:none;background:linear-gradient(180deg,var(--laiton-clair),#b08a37);color:#2a1d07;font-weight:800;border-radius:8px;padding:2px 8px;font-size:11.5px;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+#sixdots{letter-spacing:3px;color:var(--laiton);font-size:13px;font-weight:700}
+
+/* pions & plateau SVG */
+.cellnum{font-size:10px;fill:rgba(43,35,24,.5);pointer-events:none;font-family:var(--ui);font-weight:600}
+.cellnum.sur{fill:rgba(244,236,217,.8)}
+.pawn{transition:transform .45s cubic-bezier(.35,.75,.3,1);cursor:pointer}
+.pawn .hit{fill:transparent}
+.pawn .selring{opacity:0;stroke:#ffffff;stroke-width:3;fill:none;
+  filter:drop-shadow(0 0 5px rgba(255,246,214,.95))}
+.pawn.sel .selring{opacity:1;animation:ring 1s ease infinite}
+@keyframes ring{0%,100%{stroke-width:3;opacity:.95}50%{stroke-width:5.5;opacity:.5}}
+.pawn .oblmark{display:none;pointer-events:none}
+.pawn.obl .oblmark{display:block}
+.homepanel{cursor:pointer}
+.homepanel .selglow{opacity:0;stroke:#ffffff;stroke-width:4;fill:none;
+  filter:drop-shadow(0 0 7px rgba(255,246,214,.95))}
+.homepanel.sel .selglow{opacity:1;animation:ring 1s ease infinite}
+
+/* flash plein ecran */
+#flash{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;
+  z-index:60;text-align:center;padding:30px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+#flash.rougefx{background:rgba(122,17,10,.9)}
+#flash.ambrefx{background:rgba(140,96,10,.9)}
+#flash h2{font-family:var(--display);font-weight:400;
+  font-size:clamp(32px,8.4vw,52px);margin:0;color:#fff;letter-spacing:.05em;
+  text-shadow:0 3px 12px rgba(0,0,0,.55);animation:fzoom .5s ease}
+#flash p{font-size:16px;color:rgba(255,255,255,.92);margin:10px 0 0;font-weight:700}
+@keyframes fzoom{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+
+/* modals */
+.modal{position:fixed;inset:0;background:rgba(4,10,7,.74);display:none;align-items:center;
+  justify-content:center;z-index:70;padding:18px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal .box{
+  width:min(430px,100%);max-height:82dvh;overflow:auto;
+  background:linear-gradient(180deg,#1c1610,#120e08);
+  border:1px solid rgba(201,162,75,.5);border-radius:20px;padding:21px;
+  box-shadow:0 24px 60px rgba(0,0,0,.75), inset 0 1px 0 rgba(244,236,217,.08);
+}
+.modal h3{font-family:var(--display);font-weight:400;
+  margin:0 0 12px;font-size:22px;letter-spacing:.04em;
+  background:linear-gradient(176deg,#f6e6b0 10%,#c9a24b 65%,#96722d 95%);
+  -webkit-background-clip:text;background-clip:text;color:#e3c273;-webkit-text-fill-color:transparent}
+.modal p,.modal li{font-size:14px;line-height:1.55;color:rgba(244,236,217,.9)}
+.modal b{color:#fff}
+.rline{display:flex;gap:9px;margin:9px 0;font-size:14px;line-height:1.5;color:rgba(244,236,217,.9)}
+.rline .ic{flex:none;width:24px;text-align:center}
+#modal-win .box{text-align:center}
+#win-pastille{width:58px;height:58px;border-radius:50%;margin:6px auto 12px;border:3px solid #fff;
+  background-image:radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%);
+  box-shadow:0 8px 22px rgba(0,0,0,.55), inset 0 -4px 8px rgba(0,0,0,.3)}
+#win-titre{font-size:30px !important}
+@media (prefers-reduced-motion:reduce){
+  .pawn,.btn{transition:none}
+  #die.pulse,.pawn.sel .selring,.homepanel.sel .selglow{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= ACCUEIL ================= -->
+<div class="ecran on" id="scr-accueil">
+  <div class="brand">
+    <h1>Parchís Tangérois</h1>
+    <div class="ar serif">البارشيس الطنجاوي</div>
+    <div class="tag">Le jeu des dangereux — v3.3</div>
+  </div>
+  <div class="card">
+    <button class="btn primary" id="btn-mode-local">📱 Jouer sur cet iPhone</button>
+    <button class="btn ghost" id="btn-mode-ligne">🌍 Jouer en ligne — chacun son iPhone</button>
+    <button class="btn ghost" id="btn-regles-accueil">Aide — règles de Tanger</button>
+  </div>
+</div>
+
+<!-- ================= RÉGLAGES LOCAL ================= -->
+<div class="ecran" id="scr-setup">
+  <div class="card">
+    <div id="seats"></div>
+    <div class="optrow">
+      <div>
+        <div class="lbl">Mode entraînement</div>
+        <div class="sub">Signale les coups obligatoires (⚠) — sinon, libre jeu&nbsp;: à toi de voir.</div>
+      </div>
+      <button class="switch" id="sw-train" aria-label="Mode entraînement"></button>
+    </div>
+    <button class="btn primary" id="btn-start">Commencer la partie</button>
+    <button class="btn ghost" id="btn-perso">Personnaliser les règles</button>
+    <button class="btn ghost" id="btn-retour-accueil1">‹ Retour</button>
+  </div>
+</div>
+
+<!-- ================= EN LIGNE : CRÉER / REJOINDRE ================= -->
+<div class="ecran" id="scr-ligne">
+  <div class="card">
+    <div class="lblchamp">Ton prénom</div>
+    <input class="champ" id="in-nom" maxlength="12" placeholder="ex. Yassine" autocomplete="off">
+    <button class="btn primary" id="btn-creer">Créer une partie</button>
+    <div class="lblchamp" style="margin-top:18px">Ou rejoindre avec un code</div>
+    <input class="champ code" id="in-code" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters">
+    <button class="btn ghost" id="btn-rejoindre">Rejoindre</button>
+    <div class="err" id="ligne-err"></div>
+    <button class="btn ghost" id="btn-retour-accueil2">‹ Retour</button>
+  </div>
+</div>
+
+<!-- ================= LOBBY ================= -->
+<div class="ecran" id="scr-lobby">
+  <div class="card">
+    <div class="lblchamp" style="text-align:center">Code de la partie</div>
+    <div id="code-affiche">·····</div>
+    <button class="btn ghost" id="btn-whatsapp" style="margin-top:4px">💬 Inviter sur WhatsApp</button>
+    <div class="lblchamp">Joueurs — touche une couleur libre pour t'asseoir</div>
+    <div id="lobby-seats"></div>
+    <div class="notice" id="lobby-notice"></div>
+    <button class="btn primary" id="btn-lancer" style="display:none">Lancer la partie</button>
+    <button class="btn ghost" id="btn-perso-lobby" style="display:none">Personnaliser les règles</button>
+    <button class="btn ghost" id="btn-quitter-lobby">‹ Quitter</button>
+  </div>
+</div>
+
+<!-- ================= JEU ================= -->
+<div id="scr-game">
+  <div id="banner">
+    <span id="tourpastille" class="pastille"></span>
+    <span class="tourtxt" id="tourtxt">Tour : Bleu</span>
+    <span id="chip-code"></span>
+    <span id="chip-conn" style="display:none">🔴</span>
+    <button id="btn-menu">⋯</button>
+  </div>
+  <div id="toasts"></div>
+  <div id="board-zone"><div id="frame">
+    <svg id="board" viewBox="0 0 728 728" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div></div>
+  <div id="bottombar">
+    <button id="die" aria-label="Lancer le dé"></button>
+    <div id="stat">
+      <div id="status">Lance le dé</div>
+      <div id="substatus"><span id="chip12">6 → 12</span><span id="sixdots"></span></div>
+    </div>
+  </div>
+</div>
+
+<div id="flash"><h2 id="flash-t"></h2><p id="flash-p"></p></div>
+
+<!-- ================= MODALS ================= -->
+<div class="modal" id="modal-regles"><div class="box">
+  <h3>Règles de Tanger</h3>
+  <div class="rline"><div class="ic">🎲</div><div><b>Sortie sur 5&nbsp;:</b> un seul 5 fait sortir <b>deux pions</b> — le 1er sur ta case «&nbsp;5&nbsp;», le 2e sur ta case «&nbsp;10&nbsp;». S'il ne te reste qu'un pion, il sort sur la case «&nbsp;5&nbsp;».</div></div>
+  <div class="rline"><div class="ic">🔁</div><div><b>Le 6 fait rejouer.</b> Trois 6 de suite&nbsp;: ton dernier pion déplacé rentre à la maison.</div></div>
+  <div class="rline"><div class="ic">⚡</div><div><b>4 pions dehors&nbsp;:</b> chaque 6 vaut <b>12 cases</b>.</div></div>
+  <div class="rline"><div class="ic">🧱</div><div><b>Barrage («&nbsp;ferme&nbsp;»)&nbsp;:</b> 2 pions sur une même case. Même couleur&nbsp;: partout. Couleurs différentes&nbsp;: sur refuge seulement. <b>Personne ne passe</b>, pas même toi.</div></div>
+  <div class="rline"><div class="ic">🔓</div><div><b>Sur un 6 (ou 12), si tu as un barrage, tu dois l'ouvrir.</b> Si le 12 est bloqué, ouvre à 6. Sinon&nbsp;: <b>faute d'ouverture</b> — le pion joué rentre à la maison.</div></div>
+  <div class="rline"><div class="ic">🍽️</div><div><b>Manger&nbsp;:</b> atterrir sur un pion adverse seul (hors refuge) le renvoie chez lui → <b>bonus +20</b> à jouer. Si tu peux manger et joues autre chose&nbsp;: <b>faute de capture</b> — le pion joué rentre à la maison. La capture est prioritaire, même sur le +20.</div></div>
+  <div class="rline"><div class="ic">⭕</div><div><b>Refuges</b> (cases marquées d'un cercle)&nbsp;: pas de capture possible, barrages mixtes autorisés.</div></div>
+  <div class="rline"><div class="ic">🏁</div><div><b>La boire&nbsp;:</b> entrée sur compte exact → <b>bonus +10</b>. Premier à mettre ses 4 pions dans la boire gagne.</div></div>
+  <div class="rline"><div class="ic">👁️</div><div><b>Libre jeu&nbsp;:</b> l'application ne prévient pas — c'est à toi de voir les coups. Les fautes tombent après coup.</div></div>
+  <button class="btn primary" data-close>Compris</button>
+</div></div>
+
+<div class="modal" id="modal-perso"><div class="box">
+  <h3>Personnaliser les règles</h3>
+  <div id="perso-rows"></div>
+  <button class="btn primary" id="btn-perso-ok">Valider</button>
+  <button class="btn ghost" id="btn-perso-reset">Rétablir les règles de Tanger</button>
+</div></div>
+
+<div class="modal" id="modal-menu"><div class="box">
+  <h3>Menu</h3>
+  <button class="btn primary" data-close>Reprendre</button>
+  <div id="menu-sieges"></div>
+  <button class="btn ghost" id="btn-reprise" style="display:none">Reprendre un siège</button>
+  <button class="btn ghost" id="btn-perso-jeu">Personnaliser les règles</button>
+  <button class="btn ghost" id="btn-regles-jeu">Aide — règles de Tanger</button>
+  <button class="btn ghost" id="btn-restart">Quitter la partie</button>
+</div></div>
+
+<div class="modal" id="modal-reprise"><div class="box">
+  <h3>Reprendre un siège</h3>
+  <p>La partie est en cours. Si un de ces sièges est à toi, reprends-le pour continuer à jouer&nbsp;:</p>
+  <div id="reprise-rows"></div>
+  <button class="btn ghost" data-close>Juste regarder</button>
+</div></div>
+
+<div class="modal" id="modal-confirm"><div class="box">
+  <h3 id="confirm-titre">Quitter la partie&nbsp;?</h3>
+  <p id="confirm-txt">La partie en cours sera perdue.</p>
+  <button class="btn primary" id="btn-confirm-oui">Oui, quitter</button>
+  <button class="btn ghost" data-close>Annuler</button>
+</div></div>
+
+<div class="modal" id="modal-win"><div class="box">
+  <div id="win-pastille"></div>
+  <h3 id="win-titre" class="serif">Victoire&nbsp;!</h3>
+  <p id="win-sub"></p>
+  <button class="btn primary" id="btn-rejouer">Rejouer</button>
+  <button class="btn ghost" id="btn-retour-menu">Quitter</button>
+</div></div>
+
+<script>
+'use strict';
+/* ==========================================================
+   PARCHÍS TANGÉROIS v3 — local + en ligne (Firebase RTDB)
+   ========================================================== */
+
+/* ╔══════════════════════════════════════════════════════╗
+   ║  CONFIG FIREBASE — À REMPLIR                         ║
+   ║  Console Firebase → Paramètres du projet →           ║
+   ║  Vos applications → app Web → copier firebaseConfig  ║
+   ╚══════════════════════════════════════════════════════╝ */
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyAl9LGAWrnaUV81V6qF62FR1Ik4LbOLnoY",
+  authDomain:"parchissi-35156.firebaseapp.com",
+  databaseURL:"https://parchissi-35156-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"parchissi-35156",
+  storageBucket:"parchissi-35156.firebasestorage.app",
+  messagingSenderId:"154638337560",
+  appId:"1:154638337560:web:7059aee7b6d03bb9e4e56d"
+};
+
+/* ---------- règles modifiables ---------- */
+const R={
+  sortieDouble:true,
+  sortieObligatoire:false,
+  sixVaut12:true,
+  troisSix:true,
+  ouvertureObligatoire:true,
+  fauteCapture:true,
+  bonusCapture:true,
+  bonusBoire:true,
+};
+const RDEFAUT=Object.assign({},R);
+const RDEFS=[
+  ['sortieDouble','Un 5 sort deux pions','Le 1er sur ta case «5», le 2e sur ta case «10»'],
+  ['sortieObligatoire','Sortie obligatoire sur 5','Pouvoir sortir et jouer autre chose = faute'],
+  ['sixVaut12','Le 6 vaut 12','Quand tes 4 pions sont dehors'],
+  ['troisSix','Trois 6 = punition','Le dernier pion déplacé rentre à la maison'],
+  ['ouvertureObligatoire','Ouverture obligatoire','Barrage + 6 (ou 12) : tu dois ouvrir, sinon faute'],
+  ['fauteCapture','Capture prioritaire','Pouvoir manger et jouer autre chose = faute'],
+  ['bonusCapture','Bonus +20 après capture',''],
+  ['bonusBoire','Bonus +10 à la boire',''],
+];
+
+/* ---------- constantes plateau ---------- */
+const A=32, T=72, W=16*A+3*T;
+const SAFE=new Set([5,12,17,22,29,34,39,46,51,56,63,68]);
+const PLAYERS=[
+  {key:'bleu', nom:'Bleu',  hex:'#1f7fd0', dark:'#14568f', clair:'#62a9e8', salida:5,  entree:68},
+  {key:'jaune',nom:'Jaune', hex:'#f0b400', dark:'#a87d00', clair:'#ffd34d', salida:22, entree:17},
+  {key:'vert', nom:'Vert',  hex:'#1d8a4a', dark:'#125c30', clair:'#55b97e', salida:39, entree:34},
+  {key:'rouge',nom:'Rouge', hex:'#d3352b', dark:'#8f1f18', clair:'#ef6f60', salida:56, entree:51},
+];
+const T2=[10,27,44,61];
+
+/* ---------- géométrie ---------- */
+const TRACK={};
+for(let n=1;n<=8;n++)  TRACK[n]={c:11,r:20-n};
+for(let n=9;n<=16;n++) TRACK[n]={c:n+3,r:11};
+TRACK[17]={c:19,r:10};
+for(let n=18;n<=25;n++)TRACK[n]={c:37-n,r:9};
+for(let n=26;n<=33;n++)TRACK[n]={c:11,r:34-n};
+TRACK[34]={c:10,r:1};
+for(let n=35;n<=42;n++)TRACK[n]={c:9,r:n-34};
+for(let n=43;n<=50;n++)TRACK[n]={c:51-n,r:9};
+TRACK[51]={c:1,r:10};
+for(let n=52;n<=59;n++)TRACK[n]={c:n-51,r:11};
+for(let n=60;n<=67;n++)TRACK[n]={c:9,r:n-48};
+TRACK[68]={c:10,r:19};
+const CORGEO=[
+  s=>({c:10,r:19-s}),
+  s=>({c:19-s,r:10}),
+  s=>({c:10,r:s+1}),
+  s=>({c:s+1,r:10}),
+];
+function gx(c){ return c<=8 ? (c-1)*A : c<=11 ? 8*A+(c-9)*T : 8*A+3*T+(c-12)*A; }
+const gy=gx;
+function gw(c){ return (c>=9&&c<=11)?T:A; }
+const gh=gw;
+function cellRect(c,r){ return {x:gx(c),y:gy(r),w:gw(c),h:gh(r)}; }
+function cellCtr(c,r){ const q=cellRect(c,r); return {x:q.x+q.w/2,y:q.y+q.h/2,w:q.w,h:q.h}; }
+const CTR=8*A+1.5*T;
+const HOMEC=[[8*A+3*T+4*A,8*A+3*T+4*A],[8*A+3*T+4*A,4*A],[4*A,4*A],[4*A,8*A+3*T+4*A]];
+const SLOTOFF=[[-52,-52],[52,-52],[-52,52],[52,52]];
+const GOALSPOTS=(function(){
+  const s=[-39,-13,13,39], b=8*A+3*T-18, h=8*A+18, out=[];
+  out[0]=s.map(d=>[CTR+d,b]);
+  out[1]=s.map(d=>[b,CTR+d]);
+  out[2]=s.map(d=>[CTR+d,h]);
+  out[3]=s.map(d=>[h,CTR+d]);
+  return out;
+})();
+
+/* ---------- état ---------- */
+const G={
+  phase:'accueil', cur:0, face:0, val:0, sixes:0,
+  bonus:[], bonusVal:0,
+  moves:[], obligCap:new Set(), obligOuv:new Set(), obligSortie:new Set(),
+  seats:['h','ia','ia','ia'], noms:['','','',''], training:false,
+  pawns:[], lastMoved:[null,null,null,null], winner:null,
+};
+/* réseau */
+const NET={
+  on:false, dbOk:false, db:null, code:null, ref:null,
+  uid:null, nom:'', myPi:null, isHote:false,
+  sieges:null, statut:null, appliedSeq:0,
+};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+NET.uid=lsGet('pt_uid')||('u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36));
+lsSet('pt_uid',NET.uid);
+
+const isIA=pi=>G.seats[pi]==='ia';
+function nomDe(pi){ return G.noms[pi]||PLAYERS[pi].nom; }
+/* autorité : qui exécute la logique de ce tour */
+function amAuth(){
+  if(!NET.on) return true;
+  return isIA(G.cur) ? NET.isHote : (NET.myPi===G.cur);
+}
+/* le joueur humain devant CET écran peut agir */
+function canAct(){
+  if(!NET.on) return !isIA(G.cur);
+  return NET.myPi===G.cur && !isIA(G.cur);
+}
+
+/* ---------- moteur ---------- */
+function occTrack(sq){
+  const out=[];
+  for(let pi=0;pi<4;pi++)for(let pj=0;pj<4;pj++){
+    const p=G.pawns[pi][pj];
+    if(p.z==='t'&&p.sq===sq) out.push({pi,pj});
+  }
+  return out;
+}
+function occCor(pi,s){
+  const out=[];
+  for(let pj=0;pj<4;pj++){
+    const p=G.pawns[pi][pj];
+    if(p.z==='c'&&p.s===s) out.push({pi,pj});
+  }
+  return out;
+}
+function occAt(pos,pi){
+  if(pos.z==='t') return occTrack(pos.sq);
+  if(pos.z==='c') return occCor(pi,pos.s);
+  return [];
+}
+function stepOnce(pos,pi){
+  if(pos.z==='t'){
+    if(pos.sq===PLAYERS[pi].entree) return {z:'c',s:1};
+    return {z:'t',sq:pos.sq%68+1};
+  }
+  if(pos.z==='c') return pos.s===7?{z:'g'}:{z:'c',s:pos.s+1};
+  return null;
+}
+function simMove(pi,pj,v){
+  let pos={...G.pawns[pi][pj]};
+  if(pos.z==='h'||pos.z==='g') return null;
+  for(let k=1;k<=v;k++){
+    const nxt=stepOnce(pos,pi);
+    if(!nxt) return null;
+    if(k<v){
+      if(nxt.z==='g') return null;
+      if(occAt(nxt,pi).length>=2) return null;
+    }else{
+      if(nxt.z==='g') return {dest:nxt,cap:null};
+      const occ=occAt(nxt,pi);
+      if(occ.length>=2) return null;
+      if(occ.length===1){
+        const o=occ[0];
+        if(o.pi===pi) return {dest:nxt,cap:null,barr:true};
+        if(nxt.z==='t'&&SAFE.has(nxt.sq)) return {dest:nxt,cap:null,barr:true};
+        if(nxt.z==='t') return {dest:nxt,cap:o};
+        return null;
+      }
+      return {dest:nxt,cap:null};
+    }
+    pos=nxt;
+  }
+  return null;
+}
+function isBarragePiece(pi,pj){
+  const p=G.pawns[pi][pj];
+  if(p.z==='t') return occTrack(p.sq).filter(o=>o.pi===pi).length>=2;
+  if(p.z==='c') return occCor(pi,p.s).length>=2;
+  return false;
+}
+function canLand(sq,pi){
+  const occ=occTrack(sq);
+  if(occ.length>=2) return null;
+  if(occ.length===1){
+    const o=occ[0];
+    if(o.pi===pi) return {cap:null};
+    if(SAFE.has(sq)) return {cap:null};
+    return {cap:o};
+  }
+  return {cap:null};
+}
+function exitMove(pi){
+  const homeIdx=[];
+  G.pawns[pi].forEach((p,j)=>{ if(p.z==='h') homeIdx.push(j); });
+  if(!homeIdx.length) return null;
+  const pl=[];
+  const c1=canLand(PLAYERS[pi].salida,pi);
+  if(c1) pl.push({pj:homeIdx[0],sq:PLAYERS[pi].salida,cap:c1.cap});
+  if(R.sortieDouble&&homeIdx.length>=2){
+    const c2=canLand(T2[pi],pi);
+    if(c2) pl.push({pj:homeIdx[1],sq:T2[pi],cap:c2.cap});
+  }
+  if(!pl.length) return null;
+  const capP=pl.find(p=>p.cap);
+  return {id:'exit',kind:'exit',v:5,pl,cap:capP?capP.cap:null,opens:false};
+}
+function computeMoves(pi,v,opts){
+  const o=opts||{}; const list=[];
+  for(let pj=0;pj<4;pj++){
+    const r=simMove(pi,pj,v);
+    if(r) list.push({id:'m'+pj+'_'+v,kind:'m',pj,v,dest:r.dest,cap:r.cap||null,barr:!!r.barr,opens:isBarragePiece(pi,pj)});
+  }
+  if(!o.bonus && o.face===5){
+    const ex=exitMove(pi);
+    if(ex) list.push(ex);
+  }
+  return list;
+}
+function computeTurnMoves(){
+  const pi=G.cur, face=G.face;
+  const allOut=G.pawns[pi].every(p=>p.z!=='h');
+  G.val=(face===6&&allOut&&R.sixVaut12)?12:face;
+  let moves=computeMoves(pi,G.val,{face});
+  if(R.ouvertureObligatoire&&face===6&&G.val===12&&!moves.some(m=>m.opens)){
+    for(let pj=0;pj<4;pj++){
+      if(isBarragePiece(pi,pj)){
+        const r=simMove(pi,pj,6);
+        if(r) moves.push({id:'m'+pj+'_6',kind:'m',pj,v:6,dest:r.dest,cap:r.cap||null,barr:!!r.barr,opens:true});
+      }
+    }
+  }
+  G.moves=moves;
+  G.obligCap=R.fauteCapture?new Set(moves.filter(m=>m.cap).map(m=>m.id)):new Set();
+  G.obligOuv=(R.ouvertureObligatoire&&face===6)?new Set(moves.filter(m=>m.opens).map(m=>m.id)):new Set();
+  G.obligSortie=(R.sortieObligatoire&&face===5)?new Set(moves.filter(m=>m.kind==='exit').map(m=>m.id)):new Set();
+}
+
+/* ---------- synchro réseau ---------- */
+function packPawns(){
+  return G.pawns.map(row=>row.map(p=>{
+    const o={z:p.z};
+    if(p.sq!=null) o.sq=p.sq;
+    if(p.s!=null) o.s=p.s;
+    return o;
+  }));
+}
+function readPawns(v){
+  return [0,1,2,3].map(pi=>[0,1,2,3].map(pj=>Object.assign({},v[pi][pj])));
+}
+function sync(action){
+  if(!NET.on||!NET.ref) return;
+  if(NET.myPi==null&&!NET.isHote) return; /* sans siège (ancien téléphone), on n'écrit jamais */
+  const s=Math.max(NET.appliedSeq+1,Date.now());
+  NET.appliedSeq=s; NET.lastW=NET.uid;
+  const etat={
+    seq:s,
+    w:NET.uid,
+    pawns:packPawns(),
+    cur:G.cur, face:G.face, val:G.val, sixes:G.sixes,
+    phase:(G.phase==='anim')?'anim':G.phase,
+    bonus:G.bonus.length?G.bonus.slice():null,
+    bv:G.bonusVal||0,
+    lastMoved:G.lastMoved.map(x=>x==null?-1:x),
+    winner:G.winner==null?-1:G.winner,
+    action:action||null,
+  };
+  NET.ref.child('etat').set(etat);
+  if(G.winner!=null) NET.ref.child('statut').set('fini');
+}
+function applyEtat(v){
+  if(!v||typeof v.seq!=='number') return;
+  if(v.seq<NET.appliedSeq) return;
+  if(v.seq===NET.appliedSeq&&v.w===NET.lastW) return; /* écho ou redite déjà appliquée */
+  const pw=readPawns(v.pawns);
+  NET.appliedSeq=v.seq; NET.lastW=v.w||NET.lastW;
+  G.pawns=pw;
+  G.cur=v.cur; G.face=v.face; G.val=v.val; G.sixes=v.sixes;
+  G.bonus=v.bonus?Object.values(v.bonus):[];
+  G.bonusVal=v.bv||G.bonusVal||0;
+  G.lastMoved=Object.values(v.lastMoved||{}).map(x=>x<0?null:x);
+  G.winner=(v.winner==null||v.winner<0)?null:v.winner;
+  G.phase=(v.phase==='anim')?'spect':v.phase;
+  clearSel(); update();
+  drawDie(G.face); drawSixes();
+  chip12.style.display=(G.val===12&&(G.phase==='move'||G.phase==='bonus'))?'inline-block':'none';
+  const a=v.action||{};
+  if(a.t==='de'){ if(a.aucun) toast('Aucun coup possible pour '+nomDe(G.cur),'warn'); }
+  else if(a.t==='faute'){ flash('rougefx',FAUTES[a.ft][0],FAUTES[a.ft][1]); }
+  else if(a.t==='mange'){ toast('🍽️ '+nomDe(a.qui)+' mange '+nomDe(a.quoi)+' !'+(a.b?' Bonus +20':''),'cap'); }
+  else if(a.t==='boire'){ toast('🏁 '+nomDe(a.qui)+' entre dans la boire !'+(a.b?' Bonus +10':''),'ok'); }
+  else if(a.t==='trois6'){ flash('ambrefx','TROIS 6 !','Le dernier pion déplacé rentre à la maison'); }
+  else if(a.t==='bonusperdu'){ toast('Bonus +'+a.v+' perdu — aucun coup possible','warn'); }
+  else if(a.t==='fin'){ showWin(a.qui); }
+}
+function planRecup(){ /* filet de sécurité : relance le tour SEULEMENT si rien n'a bougé depuis */
+  const s=NET.appliedSeq;
+  setTimeout(()=>{
+    if(NET.appliedSeq===s&&G.phase==='spect'&&amAuth()&&G.winner==null) endOfAction();
+  },2200);
+}
+/* rafraîchit statut, dé, sélection et relance l'IA — appelé à chaque instantané réseau */
+function rafraichirJeu(){
+  drawBanner();
+  refreshDieState();
+  if(G.winner!=null) return;
+  majStatutTexte();
+  if(canAct()&&(G.phase==='move'||G.phase==='bonus')){
+    if(G.phase==='move') computeTurnMoves();
+    else{
+      const vb=G.bonusVal||20;
+      G.moves=computeMoves(G.cur,vb,{bonus:true});
+      G.obligCap=(vb===20&&R.fauteCapture)?new Set(G.moves.filter(m=>m.cap).map(m=>m.id)):new Set();
+      G.obligOuv=new Set(); G.obligSortie=new Set();
+    }
+    markSelectable();
+  }
+  if(NET.on){
+    if(amAuth()&&G.phase==='spect') planRecup();
+    else veillerIA();
+  }
+}
+function veillerIA(){
+  if(!amAuth()||!isIA(G.cur)||G.winner!=null) return;
+  if(G.phase==='roll') iaRoll();
+  else if(G.phase==='move'){ computeTurnMoves(); iaPlayMove(); }
+  else if(G.phase==='bonus'){
+    if(!G.moves.length) G.moves=computeMoves(G.cur,G.bonusVal||20,{bonus:true});
+    iaPlayMove();
+  }
+}
+function majStatutTexte(){
+  if(G.winner!=null) return;
+  const n=nomDe(G.cur), ia=isIA(G.cur);
+  if(G.phase==='roll'){
+    if(canAct()) setStatus('À toi, '+n+' — lance le dé');
+    else setStatus(ia?(n+' (IA) réfléchit…'):(n+' lance le dé sur son iPhone…'));
+  }else if(G.phase==='move'||G.phase==='spect'){
+    if(canAct()) setStatus(n+' joue '+G.val+(G.val===12?' (6 doublé)':''));
+    else setStatus(ia?(n+' (IA) joue…'):(n+' choisit un pion… ('+G.val+')'));
+  }else if(G.phase==='bonus'){
+    if(canAct()) setStatus('Bonus +'+G.bonusVal+' — choisis un pion');
+    else setStatus(n+' joue son bonus…');
+  }
+}
+
+/* ---------- déroulement ---------- */
+function doRoll(){
+  if(G.phase!=='roll'||!amAuth()) return;
+  if(NET.on&&NET.myPi==null&&!NET.isHote) return;
+  G.phase='anim';
+  dieEl.classList.remove('pulse');
+  animDice(()=>{
+    const f=1+Math.floor(Math.random()*6);
+    G.face=f;
+    G.sixes=(f===6)?G.sixes+1:0;
+    drawDie(f); drawSixes();
+    if(f===6&&G.sixes>=3&&R.troisSix){ tripleSix(); return; }
+    computeTurnMoves();
+    chip12.style.display=(G.val===12)?'inline-block':'none';
+    if(!G.moves.length){
+      toast('Aucun coup possible','warn');
+      G.phase='spect'; sync({t:'de',face:f,aucun:true});
+      setTimeout(()=>{
+        if(G.face===6){ G.phase='roll'; majStatutTexte(); refreshDieState(); sync({t:'relance'}); if(isIA(G.cur)) iaRoll(); }
+        else nextPlayer();
+      },950);
+      return;
+    }
+    G.phase='move';
+    majStatutTexte();
+    sync({t:'de',face:f});
+    markSelectable();
+    if(isIA(G.cur)) iaPlayMove();
+  });
+}
+function tripleSix(){
+  flash('ambrefx','TROIS 6 !','Le dernier pion déplacé rentre à la maison');
+  G.phase='anim'; sync({t:'trois6'});
+  const pi=G.cur, pj=G.lastMoved[pi];
+  setTimeout(()=>{
+    if(pj!=null){
+      const p=G.pawns[pi][pj];
+      if(p.z==='t'||p.z==='c'){ G.pawns[pi][pj]={z:'h'}; update(); sync(null); }
+    }
+    setTimeout(nextPlayer,500);
+  },1150);
+}
+function pickMoveForPawn(pi,pj){
+  return G.moves.find(m=>(m.kind==='m'&&m.pj===pj)||(m.kind==='exit'&&G.pawns[pi][pj].z==='h'));
+}
+function execMove(mv){
+  if(G.phase!=='move'&&G.phase!=='bonus') return;
+  if(NET.on&&NET.myPi==null&&!NET.isHote) return;
+  const pi=G.cur, enBonus=(G.phase==='bonus');
+  let fault=null;
+  if(G.obligCap.size&&!mv.cap) fault='capture';
+  else if(!G.obligCap.size&&G.obligSortie.size&&mv.kind!=='exit') fault='sortie';
+  else if(!G.obligCap.size&&!G.obligSortie.size&&G.obligOuv.size&&!G.obligOuv.has(mv.id)) fault='ouverture';
+  G.phase='anim';
+  clearSel();
+  const movedPjs=[];
+  if(mv.kind==='exit'){
+    mv.pl.forEach(p=>{ G.pawns[pi][p.pj]={z:'t',sq:p.sq}; movedPjs.push(p.pj); raise(pi,p.pj); });
+  }else{
+    G.pawns[pi][mv.pj]=Object.assign({},mv.dest); movedPjs.push(mv.pj); raise(pi,mv.pj);
+  }
+  G.lastMoved[pi]=movedPjs[movedPjs.length-1];
+  update();
+  sync({t:'coup'});
+  setTimeout(()=>afterMove(mv,fault,movedPjs,enBonus),500);
+}
+const FAUTES={
+  capture:['FAUTE DE CAPTURE','La capture est prioritaire — le pion rentre à la maison'],
+  sortie:['FAUTE DE SORTIE','La sortie sur 5 était obligatoire — le pion rentre à la maison'],
+  ouverture:["FAUTE D'OUVERTURE",'Le barrage devait s’ouvrir — le pion rentre à la maison'],
+};
+function afterMove(mv,fault,movedPjs,enBonus){
+  const pi=G.cur;
+  if(fault){
+    flash('rougefx',FAUTES[fault][0],FAUTES[fault][1]);
+    sync({t:'faute',ft:fault});
+    setTimeout(()=>{
+      movedPjs.forEach(pj=>{ G.pawns[pi][pj]={z:'h'}; });
+      update(); sync(null);
+      setTimeout(endOfAction,520);
+    },1150);
+    return;
+  }
+  const caps=(mv.kind==='exit')?mv.pl.filter(p=>p.cap).map(p=>p.cap):(mv.cap?[mv.cap]:[]);
+  caps.forEach(c=>{
+    G.pawns[c.pi][c.pj]={z:'h'};
+    let msg='🍽️ '+nomDe(pi)+' mange '+nomDe(c.pi)+' !';
+    if(R.bonusCapture){ G.bonus.push(20); msg+=' Bonus +20'; }
+    toast(msg,'cap');
+    sync({t:'mange',qui:pi,quoi:c.pi,b:R.bonusCapture});
+  });
+  if(mv.kind==='m'&&mv.dest.z==='g'){
+    let msg='🏁 '+nomDe(pi)+' entre dans la boire !';
+    if(R.bonusBoire){ G.bonus.push(10); msg+=' Bonus +10'; }
+    toast(msg,'ok');
+    sync({t:'boire',qui:pi,b:R.bonusBoire});
+    if(G.pawns[pi].every(p=>p.z==='g')){ update(); win(pi); return; }
+  }
+  update();
+  setTimeout(endOfAction,caps.length?520:140);
+}
+function endOfAction(){
+  if(G.winner!=null) return;
+  if(G.phase!=='anim'&&G.phase!=='spect') return; /* évite toute double fin de tour */
+  const pi=G.cur;
+  if(G.bonus.length){
+    const v=G.bonus.shift();
+    const moves=computeMoves(pi,v,{bonus:true});
+    if(!moves.length){
+      toast('Bonus +'+v+' perdu — aucun coup possible','warn');
+      sync({t:'bonusperdu',v});
+      endOfAction(); return;
+    }
+    G.moves=moves;
+    G.obligCap=(v===20&&R.fauteCapture)?new Set(moves.filter(m=>m.cap).map(m=>m.id)):new Set();
+    G.obligOuv=new Set(); G.obligSortie=new Set();
+    G.bonusVal=v; G.phase='bonus';
+    majStatutTexte();
+    sync({t:'bonusgo',v});
+    markSelectable();
+    if(isIA(pi)) iaPlayMove();
+    return;
+  }
+  if(G.face===6){
+    G.phase='roll';
+    majStatutTexte();
+    refreshDieState();
+    sync({t:'relance'});
+    if(isIA(pi)) iaRoll();
+    return;
+  }
+  nextPlayer();
+}
+function nextPlayer(){
+  G.sixes=0; G.face=0; G.val=0; G.bonus.length=0;
+  G.cur=(G.cur+1)%4;
+  G.phase='roll';
+  chip12.style.display='none';
+  drawDie(0); drawSixes(); drawBanner();
+  majStatutTexte();
+  refreshDieState();
+  sync({t:'tour'});
+  if(isIA(G.cur)&&amAuth()) iaRoll();
+}
+function showWin(pi){
+  const p=PLAYERS[pi];
+  document.getElementById('win-pastille').style.background=p.hex;
+  document.getElementById('win-titre').textContent=nomDe(pi)+' gagne !';
+  document.getElementById('win-sub').textContent='Les 4 pions '+p.nom.toLowerCase()+'s sont dans la boire. Machallah.';
+  const rj=document.getElementById('btn-rejouer');
+  rj.style.display=(!NET.on||NET.isHote)?'block':'none';
+  document.getElementById('win-sub').textContent+= (NET.on&&!NET.isHote)?' L’hôte peut relancer une partie.':'';
+  setTimeout(()=>showModal('modal-win'),700);
+}
+function win(pi){
+  G.winner=pi; G.phase='over';
+  sync({t:'fin',qui:pi});
+  showWin(pi);
+}
+
+/* ---------- IA ---------- */
+function iaRoll(){ setTimeout(()=>{ if(G.phase==='roll'&&isIA(G.cur)&&amAuth()) doRoll(); },750); }
+function iaPlayMove(){
+  setTimeout(()=>{
+    if((G.phase!=='move'&&G.phase!=='bonus')||!isIA(G.cur)||!amAuth()) return;
+    let pool=G.moves;
+    if(G.obligCap.size) pool=pool.filter(m=>G.obligCap.has(m.id));
+    else if(G.obligSortie.size) pool=pool.filter(m=>m.kind==='exit');
+    else if(G.obligOuv.size) pool=pool.filter(m=>G.obligOuv.has(m.id));
+    let best=null,bs=-1e9;
+    pool.forEach(m=>{ const s=scoreMove(m); if(s>bs){bs=s;best=m;} });
+    if(best) execMove(best); else { G.phase='spect'; endOfAction(); }
+  },900);
+}
+function threat(sq,pi){
+  for(let d=1;d<=6;d++){
+    const q=((sq-1-d)+68)%68+1;
+    if(occTrack(q).some(o=>o.pi!==pi)) return true;
+  }
+  return false;
+}
+function progressOf(pos,pi){
+  if(pos.z==='t') return ((pos.sq-PLAYERS[pi].salida)+68)%68;
+  if(pos.z==='c') return 63+pos.s;
+  if(pos.z==='g') return 71;
+  return 0;
+}
+function scoreMove(m){
+  const pi=G.cur; let s=Math.random()*4;
+  if(m.cap) s+=120;
+  if(m.kind==='exit') return s+60+m.pl.length*15;
+  if(m.dest.z==='g') s+=100;
+  if(m.dest.z==='c') s+=40;
+  if(m.dest.z==='t'){
+    if(SAFE.has(m.dest.sq)) s+=26;
+    if(m.barr) s+=16;
+    if(!SAFE.has(m.dest.sq)&&!m.barr&&threat(m.dest.sq,pi)) s-=34;
+  }
+  if(m.opens&&!G.obligOuv.size) s-=10;
+  s+=progressOf(m.dest,pi)*0.25;
+  return s;
+}
+
+/* ==========================================================
+   INTERFACE PLATEAU
+   ========================================================== */
+const svg=document.getElementById('board');
+const NS='http://www.w3.org/2000/svg';
+const dieEl=document.getElementById('die');
+const chip12=document.getElementById('chip12');
+const pawnNodes=[]; const homePanelNodes=[];
+
+function el(tag,attrs,parent){
+  const n=document.createElementNS(NS,tag);
+  for(const k in attrs) n.setAttribute(k,attrs[k]);
+  (parent||svg).appendChild(n); return n;
+}
+function buildBoard(){
+  if(!G.pawns.length) G.pawns=PLAYERS.map(()=>[{z:'h'},{z:'h'},{z:'h'},{z:'h'}]);
+  svg.innerHTML='';
+  /* --- defs : degrades, feutre, or, ombres --- */
+  const defs=el('defs',{});
+  defs.innerHTML=
+    '<radialGradient id="feltG" cx="50%" cy="36%" r="85%">'+
+      '<stop offset="0%" stop-color="#1e6a4f"/><stop offset="55%" stop-color="#134a37"/><stop offset="100%" stop-color="#0a2c20"/>'+
+    '</radialGradient>'+
+    '<linearGradient id="ivG" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0%" stop-color="#fcf7e8"/><stop offset="100%" stop-color="#ece0c2"/>'+
+    '</linearGradient>'+
+    '<linearGradient id="orG" x1="0" y1="0" x2="1" y2="1">'+
+      '<stop offset="0%" stop-color="#f2dc9b"/><stop offset="50%" stop-color="#c9a24b"/><stop offset="100%" stop-color="#8a6524"/>'+
+    '</linearGradient>'+
+    PLAYERS.map((P,i)=>
+      '<radialGradient id="pg'+i+'" cx="34%" cy="28%" r="80%">'+
+        '<stop offset="0%" stop-color="'+P.clair+'"/><stop offset="55%" stop-color="'+P.hex+'"/><stop offset="100%" stop-color="'+P.dark+'"/>'+
+      '</radialGradient>'+
+      '<linearGradient id="cg'+i+'" x1="0" y1="0" x2="0" y2="1">'+
+        '<stop offset="0%" stop-color="'+P.hex+'"/><stop offset="100%" stop-color="'+P.dark+'"/>'+
+      '</linearGradient>'
+    ).join('')+
+    '<filter id="ombre" x="-50%" y="-50%" width="200%" height="200%">'+
+      '<feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/>'+
+      '<feOffset dx="0" dy="3" result="o"/>'+
+      '<feFlood flood-color="#000000" flood-opacity="0.45"/>'+
+      '<feComposite in2="o" operator="in"/>'+
+      '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>'+
+    '</filter>'+
+    '<filter id="ombrePanneau" x="-20%" y="-20%" width="140%" height="140%">'+
+      '<feGaussianBlur in="SourceAlpha" stdDeviation="4"/>'+
+      '<feOffset dx="0" dy="4" result="o"/>'+
+      '<feFlood flood-color="#000000" flood-opacity="0.35"/>'+
+      '<feComposite in2="o" operator="in"/>'+
+      '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>'+
+    '</filter>';
+  /* --- tapis de feutre --- */
+  el('rect',{x:0,y:0,width:16*A+3*T,height:16*A+3*T,fill:'url(#feltG)'});
+  el('rect',{x:3,y:3,width:16*A+3*T-6,height:16*A+3*T-6,fill:'none',stroke:'rgba(0,0,0,.3)','stroke-width':1.5,rx:8});
+  const PANEL=228, PM=PANEL/2;
+  for(let pi=0;pi<4;pi++){
+    const hc=HOMEC[pi], P=PLAYERS[pi];
+    const g=el('g',{class:'homepanel','data-pi':pi});
+    el('rect',{x:hc[0]-PM,y:hc[1]-PM,width:PANEL,height:PANEL,rx:22,fill:'url(#ivG)',stroke:P.hex,'stroke-width':4,filter:'url(#ombrePanneau)'},g);
+    el('rect',{x:hc[0]-PM+7,y:hc[1]-PM+7,width:PANEL-14,height:PANEL-14,rx:16,fill:'none',stroke:P.hex,'stroke-width':1.2,opacity:.4},g);
+    el('path',{d:star4(hc[0],hc[1],58,20),fill:P.hex,opacity:.08},g);
+    SLOTOFF.forEach(o=>{
+      el('circle',{cx:hc[0]+o[0],cy:hc[1]+o[1],r:19,fill:'rgba(0,0,0,.05)',stroke:P.hex,'stroke-width':1.8,opacity:.7},g);
+    });
+    el('rect',{class:'selglow',x:hc[0]-PM-4,y:hc[1]-PM-4,width:PANEL+8,height:PANEL+8,rx:25},g);
+    el('rect',{x:hc[0]-PM,y:hc[1]-PM,width:PANEL,height:PANEL,rx:22,fill:'transparent'},g);
+    g.addEventListener('click',()=>onHomeTap(pi));
+    homePanelNodes[pi]=g;
+  }
+  for(let sq=1;sq<=68;sq++){
+    const t=TRACK[sq], q=cellRect(t.c,t.r);
+    const sal=PLAYERS.findIndex(P=>P.salida===sq);
+    const neutre=SAFE.has(sq)&&sal<0;
+    el('rect',{x:q.x,y:q.y,width:q.w,height:q.h,fill:neutre?'#332b20':'#f6efdd',stroke:neutre?'#191510':'#b8a072','stroke-width':1.2});
+    if(sal>=0) el('rect',{x:q.x,y:q.y,width:q.w,height:q.h,fill:PLAYERS[sal].hex,opacity:.55});
+    if(SAFE.has(sq)){
+      const s=star4(q.x+q.w/2,q.y+q.h/2,11,4.2);
+      el('path',{d:s,fill:neutre?'url(#orG)':'#fffdf4',stroke:neutre?'#191510':'rgba(43,35,24,.5)','stroke-width':.7},null);
+    }
+    const num=el('text',{x:q.x+4,y:q.y+13,class:'cellnum'+((neutre||sal>=0)?' sur':'')});
+    num.textContent=sq;
+  }
+  for(let pi=0;pi<4;pi++)for(let s=1;s<=7;s++){
+    const p=CORGEO[pi](s), q=cellRect(p.c,p.r);
+    el('rect',{x:q.x,y:q.y,width:q.w,height:q.h,fill:'url(#cg'+pi+')',stroke:'#1d1811','stroke-width':1.2});
+    el('rect',{x:q.x+2,y:q.y+2,width:q.w-4,height:2.5,fill:'rgba(255,255,255,.22)'});
+  }
+  const b0=8*A, b1=8*A+3*T;
+  el('rect',{x:b0,y:b0,width:3*T,height:3*T,fill:'#f6efdd',stroke:'#1d1811','stroke-width':1.4});
+  el('path',{d:'M'+b0+' '+b0+' L'+b0+' '+b1+' L'+CTR+' '+CTR+' Z',fill:'url(#cg3)',stroke:'#1d1811','stroke-width':1.4});
+  el('path',{d:'M'+b0+' '+b0+' L'+b1+' '+b0+' L'+CTR+' '+CTR+' Z',fill:'url(#cg2)',stroke:'#1d1811','stroke-width':1.4});
+  el('path',{d:'M'+b1+' '+b0+' L'+b1+' '+b1+' L'+CTR+' '+CTR+' Z',fill:'url(#cg1)',stroke:'#1d1811','stroke-width':1.4});
+  el('path',{d:'M'+b0+' '+b1+' L'+b1+' '+b1+' L'+CTR+' '+CTR+' Z',fill:'url(#cg0)',stroke:'#1d1811','stroke-width':1.4});
+  /* khatam grave au centre de la boire */
+  el('path',{d:star4(CTR,CTR,86,34),fill:'none',stroke:'url(#orG)','stroke-width':2.5,opacity:.85});
+  el('circle',{cx:CTR,cy:CTR,r:11,fill:'url(#orG)',stroke:'#3a2312','stroke-width':2});
+  for(let pi=0;pi<4;pi++){ pawnNodes[pi]=[];
+    for(let pj=0;pj<4;pj++){
+      const g=el('g',{class:'pawn','data-pi':pi,'data-pj':pj});
+      el('circle',{class:'selring',cx:0,cy:0,r:23},g);
+      const corps=el('g',{filter:'url(#ombre)'},g);
+      el('circle',{cx:0,cy:0,r:17,fill:'url(#pg'+pi+')',stroke:'#fff','stroke-width':2.6},corps);
+      el('circle',{cx:0,cy:0,r:17.8,fill:'none',stroke:'rgba(0,0,0,.38)','stroke-width':1.2},corps);
+      el('ellipse',{cx:-5,cy:-7,rx:6,ry:4,fill:'rgba(255,255,255,.75)',transform:'rotate(-25 -5 -7)'},corps);
+      el('ellipse',{cx:0,cy:10,rx:9,ry:3,fill:'rgba(255,255,255,.15)'},corps);
+      const w=el('text',{class:'oblmark',x:9,y:-12,'font-size':'17'},g); w.textContent='⚠️';
+      el('circle',{class:'hit',cx:0,cy:0,r:36},g);
+      g.addEventListener('click',()=>onPawnTap(pi,pj));
+      pawnNodes[pi][pj]=g;
+    }
+  }
+  update();
+}
+function star4(cx0,cy0,Rr,rr){
+  const pts=[];
+  for(let i=0;i<8;i++){
+    const a=Math.PI/4*i-Math.PI/2, rad=(i%2===0)?Rr:rr;
+    pts.push((cx0+rad*Math.cos(a)).toFixed(1)+' '+(cy0+rad*Math.sin(a)).toFixed(1));
+  }
+  return 'M'+pts.join(' L')+' Z';
+}
+function pawnXY(pi,pj){
+  const p=G.pawns[pi][pj];
+  if(p.z==='h'){ const hc=HOMEC[pi], o=SLOTOFF[pj]; return [hc[0]+o[0],hc[1]+o[1],1]; }
+  if(p.z==='g'){
+    const before=[]; for(let j=0;j<4;j++) if(G.pawns[pi][j].z==='g') before.push(j);
+    const gi=before.indexOf(pj);
+    const sp=GOALSPOTS[pi][gi<0?0:gi]; return [sp[0],sp[1],0.55];
+  }
+  let ctr,mates;
+  if(p.z==='t'){ const t=TRACK[p.sq]; ctr=cellCtr(t.c,t.r); mates=occTrack(p.sq); }
+  else { const c=CORGEO[pi](p.s); ctr=cellCtr(c.c,c.r); mates=occCor(pi,p.s); }
+  let dx=0,dy=0;
+  if(mates.length>=2){
+    const idx=mates.findIndex(o=>o.pi===pi&&o.pj===pj);
+    const sg=(idx===0)?-1:1;
+    if(ctr.w>=ctr.h){ dx=sg*13; dy=sg*4; } else { dx=sg*4; dy=sg*13; }
+  }
+  return [ctr.x+dx,ctr.y+dy,mates.length>=2?0.88:1];
+}
+function update(){
+  for(let pi=0;pi<4;pi++)for(let pj=0;pj<4;pj++){
+    const [x,y,sc]=pawnXY(pi,pj);
+    pawnNodes[pi][pj].style.transform='translate('+x+'px,'+y+'px) scale('+sc+')';
+  }
+}
+function raise(pi,pj){ svg.appendChild(pawnNodes[pi][pj]); }
+
+/* ---------- sélection ---------- */
+function clearSel(){
+  document.querySelectorAll('.pawn.sel,.pawn.obl').forEach(n=>n.classList.remove('sel','obl'));
+  homePanelNodes.forEach(n=>n&&n.classList.remove('sel'));
+}
+function markSelectable(){
+  clearSel();
+  if(!canAct()) return;
+  const pi=G.cur;
+  const oblig=G.obligCap.size?G.obligCap:(G.obligSortie.size?G.obligSortie:(G.obligOuv.size?G.obligOuv:null));
+  G.moves.forEach(m=>{
+    const isObl=G.training&&oblig&&oblig.has(m.id);
+    if(m.kind==='exit'){
+      homePanelNodes[pi].classList.add('sel');
+      G.pawns[pi].forEach((p,pj)=>{ if(p.z==='h'){ pawnNodes[pi][pj].classList.add('sel'); if(isObl) pawnNodes[pi][pj].classList.add('obl'); } });
+    }else{
+      pawnNodes[pi][m.pj].classList.add('sel');
+      if(isObl) pawnNodes[pi][m.pj].classList.add('obl');
+      raise(pi,m.pj);
+    }
+  });
+}
+function onPawnTap(pi,pj){
+  if((G.phase!=='move'&&G.phase!=='bonus')||pi!==G.cur||!canAct()) return;
+  const mv=pickMoveForPawn(pi,pj);
+  if(mv) execMove(mv);
+}
+function onHomeTap(pi){
+  if(G.phase!=='move'||pi!==G.cur||!canAct()) return;
+  const mv=G.moves.find(m=>m.kind==='exit');
+  if(mv) execMove(mv);
+}
+
+/* ---------- dé, bannière, statut ---------- */
+const PIPMAP={0:[],1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+(function initDie(){ for(let i=0;i<9;i++){ const s=document.createElement('span'); s.className='pip'; dieEl.appendChild(s);} })();
+function drawDie(f){
+  const on=PIPMAP[f]||[];
+  dieEl.querySelectorAll('.pip').forEach((p,i)=>p.classList.toggle('on',on.includes(i)));
+}
+function animDice(cb){
+  let n=0;
+  const iv=setInterval(()=>{
+    drawDie(1+Math.floor(Math.random()*6));
+    if(++n>=8){ clearInterval(iv); cb(); }
+  },70);
+}
+function refreshDieState(){
+  const active=(G.phase==='roll'&&canAct()&&G.winner==null);
+  dieEl.classList.toggle('off',!active);
+  dieEl.classList.toggle('pulse',active);
+}
+function drawSixes(){
+  document.getElementById('sixdots').textContent=G.sixes>0?('6 ×'+G.sixes+' '+'●'.repeat(G.sixes)+'○'.repeat(Math.max(0,3-G.sixes))):'';
+}
+function drawBanner(){
+  const P=PLAYERS[G.cur];
+  document.getElementById('banner').style.background='linear-gradient(180deg,'+P.hex+','+P.dark+')';
+  document.getElementById('tourpastille').style.background=P.hex;
+  const moi=(NET.on&&NET.myPi===G.cur)?' (toi)':'';
+  document.getElementById('tourtxt').textContent='Tour : '+nomDe(G.cur)+moi+' '+(isIA(G.cur)?'🤖':'👤');
+}
+function setStatus(t){ document.getElementById('status').textContent=t; }
+function toast(msg,type){
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:''); t.textContent=msg;
+  const zone=document.getElementById('toasts');
+  zone.appendChild(t);
+  while(zone.children.length>3) zone.removeChild(zone.firstChild);
+  setTimeout(()=>{ if(t.parentNode) t.parentNode.removeChild(t); },2800);
+}
+function flash(cls,titre,sous){
+  const f=document.getElementById('flash');
+  f.className=''; f.classList.add(cls);
+  document.getElementById('flash-t').textContent=titre;
+  document.getElementById('flash-p').textContent=sous;
+  f.style.display='flex';
+  setTimeout(()=>{ f.style.display='none'; },1100);
+}
+
+/* ---------- écrans & modals ---------- */
+function showEcran(id){
+  document.querySelectorAll('.ecran').forEach(e=>e.classList.toggle('on',e.id===id));
+  document.getElementById('scr-game').classList.toggle('on',id==='scr-game');
+}
+function showModal(id){ document.getElementById(id).style.display='flex'; }
+function hideModals(){ document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',hideModals));
+
+/* ---------- personnalisation des règles ---------- */
+function buildPerso(){
+  const zone=document.getElementById('perso-rows'); zone.innerHTML='';
+  RDEFS.forEach(d=>{
+    const row=document.createElement('div'); row.className='optrow';
+    const txt=document.createElement('div');
+    txt.innerHTML='<div class="lbl">'+d[1]+'</div>'+(d[2]?'<div class="sub">'+d[2]+'</div>':'');
+    const sw=document.createElement('button'); sw.className='switch'+(R[d[0]]?' on':'');
+    sw.addEventListener('click',()=>{ R[d[0]]=!R[d[0]]; sw.classList.toggle('on',R[d[0]]); });
+    row.appendChild(txt); row.appendChild(sw);
+    zone.appendChild(row);
+  });
+}
+document.getElementById('btn-perso-reset').addEventListener('click',()=>{
+  Object.assign(R,RDEFAUT); buildPerso();
+  toast('Règles de Tanger rétablies','ok');
+});
+document.getElementById('btn-perso-ok').addEventListener('click',()=>{
+  hideModals();
+  if(NET.on&&NET.isHote&&NET.ref) NET.ref.child('regles').set(Object.assign({},R));
+});
+
+/* ==========================================================
+   MODE LOCAL
+   ========================================================== */
+function buildSeats(){
+  const zone=document.getElementById('seats'); zone.innerHTML='';
+  PLAYERS.forEach((P,pi)=>{
+    const row=document.createElement('div'); row.className='seat';
+    row.innerHTML='<span class="pastille" style="background:'+P.hex+'"></span>'+
+      '<span class="nomj">'+P.nom+'</span>'+
+      '<div class="seg"><button data-t="h">Humain</button><button data-t="ia">IA</button></div>';
+    row.querySelectorAll('.seg button').forEach(b=>{
+      b.classList.toggle('on',G.seats[pi]===b.dataset.t);
+      b.addEventListener('click',()=>{
+        G.seats[pi]=b.dataset.t;
+        row.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
+      });
+    });
+    zone.appendChild(row);
+  });
+}
+function startLocal(){
+  hideModals();
+  NET.on=false; NET.myPi=null;
+  document.getElementById('chip-code').style.display='none';
+  G.noms=['','','',''];
+  demarrerJeu();
+}
+function demarrerJeu(){
+  G.pawns=PLAYERS.map(()=>[{z:'h'},{z:'h'},{z:'h'},{z:'h'}]);
+  G.lastMoved=[null,null,null,null];
+  G.bonus.length=0; G.sixes=0; G.face=0; G.val=0; G.winner=null;
+  G.obligCap=new Set(); G.obligOuv=new Set(); G.obligSortie=new Set();
+  G.cur=Math.max(0,G.seats.indexOf('h'));
+  showEcran('scr-game');
+  buildBoard();
+  G.phase='roll';
+  drawDie(0); drawSixes(); drawBanner();
+  chip12.style.display='none';
+  majStatutTexte();
+  refreshDieState();
+  toast('Un 5 sort deux pions. Ouvre l’œil : les fautes coûtent cher…','warn');
+  if(isIA(G.cur)&&amAuth()) iaRoll();
+}
+
+/* ==========================================================
+   MODE EN LIGNE
+   ========================================================== */
+function initFirebase(){
+  try{
+    if(typeof firebase==='undefined') return false;
+    if(String(FIREBASE_CONFIG.apiKey).indexOf('COLLE')===0) return false;
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    NET.db=firebase.database();
+    if(!NET.connWatch){
+      NET.connWatch=true;
+      NET.db.ref('.info/connected').on('value',s=>majConn(s.val()===true));
+    }
+    NET.dbOk=true;
+    return true;
+  }catch(e){ return false; }
+}
+function majConn(ok){
+  const c=document.getElementById('chip-conn');
+  c.style.display=(NET.on&&!ok)?'inline-block':'none';
+}
+/* au retour de veille ou de WhatsApp : reconnecter et se resynchroniser tout de suite */
+function forcerResync(){
+  if(!NET.on||!NET.ref) return;
+  try{ firebase.database().goOnline(); }catch(e){}
+  NET.ref.once('value',traiterPartie,function(){});
+  garderEcran();
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) forcerResync(); });
+window.addEventListener('pageshow',forcerResync);
+window.addEventListener('focus',forcerResync);
+let wakeLock=null;
+function garderEcran(){ /* garde l'écran allumé pendant la partie (iOS 16.4+) */
+  try{
+    if(navigator.wakeLock&&!wakeLock&&document.visibilityState==='visible'){
+      navigator.wakeLock.request('screen').then(w=>{
+        wakeLock=w; w.addEventListener('release',()=>{wakeLock=null;});
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+function ligneErr(t){ document.getElementById('ligne-err').textContent=t||''; }
+function codeAleatoire(){
+  const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s='';
+  for(let i=0;i<5;i++) s+=c[Math.floor(Math.random()*c.length)];
+  return s;
+}
+function nettoyage(){ /* purge des parties de plus de 48 h */
+  try{
+    NET.db.ref('parties').orderByChild('creele').endAt(Date.now()-48*3600*1000).limitToFirst(15).once('value',s=>{
+      s.forEach(ch=>{ ch.ref.remove(); });
+    });
+  }catch(e){}
+}
+function creerPartie(){
+  ligneErr('');
+  if(!initFirebase()){ ligneErr('Firebase pas configuré — vois le guide dans le chat.'); return; }
+  const nom=(document.getElementById('in-nom').value||'').trim()||'Joueur';
+  NET.nom=nom; lsSet('pt_nom',nom);
+  const code=codeAleatoire();
+  const ref=NET.db.ref('parties/'+code);
+  ref.once('value',s=>{
+    if(s.exists()){ creerPartie(); return; }
+    ref.set({
+      v:3, creele:Date.now(), hote:NET.uid, statut:'lobby',
+      sieges:{0:{t:'h',nom:nom,uid:NET.uid},1:{t:'l'},2:{t:'l'},3:{t:'l'}},
+      regles:Object.assign({},R),
+    },err=>{
+      if(err){ ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'); return; }
+      nettoyage();
+      rejoindreRef(code);
+    });
+  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+}
+function rejoindrePartie(){
+  ligneErr('');
+  if(!initFirebase()){ ligneErr('Firebase pas configuré — vois le guide dans le chat.'); return; }
+  const code=(document.getElementById('in-code').value||'').trim().toUpperCase();
+  if(code.length!==5){ ligneErr('Code à 5 caractères.'); return; }
+  const nom=(document.getElementById('in-nom').value||'').trim()||'Joueur';
+  NET.nom=nom; lsSet('pt_nom',nom);
+  NET.db.ref('parties/'+code).once('value',s=>{
+    if(!s.exists()){ ligneErr('Aucune partie avec ce code.'); return; }
+    rejoindreRef(code);
+  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+}
+function rejoindreRef(code){
+  NET.on=true; NET.code=code; NET.appliedSeq=0; NET.reprisePropose=false; G.winner=null;
+  lsSet('pt_code',code);
+  NET.ref=NET.db.ref('parties/'+code);
+  NET.ref.on('value',traiterPartie);
+}
+function aDesSiegesHumains(){
+  for(let pi=0;pi<4;pi++){ const sg=(NET.sieges||{})[pi]; if(sg&&sg.t==='h') return true; }
+  return false;
+}
+function traiterPartie(snap){
+  try{
+    const p=snap.val();
+    if(!p){ quitterLigne(); toast('La partie a été fermée','warn'); return; }
+    NET.isHote=(p.hote===NET.uid);
+    NET.sieges=p.sieges||{};
+    NET.statut=p.statut;
+    if(p.regles) Object.assign(R,p.regles);
+    NET.myPi=null;
+    for(let pi=0;pi<4;pi++){
+      const sg=NET.sieges[pi]||{t:'l'};
+      G.seats[pi]=(sg.t==='ia'||sg.t==='l')?'ia':'h';
+      G.noms[pi]=(sg.t==='h')?(sg.nom||PLAYERS[pi].nom):PLAYERS[pi].nom;
+      if(sg.t==='h'&&sg.uid===NET.uid) NET.myPi=pi;
+    }
+    if(p.statut==='lobby'){ NET.reprisePropose=false; renderLobby(); showEcran('scr-lobby'); }
+    else{
+      if(!document.getElementById('scr-game').classList.contains('on')){
+        showEcran('scr-game'); buildBoard();
+        document.getElementById('chip-code').style.display='inline-block';
+        document.getElementById('chip-code').textContent=NET.code;
+        garderEcran();
+      }
+      if(p.etat) applyEtat(p.etat);
+      rafraichirJeu();
+      if(p.statut==='jeu'&&NET.myPi==null&&!NET.reprisePropose&&aDesSiegesHumains()){
+        NET.reprisePropose=true; ouvrirReprise();
+      }
+    }
+  }catch(e){ /* un instantané cassé ne doit jamais figer le client */ }
+}
+function ouvrirReprise(){
+  const zone=document.getElementById('reprise-rows'); zone.innerHTML='';
+  let n=0;
+  for(let pi=0;pi<4;pi++){
+    const sg=(NET.sieges||{})[pi];
+    if(!sg||sg.t!=='h') continue; n++;
+    const row=document.createElement('div'); row.className='seat';
+    row.innerHTML='<span class="pastille" style="background:'+PLAYERS[pi].hex+'"></span>'+
+      '<span class="nomj">'+(sg.nom||'Joueur')+'<span class="soustitre">'+PLAYERS[pi].nom+'</span></span>';
+    const b=document.createElement('button'); b.className='btn ghost mini'; b.textContent='C’est moi';
+    b.addEventListener('click',()=>{
+      NET.ref.child('sieges/'+pi).update({uid:NET.uid});
+      hideModals();
+      toast('Siège repris — à toi de jouer quand ce sera ton tour','ok');
+    });
+    row.appendChild(b); zone.appendChild(row);
+  }
+  if(n) showModal('modal-reprise');
+}
+function renderLobby(){
+  document.getElementById('code-affiche').textContent=NET.code;
+  const zone=document.getElementById('lobby-seats'); zone.innerHTML='';
+  for(let pi=0;pi<4;pi++){
+    const sg=NET.sieges[pi]||{t:'l'}, P=PLAYERS[pi];
+    const row=document.createElement('div'); row.className='seat';
+    let label, sous='';
+    if(sg.t==='h'){ label=sg.nom||'Joueur'; sous=P.nom+(sg.uid===NET.uid?' — toi':'')+(NET.sieges&&sg.uid===undefined?'':''); }
+    else if(sg.t==='ia'){ label='IA 🤖'; sous=P.nom; }
+    else { label='Libre'; sous=P.nom+' — touche pour t’asseoir'; }
+    row.innerHTML='<span class="pastille" style="background:'+P.hex+'"></span>'+
+      '<span class="nomj">'+label+'<span class="soustitre">'+sous+'</span></span>';
+    const act=document.createElement('div'); act.style.display='flex'; act.style.gap='6px';
+    if(sg.t==='l'){
+      const b=document.createElement('button'); b.className='btn ghost mini'; b.textContent='S’asseoir';
+      b.addEventListener('click',()=>prendreSiege(pi));
+      act.appendChild(b);
+      if(NET.isHote){
+        const bi=document.createElement('button'); bi.className='btn ghost mini'; bi.textContent='→ IA';
+        bi.addEventListener('click',()=>NET.ref.child('sieges/'+pi).set({t:'ia'}));
+        act.appendChild(bi);
+      }
+    }else if(sg.t==='ia'&&NET.isHote){
+      const bl=document.createElement('button'); bl.className='btn ghost mini'; bl.textContent='→ Libre';
+      bl.addEventListener('click',()=>NET.ref.child('sieges/'+pi).set({t:'l'}));
+      act.appendChild(bl);
+    }else if(sg.t==='h'&&sg.uid!==NET.uid&&NET.myPi==null){
+      const br=document.createElement('button'); br.className='btn ghost mini'; br.textContent='C’est moi';
+      br.addEventListener('click',()=>NET.ref.child('sieges/'+pi).update({uid:NET.uid,nom:NET.nom}));
+      act.appendChild(br);
+    }
+    row.appendChild(act);
+    zone.appendChild(row);
+  }
+  const nH=Object.values(NET.sieges).filter(s=>s&&s.t==='h').length;
+  document.getElementById('lobby-notice').textContent=
+    NET.isHote?'Les sièges libres deviendront des IA au lancement.':'En attente de l’hôte pour lancer la partie…';
+  document.getElementById('btn-lancer').style.display=NET.isHote?'block':'none';
+  document.getElementById('btn-lancer').disabled=(nH<1);
+  document.getElementById('btn-perso-lobby').style.display=NET.isHote?'block':'none';
+}
+function prendreSiege(pi){
+  const ancien=NET.myPi;
+  NET.ref.child('sieges/'+pi).transaction(cur=>{
+    if(cur&&cur.t!=='l') return;
+    return {t:'h',nom:NET.nom,uid:NET.uid};
+  },(err,committed)=>{
+    if(committed&&ancien!=null&&ancien!==pi) NET.ref.child('sieges/'+ancien).set({t:'l'});
+  });
+}
+function lancerEnLigne(){
+  if(!NET.isHote) return;
+  const maj={};
+  for(let pi=0;pi<4;pi++){
+    const sg=NET.sieges[pi]||{t:'l'};
+    if(sg.t==='l') maj['sieges/'+pi]={t:'ia'};
+  }
+  maj['statut']='jeu';
+  maj['regles']=Object.assign({},R);
+  const premier=(function(){ for(let pi=0;pi<4;pi++){ const sg=NET.sieges[pi]||{t:'l'}; if(sg.t==='h') return pi; } return 0; })();
+  maj['etat']={
+    seq:Date.now(), w:NET.uid, cur:premier, face:0, val:0, sixes:0, phase:'roll',
+    pawns:[0,1,2,3].map(()=>[0,1,2,3].map(()=>({z:'h'}))),
+    lastMoved:[-1,-1,-1,-1], winner:-1, bonus:null,
+    action:{t:'debut'},
+  };
+  NET.ref.update(maj);
+}
+function quitterLigne(){
+  if(NET.ref){
+    if(NET.statut==='lobby'&&NET.myPi!=null) NET.ref.child('sieges/'+NET.myPi).set({t:'l'});
+    NET.ref.off();
+  }
+  NET.on=false; NET.ref=null; NET.code=null; NET.myPi=null; NET.appliedSeq=0; NET.reprisePropose=false;
+  hideModals();
+  document.getElementById('chip-code').style.display='none';
+  document.getElementById('chip-conn').style.display='none';
+  showEcran('scr-accueil');
+}
+function rejouerEnLigne(){
+  if(!NET.isHote) return;
+  NET.ref.update({
+    statut:'jeu',
+    etat:{
+      seq:Math.max(NET.appliedSeq+1,Date.now()), w:NET.uid, cur:0, face:0, val:0, sixes:0, phase:'roll',
+      pawns:[0,1,2,3].map(()=>[0,1,2,3].map(()=>({z:'h'}))),
+      lastMoved:[-1,-1,-1,-1], winner:-1, bonus:null,
+      action:{t:'debut'},
+    }
+  });
+}
+
+/* ---------- navigation ---------- */
+document.getElementById('btn-mode-local').addEventListener('click',()=>{ buildSeats(); showEcran('scr-setup'); });
+document.getElementById('btn-mode-ligne').addEventListener('click',()=>{
+  document.getElementById('in-nom').value=lsGet('pt_nom')||'';
+  ligneErr('');
+  if(typeof firebase==='undefined') ligneErr('Réseau bloqué ici — déploie sur Netlify pour jouer en ligne.');
+  else if(String(FIREBASE_CONFIG.apiKey).indexOf('COLLE')===0) ligneErr('Firebase pas encore configuré — vois le guide dans le chat.');
+  showEcran('scr-ligne');
+});
+document.getElementById('btn-regles-accueil').addEventListener('click',()=>showModal('modal-regles'));
+document.getElementById('btn-retour-accueil1').addEventListener('click',()=>showEcran('scr-accueil'));
+document.getElementById('btn-retour-accueil2').addEventListener('click',()=>showEcran('scr-accueil'));
+document.getElementById('btn-creer').addEventListener('click',creerPartie);
+document.getElementById('btn-rejoindre').addEventListener('click',rejoindrePartie);
+document.getElementById('btn-whatsapp').addEventListener('click',()=>{
+  const lien=location.origin+location.pathname+'?p='+NET.code;
+  const txt='🎲 Rejoins ma partie de Parchís Tangérois ! Code : '+NET.code+' — ouvre ce lien dans Safari : '+lien;
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+});
+document.getElementById('btn-lancer').addEventListener('click',lancerEnLigne);
+document.getElementById('btn-perso-lobby').addEventListener('click',()=>{ buildPerso(); showModal('modal-perso'); });
+document.getElementById('btn-quitter-lobby').addEventListener('click',quitterLigne);
+document.getElementById('btn-menu').addEventListener('click',()=>{ construireMenu(); showModal('modal-menu'); });
+function construireMenu(){
+  const br=document.getElementById('btn-reprise');
+  br.style.display=(NET.on&&NET.myPi==null&&aDesSiegesHumains())?'block':'none';
+  const zone=document.getElementById('menu-sieges'); zone.innerHTML='';
+  if(NET.on&&NET.isHote){
+    for(let pi=0;pi<4;pi++){
+      const sg=(NET.sieges||{})[pi];
+      if(!sg||sg.t!=='h'||sg.uid===NET.uid) continue;
+      const row=document.createElement('div'); row.className='seat';
+      row.innerHTML='<span class="pastille" style="background:'+PLAYERS[pi].hex+'"></span>'+
+        '<span class="nomj">'+(sg.nom||'Joueur')+'<span class="soustitre">absent ? remplace-le par l’IA</span></span>';
+      const b=document.createElement('button'); b.className='btn ghost mini'; b.textContent='→ IA';
+      b.addEventListener('click',()=>{ NET.ref.child('sieges/'+pi).set({t:'ia'}); hideModals(); });
+      row.appendChild(b); zone.appendChild(row);
+    }
+  }
+}
+document.getElementById('btn-reprise').addEventListener('click',()=>{ hideModals(); ouvrirReprise(); });
+document.getElementById('sw-train').addEventListener('click',function(){
+  G.training=!G.training; this.classList.toggle('on',G.training);
+});
+document.getElementById('btn-start').addEventListener('click',startLocal);
+document.getElementById('btn-perso').addEventListener('click',()=>{ buildPerso(); showModal('modal-perso'); });
+document.getElementById('btn-perso-jeu').addEventListener('click',()=>{
+  if(NET.on&&!NET.isHote){ hideModals(); toast('Seul l’hôte peut modifier les règles','warn'); return; }
+  hideModals(); buildPerso(); showModal('modal-perso');
+});
+document.getElementById('btn-regles-jeu').addEventListener('click',()=>{ hideModals(); showModal('modal-regles'); });
+document.getElementById('btn-restart').addEventListener('click',()=>{ hideModals(); showModal('modal-confirm'); });
+document.getElementById('btn-confirm-oui').addEventListener('click',()=>{
+  hideModals();
+  if(NET.on) quitterLigne(); else showEcran('scr-accueil');
+  G.phase='accueil';
+});
+document.getElementById('btn-rejouer').addEventListener('click',()=>{
+  hideModals();
+  if(NET.on) rejouerEnLigne(); else demarrerJeu();
+});
+document.getElementById('btn-retour-menu').addEventListener('click',()=>{
+  hideModals();
+  if(NET.on) quitterLigne(); else showEcran('scr-accueil');
+  G.phase='accueil';
+});
+dieEl.addEventListener('click',()=>{ if(canAct()) doRoll(); });
+
+/* lien d'invitation ?p=CODE */
+(function(){
+  let code=null;
+  try{ code=new URLSearchParams(location.search).get('p'); }catch(e){}
+  if(code&&code.length===5){
+    document.getElementById('in-code').value=code.toUpperCase();
+    document.getElementById('in-nom').value=lsGet('pt_nom')||'';
+    showEcran('scr-ligne');
+  }
+})();
+</script>
+</body>
+</html>
