@@ -53,9 +53,9 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 - Refuges (cases sombres à étoile) : {5,12,17,22,29,34,39,46,51,56,63,68}. Pas de capture sur refuge (barrage mixte à la place). Capture possible sur T2 {10,27,44,61}.
 - **Exception : la sortie mange.** En sortant de la maison, tout pion adverse posé sur la salida est mangé — même un barrage adverse de deux (les 2 rentrent, +20 chacun, joués en deux coups). Seul un barrage À SOI sur la salida bloque la 1re bille. La 2e bille (salida+5) suit les règles normales : un adverse seul est mangé, un barrage adverse la bloque (elle reste à la maison).
 - **Sortie sur 5 : deux pions** (salida + salida+5). Un seul pion restant → salida seule.
-- 6 → rejoue. Trois 6 → dernier pion déplacé rentre (sauf boire). **4 pions dehors → 6 vaut 12.**
+- 6 → rejoue. Trois 6 → dernier pion déplacé rentre (**corridor et boire protégés**). **4 pions dehors → 6 vaut 12.**
 - Barrage = 2 pions même case (même couleur partout, mixte sur refuge) : bloque passage **et** arrêt. Sur 6/12 : **ouverture obligatoire** (repli à 6 si 12 impossible) — **vaut aussi pour un barrage mixte** : sur un 6 il faut retirer son pion du refuge partagé. Pas de faute si aucune ouverture n'est réellement possible.
-- **Libre jeu** : l'app ne bloque pas les coups, elle punit après. FAUTE DE CAPTURE / DE SORTIE (off par défaut) / D'OUVERTURE → le pion joué rentre, flash rouge. Priorité capture > sortie > ouverture.
+- **Libre jeu** : l'app ne bloque pas les coups, elle punit après. FAUTE DE CAPTURE / DE SORTIE (off par défaut) / D'OUVERTURE → le pion joué rentre, flash rouge, **et le tour est perdu** (pas de relance après un 6 fautif, bonus restants perdus). Priorité capture > sortie > ouverture.
 - Capture hors refuge → **+20** (obligatoire si possible, chaînable). Boire sur compte exact → **+10**. Victoire = 4 pions dans la boire.
 - 8 interrupteurs dans `R` (modal « Personnaliser les règles ») ; en ligne seul l'hôte les modifie (nœud `regles`).
 

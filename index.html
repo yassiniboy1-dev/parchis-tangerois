@@ -482,15 +482,15 @@ body{
 <!-- ================= MODALS ================= -->
 <div class="modal" id="modal-regles"><div class="box">
   <h3>Règles de Tanger</h3>
-  <div class="rline"><div class="ic">🎲</div><div><b>Sortie sur 5&nbsp;:</b> un seul 5 fait sortir <b>deux pions</b> — le 1er sur ta case «&nbsp;5&nbsp;», le 2e sur ta case «&nbsp;10&nbsp;». S'il ne te reste qu'un pion, il sort sur la case «&nbsp;5&nbsp;».</div></div>
-  <div class="rline"><div class="ic">🔁</div><div><b>Le 6 fait rejouer.</b> Trois 6 de suite&nbsp;: ton dernier pion déplacé rentre à la maison.</div></div>
+  <div class="rline"><div class="ic">🎲</div><div><b>Sortie sur 5&nbsp;:</b> un seul 5 fait sortir <b>deux pions</b> — le 1er sur ta case «&nbsp;5&nbsp;», le 2e sur ta case «&nbsp;10&nbsp;». S'il ne te reste qu'un pion, il sort sur la case «&nbsp;5&nbsp;». <b>La sortie mange&nbsp;:</b> tout pion adverse posé sur ta case «&nbsp;5&nbsp;» est mangé, même un barrage de deux (+20 chacun).</div></div>
+  <div class="rline"><div class="ic">🔁</div><div><b>Le 6 fait rejouer.</b> Trois 6 de suite&nbsp;: ton dernier pion déplacé rentre à la maison (sauf s'il est déjà dans le corridor ou la boire).</div></div>
   <div class="rline"><div class="ic">⚡</div><div><b>4 pions dehors&nbsp;:</b> chaque 6 vaut <b>12 cases</b>.</div></div>
   <div class="rline"><div class="ic">🧱</div><div><b>Barrage («&nbsp;ferme&nbsp;»)&nbsp;:</b> 2 pions sur une même case. Même couleur&nbsp;: partout. Couleurs différentes&nbsp;: sur refuge seulement. <b>Personne ne passe</b>, pas même toi.</div></div>
-  <div class="rline"><div class="ic">🔓</div><div><b>Sur un 6 (ou 12), si tu as un barrage, tu dois l'ouvrir.</b> Si le 12 est bloqué, ouvre à 6. Sinon&nbsp;: <b>faute d'ouverture</b> — le pion joué rentre à la maison.</div></div>
+  <div class="rline"><div class="ic">🔓</div><div><b>Sur un 6 (ou 12), si tu as un barrage, tu dois l'ouvrir</b> — un barrage <b>mixte</b> sur refuge compte aussi&nbsp;: retire ton pion. Si le 12 est bloqué, ouvre à 6. Sinon&nbsp;: <b>faute d'ouverture</b>.</div></div>
   <div class="rline"><div class="ic">🍽️</div><div><b>Manger&nbsp;:</b> atterrir sur un pion adverse seul (hors refuge) le renvoie chez lui → <b>bonus +20</b> à jouer. Si tu peux manger et joues autre chose&nbsp;: <b>faute de capture</b> — le pion joué rentre à la maison. La capture est prioritaire, même sur le +20.</div></div>
-  <div class="rline"><div class="ic">⭕</div><div><b>Refuges</b> (cases marquées d'un cercle)&nbsp;: pas de capture possible, barrages mixtes autorisés.</div></div>
+  <div class="rline"><div class="ic">⭕</div><div><b>Refuges</b> (cases marquées d'une étoile)&nbsp;: pas de capture possible (sauf par une sortie), barrages mixtes autorisés.</div></div>
   <div class="rline"><div class="ic">🏁</div><div><b>La boire&nbsp;:</b> entrée sur compte exact → <b>bonus +10</b>. Premier à mettre ses 4 pions dans la boire gagne.</div></div>
-  <div class="rline"><div class="ic">👁️</div><div><b>Libre jeu&nbsp;:</b> l'application ne prévient pas — c'est à toi de voir les coups. Les fautes tombent après coup.</div></div>
+  <div class="rline"><div class="ic">👁️</div><div><b>Libre jeu&nbsp;:</b> l'application ne prévient pas — c'est à toi de voir les coups. Une faute&nbsp;: le pion joué rentre à la maison <b>et le tour est perdu</b>.</div></div>
   <button class="btn primary" data-close>Compris</button>
 </div></div>
 
@@ -947,7 +947,8 @@ function tripleSix(){
   setTimeout(()=>{
     if(pj!=null){
       const p=G.pawns[pi][pj];
-      if(p.z==='t'||p.z==='c'){ G.pawns[pi][pj]={z:'h'}; update(); sync(null); }
+      /* corridor et boire protégés : seul un pion encore sur la piste rentre */
+      if(p.z==='t'){ G.pawns[pi][pj]={z:'h'}; update(); sync(null); }
     }
     setTimeout(nextPlayer,500);
   },1150);
@@ -989,7 +990,9 @@ function afterMove(mv,fault,movedPjs,enBonus){
     setTimeout(()=>{
       movedPjs.forEach(pj=>{ G.pawns[pi][pj]={z:'h'}; });
       update(); sync(null);
-      setTimeout(endOfAction,520);
+      /* une faute fait perdre le tour : pas de relance même après un 6,
+         bonus restants perdus (règle de Tanger, confirmée) */
+      setTimeout(nextPlayer,520);
     },1150);
     return;
   }
