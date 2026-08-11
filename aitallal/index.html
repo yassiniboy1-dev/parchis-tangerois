@@ -77,6 +77,8 @@
   <!-- v53-fix122 (revue) : 11 correctifs issus de la revue adversariale — CONVERGENCE de sync (a contenu canonique egal on adopte la serialisation du cloud, sinon oscillation perpetuelle entre appareils) ; les cles non-listes modifiees localement ne sont plus ecrasees par le download du pre-check ; verrou pendingSync pose avant le pre-check ; envoi annule si la fusion est bloquee par le garde anti-perte ; lastSync n avance que jusqu au lastUpdate reel du cloud ; bouton diagnostic cable par delegation document (il mourait au re-parse d initParamsAccordion) ; sonde Storage sur plans/ ET documents/ avec verdict honnete (lecture seule testee) ; visionneuse plein ecran rendue aussi en Mode Commercial (fallback brochure pop-ups bloques) ; print-color-adjust sur la brochure (couverture sombre imprimable) ; nom du PDF assaini ; erreurs de connexion bilingues lisibles (bloc texte dans le flex). -->
   <!-- v53-fix122 : VISUEL D AMBIANCE par defaut du Mode Commercial (visuels/hero-elghersa.webp, genere Nano Banana Pro, deploye avec le site) — repli automatique du hero et de la couverture de brochure quand Parametres → heroImageUrl est vide ; une URL saisie garde la priorite. Illustration IA, pas une photo du projet (documents deja marques « non contractuel »). -->
   <!-- v53-fix123 : COMPTE ADMIN BLINDE — un appareil purge (iOS vide le stockage des sites inutilises ~1 mois) recree le compte admin d usine (admin/admin) et l envoyait par-dessus le VRAI compte du cloud a la fusion (vecu le 14 juillet ET le 11 aout : mot de passe admin personnalise revenu a « admin » partout, utilisateurs « oublies »). Desormais detectChangesAndStamp n estampille jamais le compte admin d usine intact : sans lastModified, il perd toujours la fusion face au compte du cloud. -->
+  <!-- v53-fix124 : SECURITE — mots de passe HACHES (PBKDF2-SHA256, sel par compte) au lieu du clair. Migration sans blocage : la connexion accepte encore un ancien mot de passe en clair puis le convertit ; une passe hache tous les comptes des la 1re ouverture admin. Repli clair si Web Crypto indisponible (contexte non securise). Unicite du mot de passe et alerte « mot de passe faible » (drapeau pwFaible, sans clair) adaptees. -->
+  <!-- v53-fix124 : VERROUILLAGE anti-essais sur la connexion (mot de passe seul) — 5 echecs => pause de 5 min, persistee. -->
   <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8243,23 +8245,146 @@ function renderLogin() {
   `;
 }
 
-function doLogin() {
+// ============================================================
+// v53-fix124 : HACHAGE DES MOTS DE PASSE (PBKDF2-SHA256, sel par compte)
+// Avant fix124 les mots de passe étaient stockés EN CLAIR dans la base (lisibles
+// par quiconque accède au projet Firebase). Migration SANS blocage possible :
+// la connexion accepte encore un ancien mot de passe en clair puis le convertit
+// (upgrade-on-login), et une passe de migration hache tous les comptes dès la
+// première ouverture par un admin. Contexte sécurisé requis (https/localhost) ;
+// sinon on reste en clair — jamais de blocage de l'app.
+// ============================================================
+const CRYPTO_OK = !!(window.crypto && window.crypto.subtle && window.crypto.subtle.importKey);
+const PW_ITER = 120000;
+// Mots de passe trop faibles → nudge sur le tableau de bord (jamais stockés en clair)
+const PW_FAIBLES = ['admin', 'admin1', 'adnane', 'password', 'passe', '0000', '1234', '12345', '123456', 'azerty', 'qwerty', 'motdepasse'];
+
+function _bufToHex(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
+}
+function _selAleatoire() {
+  const b = new Uint8Array(16); window.crypto.getRandomValues(b); return _bufToHex(b);
+}
+async function hashMotDePasse(motDePasse, selHex) {
+  const enc = new TextEncoder();
+  const sel = new Uint8Array(selHex.match(/.{2}/g).map(h => parseInt(h, 16)));
+  const cle = await window.crypto.subtle.importKey('raw', enc.encode(String(motDePasse)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await window.crypto.subtle.deriveBits({ name: 'PBKDF2', salt: sel, iterations: PW_ITER, hash: 'SHA-256' }, cle, 256);
+  return _bufToHex(bits);
+}
+// Vrai si le mot de passe correspond au compte (haché, ou ancien clair en repli)
+async function verifierMotDePasse(motDePasse, user) {
+  if (user && user.pwHash && user.pwSalt) {
+    try { return (await hashMotDePasse(motDePasse, user.pwSalt)) === user.pwHash; }
+    catch (e) { return false; }
+  }
+  return !!(user && user.password !== undefined && user.password === motDePasse);
+}
+// Champs de sécurité pour un mot de passe clair donné (sel + hash + drapeau faible)
+async function _champsMotDePasse(motDePasseClair) {
+  const sel = _selAleatoire();
+  return {
+    pwSalt: sel,
+    pwHash: await hashMotDePasse(motDePasseClair, sel),
+    pwFaible: PW_FAIBLES.includes(String(motDePasseClair).toLowerCase()),
+  };
+}
+// Le mot de passe est-il déjà utilisé par un autre compte ? (connexion par mot de
+// passe seul → doit rester unique). Compare aux comptes hachés ET clairs.
+async function _motDePasseDejaUtilise(motDePasse, exceptId) {
+  for (const u of state.users) {
+    if (exceptId != null && u.id === exceptId) continue;
+    if (await verifierMotDePasse(motDePasse, u)) return true;
+  }
+  return false;
+}
+// Migration en masse : hache tout compte encore en clair, retire le clair. Idempotent.
+async function migrerMotsDePasse() {
+  if (!CRYPTO_OK) return false;
+  let change = false;
+  for (const u of state.users) {
+    if (u && u.password !== undefined && !(u.pwHash && u.pwSalt)) {
+      try {
+        const champs = await _champsMotDePasse(u.password);
+        u.pwHash = champs.pwHash; u.pwSalt = champs.pwSalt; u.pwFaible = champs.pwFaible;
+        delete u.password;
+        change = true;
+      } catch (e) { console.warn('[Auth] Migration mot de passe impossible pour', u.login, e && e.message); }
+    }
+  }
+  if (change) persist();
+  return change;
+}
+
+// v53-fix124 : VERROUILLAGE ANTI-ESSAIS (connexion par mot de passe seul)
+// 5 échecs → pause de 5 minutes (persistée, survit au rechargement).
+let _loginFails = load('aitallal_login_fails', { n: 0, until: 0 });
+const LOGIN_MAX = 5, LOGIN_PAUSE_MS = 5 * 60 * 1000;
+function _verrouLogin() {
+  const now = Date.now();
+  if (_loginFails.until && now < _loginFails.until) return { bloque: true, minutes: Math.ceil((_loginFails.until - now) / 60000) };
+  return { bloque: false, minutes: 0 };
+}
+function _echecLogin() {
+  _loginFails.n = (_loginFails.n || 0) + 1;
+  if (_loginFails.n >= LOGIN_MAX) _loginFails.until = Date.now() + LOGIN_PAUSE_MS;
+  save('aitallal_login_fails', _loginFails);
+}
+function _resetEchecsLogin() { _loginFails = { n: 0, until: 0 }; save('aitallal_login_fails', _loginFails); }
+
+async function doLogin() {
+  const errBox = (html) => { const el = document.getElementById('login-error'); if (el) el.innerHTML = `<div class="error-box">${icon('alert')}<div>${html}</div></div>`; };
+  const videChamp = () => { const pi = document.getElementById('password-input'); if (pi) pi.value = ''; };
+
+  // Verrouillage anti-essais (fix124)
+  const verrou = _verrouLogin();
+  if (verrou.bloque) {
+    errBox(`Trop de tentatives. Réessayez dans ${verrou.minutes} min.<span dir="rtl" lang="ar" style="display:block;">محاولات كثيرة. أعد المحاولة بعد ${verrou.minutes} دقيقة.</span>`);
+    return;
+  }
+
   const password = document.getElementById('password-input').value;
   if (!password) {
     // v53-fix122 : messages d'erreur bilingues français/arabe
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}<div>Veuillez saisir votre mot de passe<span dir="rtl" lang="ar" style="display:block;">المرجو إدخال كلمة السر</span></div></div>`;
+    errBox('Veuillez saisir votre mot de passe<span dir="rtl" lang="ar" style="display:block;">المرجو إدخال كلمة السر</span>');
     return;
   }
-  // v53-fix121 : connexion par mot de passe seul (le login n'est plus demandé)
-  const user = state.users.find(u => u.password === password && u.actif);
+
+  // v53-fix121/124 : connexion par mot de passe seul, vérifié (haché ou clair legacy)
+  let user = null;
+  for (const u of state.users) {
+    if (!u.actif) continue;
+    if (await verifierMotDePasse(password, u)) { user = u; break; }
+  }
   if (!user) {
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}<div>Mot de passe incorrect<span dir="rtl" lang="ar" style="display:block;">كلمة السر غير صحيحة</span></div></div>`;
-    document.getElementById('password-input').value = '';
+    _echecLogin();
+    const reste = Math.max(0, LOGIN_MAX - (_loginFails.n || 0));
+    const suffixe = reste > 0 && reste <= 2 ? ` (${reste} essai${reste > 1 ? 's' : ''} restant${reste > 1 ? 's' : ''})` : '';
+    errBox(`Mot de passe incorrect${suffixe}<span dir="rtl" lang="ar" style="display:block;">كلمة السر غير صحيحة</span>`);
+    videChamp();
     return;
   }
+  _resetEchecsLogin();
+
+  // upgrade-on-login : convertir un ancien compte en clair dès sa 1re connexion
+  let upgrade = false;
+  if (CRYPTO_OK && user.password !== undefined && !(user.pwHash && user.pwSalt)) {
+    try {
+      const champs = await _champsMotDePasse(password);
+      user.pwHash = champs.pwHash; user.pwSalt = champs.pwSalt; user.pwFaible = champs.pwFaible;
+      delete user.password;
+      upgrade = true;
+    } catch (e) {}
+  }
+
   state.user = { id: user.id, login: user.login, nom: user.nom, role: user.role };
   // v53-fix106 : tracer la connexion (state.user défini juste avant)
   logAudit('connexion', 'utilisateur', user.id, 'Connexion à l\'application');
+  if (upgrade) persist(); // sécurise l'observateur (dont render() sort avant persist)
+  // Migration de masse dès la 1re connexion admin (une seule écriture partagée)
+  if (user.role === 'admin' && CRYPTO_OK) { try { await migrerMotsDePasse(); } catch (e) {} }
   render();
 }
 
@@ -9866,8 +9991,11 @@ function renderDashboard() {
   const ventesEnAttente = state.ventes.filter(v => v.statut === 'En attente');
 
   // Alerte sécurité : mot de passe admin par défaut
-  const adminDefaut = state.users.find(u => u.login === 'admin' && u.password === 'admin');
-  const showWarningPassword = adminDefaut && state.user.role === 'admin';
+  // v53-fix124 : alerte mot de passe faible — via le drapeau pwFaible (haché, pas de
+  // clair) ou l'ancien mot de passe clair par défaut tant que la migration n'a pas eu lieu.
+  const moiMeme = state.users.find(u => u.id === state.user.id);
+  const monMdpFaible = !!(moiMeme && (moiMeme.pwFaible || (moiMeme.password !== undefined && PW_FAIBLES.includes(String(moiMeme.password).toLowerCase()))));
+  const showWarningPassword = monMdpFaible && state.user.role === 'admin';
 
   // Statistiques pour les cartes
   const nbBiens = state.stock.length;
@@ -19128,7 +19256,7 @@ function renderParametres() {
 
     <!-- v53-fix69 : Badge de version visible pour diagnostic déploiement -->
     <div style="display:inline-block;padding:4px 10px;background:#0a1f3d;color:#d4af37;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:0.05em;margin-bottom:14px;">
-      VERSION : v53-fix123
+      VERSION : v53-fix124
     </div>
 
     <!-- Barre d'actions : tout ouvrir / tout fermer -->
@@ -27048,7 +27176,7 @@ function saveClient() {
   showToast('success', '✓ Client enregistré');
 }
 
-function saveUser() {
+async function saveUser() {
   if (!can('gerer_utilisateurs')) { showError('Vous n\'avez pas la permission de gérer les utilisateurs.', 'Action interdite'); return; }
   const d = collectModalData();
   {
@@ -27061,20 +27189,35 @@ function saveUser() {
   // v53-fix97 : Préserver permsOverride (modifié via le delegate handler des checkboxes)
   // state.modal.data.permsOverride contient les overrides en cours d'édition
   const permsOverride = (state.modal.data && state.modal.data.permsOverride) || {};
+  // v53-fix124 : mot de passe stocké HACHÉ (pwHash/pwSalt/pwFaible) — jamais en clair.
+  // Repli clair uniquement si le navigateur n'offre pas Web Crypto (contexte non sécurisé).
   if (state.modal.editId) {
-    // v53-fix121 : connexion par mot de passe seul -> si un nouveau mot de passe est saisi, il doit rester unique
-    if (d.password && state.users.some(u => u.id !== state.modal.editId && u.password === d.password)) {
+    // Si un nouveau mot de passe est saisi, il doit rester unique (connexion par mot de passe seul)
+    if (d.password && await _motDePasseDejaUtilise(d.password, state.modal.editId)) {
       showFormErrors([{ field: 'password', message: 'Ce mot de passe est déjà utilisé par un autre compte. Choisissez-en un autre.' }]); return;
     }
-    state.users = state.users.map(u => u.id === state.modal.editId ? { ...u, nom: d.nom, login: d.login, role: d.role, telephone, password: d.password || u.password, permsOverride } : u);
+    let champs = null;
+    if (d.password) champs = CRYPTO_OK ? await _champsMotDePasse(d.password) : { _clair: d.password };
+    state.users = state.users.map(u => {
+      if (u.id !== state.modal.editId) return u;
+      const maj = { ...u, nom: d.nom, login: d.login, role: d.role, telephone, permsOverride };
+      if (champs) {
+        if (champs._clair !== undefined) { maj.password = champs._clair; }
+        else { maj.pwHash = champs.pwHash; maj.pwSalt = champs.pwSalt; maj.pwFaible = champs.pwFaible; delete maj.password; }
+      }
+      return maj;
+    });
     logAudit('modification', 'utilisateur', state.modal.editId, `${d.nom} (${d.role})`);
   } else {
     if (!d.password) { showFormErrors([{ field: 'password', message: 'Le mot de passe est obligatoire' }]); return; }
     if (state.users.some(u => u.login === d.login)) { showFormErrors([{ field: 'login', message: 'Ce login est déjà utilisé. Choisissez-en un autre.' }]); return; }
     // v53-fix121 : connexion par mot de passe seul -> le mot de passe doit etre unique
-    if (state.users.some(u => u.password === d.password)) { showFormErrors([{ field: 'password', message: 'Ce mot de passe est déjà utilisé par un autre compte. Comme la connexion se fait par mot de passe seul, choisissez-en un autre.' }]); return; }
+    if (await _motDePasseDejaUtilise(d.password, null)) { showFormErrors([{ field: 'password', message: 'Ce mot de passe est déjà utilisé par un autre compte. Comme la connexion se fait par mot de passe seul, choisissez-en un autre.' }]); return; }
     const newUserId = Date.now();
-    state.users.push({ id: newUserId, nom: d.nom, login: d.login, telephone, password: d.password, role: d.role || 'commercial', actif: true, permsOverride });
+    const nouveau = { id: newUserId, nom: d.nom, login: d.login, telephone, role: d.role || 'commercial', actif: true, permsOverride };
+    if (CRYPTO_OK) { const c = await _champsMotDePasse(d.password); nouveau.pwHash = c.pwHash; nouveau.pwSalt = c.pwSalt; nouveau.pwFaible = c.pwFaible; }
+    else { nouveau.password = d.password; }
+    state.users.push(nouveau);
     logAudit('creation', 'utilisateur', newUserId, `${d.nom} (${d.role || 'commercial'})`);
   }
   state.modal = null;
@@ -32098,7 +32241,7 @@ async function creerSauvegarde(reason, silent) {
       ts: now,
       date: new Date(now).toLocaleString('fr-FR'),
       device: getDeviceId(),
-      version: 'v53-fix123',
+      version: 'v53-fix124',
       reason: reason || 'manuelle',
       counts: _backupCounts(),
     };
@@ -32185,7 +32328,7 @@ async function restaurerSauvegarde(id) {
     // 3) rendre le cloud autoritaire = données de la sauvegarde
     const cloudUpdates = {};
     Object.keys(data).forEach(key => { cloudUpdates['data/' + key] = data[key]; });
-    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix123', restoredFrom: id };
+    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix124', restoredFrom: id };
     await window.FB.update(window.FB.ref(window.FB.db, CLOUD_SHARED_PATH), cloudUpdates);
     // 4) écraser le local + aligner hashes/lastSync pour éviter tout re-merge
     const newHashes = {};
@@ -32355,7 +32498,7 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
       lastUpdate: now,
       deviceId: getDeviceId(),
       deviceInfo: navigator.userAgent.slice(0, 100),
-      appVersion: 'v53-fix123',
+      appVersion: 'v53-fix124',
       changedKeys: changedKeys,  // utile pour debug
     };
 

@@ -22,6 +22,14 @@ for F in index.html index-ar.html; do
   [ "$ERRS" -eq 0 ] && ok "syntaxe JS de $F (tous les blocs)" || ko "syntaxe JS de $F ($ERRS bloc(s) en erreur)"
 done
 
+# ── 1b. Tests de la logique de synchronisation (fonctions réelles d'index.html) ──
+if node tests/sync.test.js > "$TMP/sync.log" 2>&1; then
+  ok "tests de synchronisation ($(grep -c '✅' "$TMP/sync.log") assertions)"
+else
+  ko "tests de synchronisation en échec (voir : node tests/sync.test.js)"
+  sed 's/^/   /' "$TMP/sync.log" | grep -E '❌|Error' | head -5
+fi
+
 # ── 2. Cohérence des versions ────────────────────────────────────────────────
 V_SW=$(grep -o "aitallal-v53-fix[0-9]*" sw.js | head -1 | sed 's/aitallal-//')
 V_BADGE=$(grep -o "VERSION : v53-fix[0-9]*" index.html | head -1 | sed 's/VERSION : //')

@@ -1,6 +1,6 @@
 // AIT ALLAL GROUPE — Service Worker
 // CACHE_NAME bumpé à chaque déploiement pour forcer la mise à jour
-const CACHE_NAME = 'aitallal-v53-fix123';
+const CACHE_NAME = 'aitallal-v53-fix124';
 const URLS_A_CACHER = [
   './',
   './index.html',
