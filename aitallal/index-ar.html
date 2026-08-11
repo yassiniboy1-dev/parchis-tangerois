@@ -73,6 +73,7 @@
   <!-- v53-fix122 : ECRAN DE CONNEXION BILINGUE francais/arabe (titre, sous-titre, libelle, placeholder, bouton, lien mot de passe oublie, messages d erreur) — ilots RTL isoles (span dir=rtl), ids et data-action inchanges : la preservation valeur/focus/curseur de fix101 continue de fonctionner. -->
   <!-- v53-fix122 : MODE COMMERCIAL — BROCHURE PDF elegante (feature 3/4) : bouton « 📄 Brochure PDF » sur la fiche d un bien → document A4 deux pages (couverture immersive photo/bordeaux + page detail caracteristiques/residence/proximite/contact) avec « PDF propre » nomme Brochure-<ref>.pdf (html2pdf embarque), impression, et visionneuse plein ecran si pop-ups bloques (type 'brochure' dans renderContratView). Prix UNIQUEMENT via getPrixIndicatif (« A partir de ») — jamais de part N. -->
   <!-- v53-fix122 : badge VERSION des Parametres realigne (etait reste a v53-fix120). make_ar.py REPARE (ancres fix121+, etapes absorbees tolerees, doublon renderControleAR impossible) : index-ar.html est de nouveau GENERE depuis index.html au lieu d etre edite a la main. -->
+  <!-- v53-fix122 : VISUEL D AMBIANCE par defaut du وضع العرض التجاري (visuels/hero-elghersa.webp, genere Nano Banana Pro, deploye avec le site) — repli automatique du hero et de la couverture de brochure quand Parametres → heroImageUrl est vide ; une URL saisie garde la priorite. Illustration IA, pas une photo du projet (documents deja marques « non contractuel »). -->
   <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -8502,7 +8503,9 @@ function renderLuxeHero() {
   const sousTitre = p.heroSousTitre || (p.villeProjet ? `L'art de vivre à ${p.villeProjet}` : 'L\'art de vivre');
   const slogan = p.heroSlogan || 'Une signature d\'excellence dans l\'immobilier du Nord du Maroc, où chaque résidence reflète notre engagement pour la qualité et l\'élégance.';
   const prixDepart = p.heroPrixDepart || '';
-  const imageUrl = p.heroImageUrl || '';
+  // v53-fix122 : visuel d'ambiance par défaut (généré Nano Banana Pro, déployé avec le
+  // site dans visuels/). Une URL saisie dans Paramètres garde toujours la priorité.
+  const imageUrl = p.heroImageUrl || 'visuels/hero-elghersa.webp';
 
   return `
     <div class="luxe-page">
@@ -29473,7 +29476,10 @@ function imprimerBrochureLuxe(b) {
   const nomProj = p.nomProjet || '';
   const villeP = p.villeProjet || '';
   const prixInd = getPrixIndicatif(b);
-  const photoUrl = (modele && modele.photoUrl) ? modele.photoUrl : (p.heroImageUrl || '');
+  // v53-fix122 : repli sur le visuel d'ambiance déployé avec le site (URL absolue :
+  // la brochure s'affiche aussi dans une visionneuse Blob où le relatif ne résout pas)
+  const photoUrl = (modele && modele.photoUrl) ? modele.photoUrl
+    : (p.heroImageUrl || new URL('visuels/hero-elghersa.webp', location.href).href);
   const description = (modele && modele.description) || '';
   const projetDesc = p.projetDescription || '';
   const etageLabel = (b.etage === 0 || b.etage === '0') ? 'Rez-de-chaussée' : ('Étage ' + b.etage);

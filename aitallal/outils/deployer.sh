@@ -13,6 +13,7 @@ bash outils/verifier.sh
 ZIP="aitallal-netlify-$VERSION.zip"
 rm -f aitallal-netlify-*.zip
 zip -j "$ZIP" index.html manifest.json sw.js
+zip "$ZIP" visuels/hero-elghersa.webp   # visuel d'ambiance servi en /visuels/ (fix122)
 echo
 echo "→ $ZIP prêt."
 echo "  Déployer : app.netlify.com → site aitallal → Deploys → glisser le zip."
