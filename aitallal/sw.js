@@ -1,6 +1,6 @@
 // AIT ALLAL GROUPE — Service Worker
 // CACHE_NAME bumpé à chaque déploiement pour forcer la mise à jour
-const CACHE_NAME = 'aitallal-v53-fix121';
+const CACHE_NAME = 'aitallal-v53-fix122';
 const URLS_A_CACHER = [
   './',
   './index.html',
@@ -39,7 +39,12 @@ self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
   // Ne pas mettre en cache les requêtes Firebase, Google APIs, etc.
+  // v53-fix122 : ajout de firebasedatabase.app (Realtime DB europe-west1) et
+  // firebasestorage.app — ils manquaient : le repli long-polling de la base
+  // pouvait être servi depuis le cache par la branche « Cache First » ci-dessous.
   if (url.includes('firebaseio.com') ||
+      url.includes('firebasedatabase.app') ||
+      url.includes('firebasestorage.app') ||
       url.includes('googleapis.com') ||
       url.includes('firebase.google.com') ||
       url.includes('gstatic.com')) {
