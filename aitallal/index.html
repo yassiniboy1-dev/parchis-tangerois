@@ -76,6 +76,7 @@
   <!-- v53-fix122 : ICONES DE MENU generees (Nano Banana Pro) — 14 pastilles marine/or coherentes (data URI WebP ~16 Ko au total) remplacent les pictos filaires de la sidebar PC, du tiroir mobile et le ✨ des boutons Mode Commercial (helper iconeMenu, repli SVG). -->
   <!-- v53-fix122 (revue) : 11 correctifs issus de la revue adversariale — CONVERGENCE de sync (a contenu canonique egal on adopte la serialisation du cloud, sinon oscillation perpetuelle entre appareils) ; les cles non-listes modifiees localement ne sont plus ecrasees par le download du pre-check ; verrou pendingSync pose avant le pre-check ; envoi annule si la fusion est bloquee par le garde anti-perte ; lastSync n avance que jusqu au lastUpdate reel du cloud ; bouton diagnostic cable par delegation document (il mourait au re-parse d initParamsAccordion) ; sonde Storage sur plans/ ET documents/ avec verdict honnete (lecture seule testee) ; visionneuse plein ecran rendue aussi en Mode Commercial (fallback brochure pop-ups bloques) ; print-color-adjust sur la brochure (couverture sombre imprimable) ; nom du PDF assaini ; erreurs de connexion bilingues lisibles (bloc texte dans le flex). -->
   <!-- v53-fix122 : VISUEL D AMBIANCE par defaut du Mode Commercial (visuels/hero-elghersa.webp, genere Nano Banana Pro, deploye avec le site) — repli automatique du hero et de la couverture de brochure quand Parametres → heroImageUrl est vide ; une URL saisie garde la priorite. Illustration IA, pas une photo du projet (documents deja marques « non contractuel »). -->
+  <!-- v53-fix123 : COMPTE ADMIN BLINDE — un appareil purge (iOS vide le stockage des sites inutilises ~1 mois) recree le compte admin d usine (admin/admin) et l envoyait par-dessus le VRAI compte du cloud a la fusion (vecu le 14 juillet ET le 11 aout : mot de passe admin personnalise revenu a « admin » partout, utilisateurs « oublies »). Desormais detectChangesAndStamp n estampille jamais le compte admin d usine intact : sans lastModified, il perd toujours la fusion face au compte du cloud. -->
   <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5575,6 +5576,16 @@ function detectChangesAndStamp() {
       const id = rec[idField];
       if (id == null) return;
       currentIds.add(String(id));
+      // v53-fix123 : le compte admin D'USINE (recréé quand un appareil a été purgé —
+      // iOS vide le stockage des sites inutilisés ~1 mois) ne doit JAMAIS être
+      // estampillé : sans lastModified il perd la fusion face au vrai compte du
+      // cloud. Vécu 2 fois (14 juillet et 11 août) : le mot de passe admin
+      // personnalisé revenait silencieusement à « admin » sur tous les appareils.
+      // Dès que l'admin est modifié (mot de passe changé…), il redevient normal.
+      if (stateKey === 'users' && rec.id === 1 && rec.login === 'admin' &&
+          rec.password === 'admin' && rec.nom === 'Administrateur' && rec.role === 'admin') {
+        return;
+      }
       // Hash du contenu (sans lastModified pour éviter une boucle de stampage)
       const recCopy = { ...rec };
       delete recCopy.lastModified;
@@ -19117,7 +19128,7 @@ function renderParametres() {
 
     <!-- v53-fix69 : Badge de version visible pour diagnostic déploiement -->
     <div style="display:inline-block;padding:4px 10px;background:#0a1f3d;color:#d4af37;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:0.05em;margin-bottom:14px;">
-      VERSION : v53-fix122
+      VERSION : v53-fix123
     </div>
 
     <!-- Barre d'actions : tout ouvrir / tout fermer -->
@@ -32087,7 +32098,7 @@ async function creerSauvegarde(reason, silent) {
       ts: now,
       date: new Date(now).toLocaleString('fr-FR'),
       device: getDeviceId(),
-      version: 'v53-fix122',
+      version: 'v53-fix123',
       reason: reason || 'manuelle',
       counts: _backupCounts(),
     };
@@ -32174,7 +32185,7 @@ async function restaurerSauvegarde(id) {
     // 3) rendre le cloud autoritaire = données de la sauvegarde
     const cloudUpdates = {};
     Object.keys(data).forEach(key => { cloudUpdates['data/' + key] = data[key]; });
-    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix122', restoredFrom: id };
+    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix123', restoredFrom: id };
     await window.FB.update(window.FB.ref(window.FB.db, CLOUD_SHARED_PATH), cloudUpdates);
     // 4) écraser le local + aligner hashes/lastSync pour éviter tout re-merge
     const newHashes = {};
@@ -32344,7 +32355,7 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
       lastUpdate: now,
       deviceId: getDeviceId(),
       deviceInfo: navigator.userAgent.slice(0, 100),
-      appVersion: 'v53-fix122',
+      appVersion: 'v53-fix123',
       changedKeys: changedKeys,  // utile pour debug
     };
 

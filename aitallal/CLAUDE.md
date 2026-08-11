@@ -113,3 +113,13 @@ blocs A B C D G H I. `verifier.sh` les contrôle.
 
 - Feature 4/4 : galerie photos + plans par type (les photos restent à fournir par Yassine).
 - Optionnel : montrer dans l'app où vérifier que la synchro cloud est activée (fix120, note).
+
+## Piège vécu : le compte admin d'usine (fix123)
+
+iOS purge le stockage local des sites inutilisés (~1 mois). L'appareil purgé recrée alors le
+compte admin d'usine (`admin`/`admin`, id=1), que `detectChangesAndStamp` estampillait comme
+« nouveau » → il gagnait la fusion par `lastModified` et écrasait le VRAI compte admin du cloud
+sur tous les appareils (vécu le 14/07 et le 11/08/2026 : mot de passe personnalisé revenu à
+`admin`). Depuis fix123, le compte d'usine INTACT n'est jamais estampillé — il perd toujours la
+fusion. Ne pas retirer ce garde ; si le format du compte par défaut change (ligne `users: load(…)`),
+adapter la condition du garde en conséquence.
