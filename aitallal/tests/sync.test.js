@@ -65,6 +65,7 @@ const source = [
   extraireConst('SYNC_RECORD_LISTS'),
   extraireFonction('quickHash'),
   extraireFonction('mergeRecordList'),
+  extraireFonction('_estAdminUsineIntact'),
   extraireFonction('detectChangesAndStamp'),
   extraireFonction('_trierClesProfond'),
   extraireFonction('canonEgal'),
@@ -78,7 +79,7 @@ function assert(cond, titre) {
   else { ko++; console.log('  ❌ ' + titre); }
 }
 
-const { quickHash, mergeRecordList, detectChangesAndStamp, canonEgal } = sandbox;
+const { quickHash, mergeRecordList, detectChangesAndStamp, canonEgal, _estAdminUsineIntact } = sandbox;
 
 console.log('\n1. quickHash');
 assert(quickHash('abc') === quickHash('abc'), 'déterministe');
@@ -125,6 +126,14 @@ console.log('\n4. Compte admin d’usine non estampillé (fix123)');
   sandbox.state = { users: [{ id: 1, login: 'admin', pwHash: 'deadbeef', pwSalt: 'ab12', nom: 'Administrateur', role: 'admin', actif: true }], _recordHashes: {}, tombstones: {} };
   detectChangesAndStamp();
   assert(typeof sandbox.state.users[0].lastModified === 'number', 'admin haché (fix124) : estampillé normalement');
+}
+
+console.log('\n4b. Prédicat admin d’usine (fix124-revue : garde + login + migration synchronisés)');
+{
+  assert(_estAdminUsineIntact({ id: 1, login: 'admin', password: 'admin', nom: 'Administrateur', role: 'admin' }) === true, 'reconnaît le compte d’usine intact (à NE PAS hacher)');
+  assert(_estAdminUsineIntact({ id: 1, login: 'admin', pwHash: 'x', pwSalt: 'y', nom: 'Administrateur', role: 'admin' }) === false, 'un admin déjà haché n’est plus « d’usine » (sera propagé)');
+  assert(_estAdminUsineIntact({ id: 1, login: 'admin', password: 'SECRET', nom: 'Administrateur', role: 'admin' }) === false, 'un admin au mot de passe personnalisé n’est plus « d’usine »');
+  assert(_estAdminUsineIntact({ id: 99, login: 'admin', password: 'admin', nom: 'Administrateur', role: 'admin' }) === false, 'un autre compte « admin » (id ≠ 1) n’est pas le compte d’usine');
 }
 
 console.log('\n5. Tombstone — une suppression distante retire l’enregistrement');

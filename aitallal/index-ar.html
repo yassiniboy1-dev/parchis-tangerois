@@ -5594,8 +5594,7 @@ function detectChangesAndStamp() {
       // cloud. Vécu 2 fois (14 juillet et 11 août) : le mot de passe admin
       // personnalisé revenait silencieusement à « admin » sur tous les appareils.
       // Dès que l'admin est modifié (mot de passe changé…), il redevient normal.
-      if (stateKey === 'users' && rec.id === 1 && rec.login === 'admin' &&
-          rec.password === 'admin' && rec.nom === 'Administrateur' && rec.role === 'admin') {
+      if (stateKey === 'users' && _estAdminUsineIntact(rec)) {
         return;
       }
       // Hash du contenu (sans lastModified pour éviter une boucle de stampage)
@@ -8294,12 +8293,24 @@ async function _motDePasseDejaUtilise(motDePasse, exceptId) {
   }
   return false;
 }
+// v53-fix124(revue) : le compte admin D'USINE INTACT (admin/admin) ne doit JAMAIS
+// être haché. Sinon `delete password` le rend méconnaissable pour la garde fix123
+// (detectChangesAndStamp l.~5587) → il se fait estampiller → un appareil purgé qui
+// recrée ce compte réécrase le vrai admin du cloud (le sinistre des 14/07 et 11/08,
+// ressuscité par le hachage). Il reste connectable via le repli clair de
+// verifierMotDePasse, et devient haché+propagé dès que son mot de passe est
+// personnalisé (saveUser). Prédicat commun aux 3 sites : garde + login + migration.
+function _estAdminUsineIntact(u) {
+  return !!(u && u.id === 1 && u.login === 'admin' && u.password === 'admin' &&
+            u.nom === 'Administrateur' && u.role === 'admin');
+}
+
 // Migration en masse : hache tout compte encore en clair, retire le clair. Idempotent.
 async function migrerMotsDePasse() {
   if (!CRYPTO_OK) return false;
   let change = false;
   for (const u of state.users) {
-    if (u && u.password !== undefined && !(u.pwHash && u.pwSalt)) {
+    if (u && u.password !== undefined && !(u.pwHash && u.pwSalt) && !_estAdminUsineIntact(u)) {
       try {
         const champs = await _champsMotDePasse(u.password);
         u.pwHash = champs.pwHash; u.pwSalt = champs.pwSalt; u.pwFaible = champs.pwFaible;
@@ -8315,10 +8326,14 @@ async function migrerMotsDePasse() {
 // v53-fix124 : VERROUILLAGE ANTI-ESSAIS (connexion par mot de passe seul)
 // 5 échecs → pause de 5 minutes (persistée, survit au rechargement).
 let _loginFails = load('aitallal_login_fails', { n: 0, until: 0 });
+let _loginEnCours = false; // v53-fix124(revue) : garde anti double-connexion concurrente
 const LOGIN_MAX = 5, LOGIN_PAUSE_MS = 5 * 60 * 1000;
 function _verrouLogin() {
   const now = Date.now();
   if (_loginFails.until && now < _loginFails.until) return { bloque: true, minutes: Math.ceil((_loginFails.until - now) / 60000) };
+  // v53-fix124(revue) : pause écoulée → repartir sur 5 essais neufs (sinon le 6e
+  // essai reste bloqué en boucle car le compteur n ne redescendait jamais).
+  if (_loginFails.until && now >= _loginFails.until) { _loginFails = { n: 0, until: 0 }; save('aitallal_login_fails', _loginFails); }
   return { bloque: false, minutes: 0 };
 }
 function _echecLogin() {
@@ -8329,6 +8344,9 @@ function _echecLogin() {
 function _resetEchecsLogin() { _loginFails = { n: 0, until: 0 }; save('aitallal_login_fails', _loginFails); }
 
 async function doLogin() {
+  if (_loginEnCours) return; // v53-fix124(revue) : un double-clic ne lance qu'une connexion
+  _loginEnCours = true;
+  try {
   const errBox = (html) => { const el = document.getElementById('login-error'); if (el) el.innerHTML = `<div class="error-box">${icon('alert')}<div>${html}</div></div>`; };
   const videChamp = () => { const pi = document.getElementById('password-input'); if (pi) pi.value = ''; };
 
@@ -8363,8 +8381,9 @@ async function doLogin() {
   _resetEchecsLogin();
 
   // upgrade-on-login : convertir un ancien compte en clair dès sa 1re connexion
+  // (jamais l'admin d'usine intact — voir _estAdminUsineIntact / garde fix123)
   let upgrade = false;
-  if (CRYPTO_OK && user.password !== undefined && !(user.pwHash && user.pwSalt)) {
+  if (CRYPTO_OK && user.password !== undefined && !(user.pwHash && user.pwSalt) && !_estAdminUsineIntact(user)) {
     try {
       const champs = await _champsMotDePasse(password);
       user.pwHash = champs.pwHash; user.pwSalt = champs.pwSalt; user.pwFaible = champs.pwFaible;
@@ -8380,6 +8399,7 @@ async function doLogin() {
   // Migration de masse dès la 1re connexion admin (une seule écriture partagée)
   if (user.role === 'admin' && CRYPTO_OK) { try { await migrerMotsDePasse(); } catch (e) {} }
   render();
+  } finally { _loginEnCours = false; }
 }
 
 function logout() {
@@ -27171,8 +27191,12 @@ function saveClient() {
   showToast('success', '✓ Client enregistré');
 }
 
+let _saveUserEnCours = false; // v53-fix124(revue) : garde anti double-clic sur « Enregistrer »
 async function saveUser() {
   if (!can('gerer_utilisateurs')) { showError('Vous n\'avez pas la permission de gérer les utilisateurs.', 'Action interdite'); return; }
+  if (_saveUserEnCours) return; // un double-clic ne crée pas deux comptes
+  _saveUserEnCours = true;
+  try {
   const d = collectModalData();
   {
     const errors = [];
@@ -27197,8 +27221,12 @@ async function saveUser() {
       if (u.id !== state.modal.editId) return u;
       const maj = { ...u, nom: d.nom, login: d.login, role: d.role, telephone, permsOverride };
       if (champs) {
-        if (champs._clair !== undefined) { maj.password = champs._clair; }
-        else { maj.pwHash = champs.pwHash; maj.pwSalt = champs.pwSalt; maj.pwFaible = champs.pwFaible; delete maj.password; }
+        if (champs._clair !== undefined) {
+          // v53-fix124(revue) : repli clair — retirer un éventuel hash périmé, sinon
+          // verifierMotDePasse (qui teste pwHash d'abord) ignorerait le nouveau mot de passe.
+          maj.password = champs._clair; maj.pwFaible = PW_FAIBLES.includes(String(champs._clair).toLowerCase());
+          delete maj.pwHash; delete maj.pwSalt;
+        } else { maj.pwHash = champs.pwHash; maj.pwSalt = champs.pwSalt; maj.pwFaible = champs.pwFaible; delete maj.password; }
       }
       return maj;
     });
@@ -27217,6 +27245,7 @@ async function saveUser() {
   }
   state.modal = null;
   showToast('success', '✓ Utilisateur enregistré');
+  } finally { _saveUserEnCours = false; }
 }
 
 // ============================================================
