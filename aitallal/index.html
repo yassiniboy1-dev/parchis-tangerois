@@ -74,6 +74,7 @@
   <!-- v53-fix122 : MODE COMMERCIAL — BROCHURE PDF elegante (feature 3/4) : bouton « 📄 Brochure PDF » sur la fiche d un bien → document A4 deux pages (couverture immersive photo/bordeaux + page detail caracteristiques/residence/proximite/contact) avec « PDF propre » nomme Brochure-<ref>.pdf (html2pdf embarque), impression, et visionneuse plein ecran si pop-ups bloques (type 'brochure' dans renderContratView). Prix UNIQUEMENT via getPrixIndicatif (« A partir de ») — jamais de part N. -->
   <!-- v53-fix122 : badge VERSION des Parametres realigne (etait reste a v53-fix120). make_ar.py REPARE (ancres fix121+, etapes absorbees tolerees, doublon renderControleAR impossible) : index-ar.html est de nouveau GENERE depuis index.html au lieu d etre edite a la main. -->
   <!-- v53-fix122 : ICONES DE MENU generees (Nano Banana Pro) — 14 pastilles marine/or coherentes (data URI WebP ~16 Ko au total) remplacent les pictos filaires de la sidebar PC, du tiroir mobile et le ✨ des boutons Mode Commercial (helper iconeMenu, repli SVG). -->
+  <!-- v53-fix122 (revue) : 11 correctifs issus de la revue adversariale — CONVERGENCE de sync (a contenu canonique egal on adopte la serialisation du cloud, sinon oscillation perpetuelle entre appareils) ; les cles non-listes modifiees localement ne sont plus ecrasees par le download du pre-check ; verrou pendingSync pose avant le pre-check ; envoi annule si la fusion est bloquee par le garde anti-perte ; lastSync n avance que jusqu au lastUpdate reel du cloud ; bouton diagnostic cable par delegation document (il mourait au re-parse d initParamsAccordion) ; sonde Storage sur plans/ ET documents/ avec verdict honnete (lecture seule testee) ; visionneuse plein ecran rendue aussi en Mode Commercial (fallback brochure pop-ups bloques) ; print-color-adjust sur la brochure (couverture sombre imprimable) ; nom du PDF assaini ; erreurs de connexion bilingues lisibles (bloc texte dans le flex). -->
   <!-- v53-fix122 : VISUEL D AMBIANCE par defaut du Mode Commercial (visuels/hero-elghersa.webp, genere Nano Banana Pro, deploye avec le site) — repli automatique du hero et de la couverture de brochure quand Parametres → heroImageUrl est vide ; une URL saisie garde la priorite. Illustration IA, pas une photo du projet (documents deja marques « non contractuel »). -->
   <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
@@ -8235,13 +8236,13 @@ function doLogin() {
   const password = document.getElementById('password-input').value;
   if (!password) {
     // v53-fix122 : messages d'erreur bilingues français/arabe
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}Veuillez saisir votre mot de passe<span dir="rtl" lang="ar" style="display:block;">المرجو إدخال كلمة السر</span></div>`;
+    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}<div>Veuillez saisir votre mot de passe<span dir="rtl" lang="ar" style="display:block;">المرجو إدخال كلمة السر</span></div></div>`;
     return;
   }
   // v53-fix121 : connexion par mot de passe seul (le login n'est plus demandé)
   const user = state.users.find(u => u.password === password && u.actif);
   if (!user) {
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}Mot de passe incorrect<span dir="rtl" lang="ar" style="display:block;">كلمة السر غير صحيحة</span></div>`;
+    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}<div>Mot de passe incorrect<span dir="rtl" lang="ar" style="display:block;">كلمة السر غير صحيحة</span></div></div>`;
     document.getElementById('password-input').value = '';
     return;
   }
@@ -9285,6 +9286,7 @@ function renderLuxeFicheBien() {
     ${state.confirmPopup ? renderConfirmPopup() : ''}
     ${state.favoriModal ? renderLuxeFavoriModal() : ''}
     ${state.simulateur ? renderLuxeSimulateur() : ''}
+    ${state.contratView ? renderContratView() : ''}
   `;
 }
 
@@ -21944,11 +21946,6 @@ function attachEvents() {
   }));
 
   // Désactiver la synchronisation cloud
-  // v53-fix122 : diagnostic pas-à-pas de la connexion Firebase
-  document.querySelectorAll('[data-action="cloud-diagnostic"]').forEach(el => el.addEventListener('click', () => {
-    runCloudDiagnostic();
-  }));
-
   document.querySelectorAll('[data-action="cloud-disable"]').forEach(el => el.addEventListener('click', () => {
     showConfirm(
       'Désactiver la synchronisation cloud ?\n\nVos données locales seront conservées sur cet appareil mais ne seront plus synchronisées avec le cloud.\n\nLes données déjà uploadées dans le cloud restent accessibles depuis vos autres appareils.',
@@ -29554,7 +29551,7 @@ function imprimerBrochureLuxe(b) {
 <title>Brochure – ${esc(b.ref)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: A4; margin: 0; }
   body { font-family: 'Inter', sans-serif; color: #2c2c2c; background: #fff; }
   .page { width: 210mm; min-height: 296mm; margin: 0 auto; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
@@ -29685,7 +29682,7 @@ function imprimerBrochureLuxe(b) {
     boutons.forEach(function (bt) { bt.style.display = 'none'; });
     const opt = {
       margin: 0,
-      filename: 'Brochure-${esc(b.ref)}.pdf',
+      filename: 'Brochure-${String(b.ref).replace(/[^\w.-]/g, '_')}.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -31886,25 +31883,44 @@ async function runCloudDiagnostic() {
   // volontairement inexistant : « object-not-found » = règles OK ; « unauthorized »
   // = règles expirées ou absentes (c'était la panne du 14 juillet).
   e = etape('Firebase Storage (plans & documents)');
-  try {
-    const probeRef = window.FB.storageRef(window.FB.storage, 'documents/_diag_sonde_' + Date.now());
-    await window.FB.getDownloadURL(probeRef);
-    finEtape(e, true, 'Accès Storage autorisé');
-  } catch (err) {
-    const code = String((err && err.code) || '');
-    if (code.includes('object-not-found')) {
-      finEtape(e, true, 'Règles Storage OK — envoi des plans et documents autorisé');
-    } else if (code.includes('unauthorized') || code.includes('unauthenticated')) {
-      finEtape(e, false, 'ACCÈS REFUSÉ — les règles Storage ont expiré (le « mode test » Firebase ne dure que 30 jours). Les plans PDF et les documents/CIN ne peuvent plus être envoyés. Corriger dans la console Firebase → Storage → Rules : autoriser lecture/écriture pour les utilisateurs authentifiés sur plans/ et documents/ (règles sans date d\'expiration).');
+  {
+    // v53-fix122(rev) : sonder les DEUX préfixes utilisés par l'app, et ne conclure
+    // que sur ce qui est réellement testé (la lecture ; l'écriture ne l'est pas).
+    let refusPrefixe = '';
+    let autreErreur = '';
+    for (const prefixe of ['plans', 'documents']) {
+      try {
+        await window.FB.getDownloadURL(window.FB.storageRef(window.FB.storage, prefixe + '/_diag_sonde_' + Date.now()));
+      } catch (err) {
+        const code = String((err && err.code) || '');
+        if (code.includes('object-not-found')) continue; // règles OK sur ce préfixe
+        if (code.includes('unauthorized') || code.includes('unauthenticated')) { refusPrefixe = prefixe; break; }
+        autreErreur = code + ' — ' + ((err && err.message) || 'erreur inattendue');
+        break;
+      }
+    }
+    if (refusPrefixe) {
+      finEtape(e, false, 'ACCÈS REFUSÉ sur ' + refusPrefixe + '/ — les règles Storage ont expiré (le « mode test » Firebase ne dure que 30 jours) ou ne couvrent pas ce chemin. Les plans PDF et les documents/CIN ne peuvent plus être envoyés. Corriger dans la console Firebase → Storage → Rules : autoriser lecture/écriture pour les utilisateurs authentifiés sur plans/ et documents/ (règles sans date d\'expiration).');
       d.lienConsole = FB_CONSOLE + '/storage/ait-allal-groupe.firebasestorage.app/rules';
       d.lienLabel = '🔧 Ouvrir les règles Storage';
+    } else if (autreErreur) {
+      finEtape(e, false, autreErreur);
     } else {
-      finEtape(e, false, code + ' — ' + ((err && err.message) || 'erreur inattendue'));
+      finEtape(e, true, 'Lecture Storage autorisée sur plans/ et documents/ (l\'écriture n\'est pas testée)');
     }
   }
 
   terminer();
 }
+
+// v53-fix122(rev) : câblage par DÉLÉGATION au niveau document — un binding par
+// élément dans attachEvents() était détruit par le re-parse innerHTML
+// d'initParamsAccordion (bouton mort au premier clic). Enregistré UNE seule fois.
+document.addEventListener('click', function (e) {
+  const btn = e.target && e.target.closest ? e.target.closest('[data-action="cloud-diagnostic"]') : null;
+  if (!btn || btn.disabled) return;
+  runCloudDiagnostic();
+});
 
 // v53-fix122 : rendu du panneau de diagnostic (appelé depuis la section cloud des Paramètres)
 function renderCloudDiag() {
@@ -32247,25 +32263,39 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
     if (!silent) showToast('warning', '⏳ Une synchronisation est déjà en cours...');
     return false;
   }
+  // v53-fix122(rev) : verrou posé AVANT le pré-check — les await ci-dessous ouvraient
+  // une fenêtre de ré-entrance entre le test et la pose du verrou.
+  pendingSync = true;
+  state.cloud.status = 'syncing';
+  if (state.page === 'parametres') render();
   // v53-fix122 : ANTI-ÉCRASEMENT — si le cloud a reçu une mise à jour depuis notre
   // dernière sync, fusionner d'abord. Sinon on repousserait des listes périmées
   // par-dessus les modifs des autres appareils (vécu : journal d'audit revenu en arrière).
   // Lecture minuscule de _meta (~150 octets) ; sauté sur envoi forcé (récupération).
+  let preTs = null; // lastUpdate réellement lu dans le cloud (sert au chemin « rien à envoyer »)
   if (!forceFullUpload) {
     try {
       const preSnap = await window.FB.get(window.FB.ref(window.FB.db, `${CLOUD_SHARED_PATH}/_meta`));
-      const preTs = preSnap.exists() ? ((preSnap.val() || {}).lastUpdate || 0) : 0;
+      preTs = preSnap.exists() ? ((preSnap.val() || {}).lastUpdate || 0) : 0;
       if (preTs > (state.cloud.lastSync || 0)) {
         console.log('[Cloud] ⚠️ Cloud plus récent que notre dernière sync → fusion avant envoi');
-        await downloadFromCloud(true);
+        // Céder le verrou au download (reprise synchrone dans le même tick JS),
+        // puis le reprendre en microtâche — avant tout timer ou clic.
+        pendingSync = false;
+        const fusionOk = await downloadFromCloud(true);
+        pendingSync = true;
+        if (!fusionOk && state.cloud.errorCode === 'data-loss-prevented') {
+          // v53-fix122(rev) : fusion bloquée par le garde anti-perte → ne PAS écraser
+          // le cloud ; l'utilisateur tranche dans Paramètres → Synchronisation.
+          console.warn('[Cloud] ⛔ Envoi annulé : fusion bloquée par le garde anti-perte — résoudre dans Paramètres → Synchronisation');
+          pendingSync = false;
+          return false;
+        }
       }
     } catch (e) {
       console.warn('[Cloud] Vérification _meta avant envoi impossible :', e && e.message);
     }
   }
-  pendingSync = true;
-  state.cloud.status = 'syncing';
-  if (state.page === 'parametres') render();
 
   try {
     // v53-fix57 : Calculer le hash de chaque clé et comparer aux hashes précédents
@@ -32291,8 +32321,12 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
     // Si rien n'a changé → on n'envoie rien (économie max)
     if (changedKeys.length === 0) {
       console.log('[Cloud] ✓ Rien à envoyer (aucune modification détectée)');
-      state.cloud.lastSync = now;
-      save('aitallal_cloud_lastsync', now);
+      // v53-fix122(rev) : n'avancer lastSync que jusqu'au lastUpdate RÉEL du cloud —
+      // Date.now() aveuglait le pré-check anti-écrasement jusqu'à la prochaine écriture distante.
+      if (preTs !== null && preTs > (state.cloud.lastSync || 0)) {
+        state.cloud.lastSync = preTs;
+        save('aitallal_cloud_lastsync', preTs);
+      }
       state.cloud.status = 'connected';
       state.cloud.dirty = false;
       save('aitallal_cloud_dirty', false);
@@ -32346,6 +32380,28 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
   } finally {
     pendingSync = false;
   }
+}
+
+// v53-fix122(rev) : comparaison canonique de deux listes d'enregistrements —
+// insensible à l'ordre des enregistrements ET à l'ordre des champs. Sert à la
+// CONVERGENCE : à contenu égal, on adopte la sérialisation du cloud, sinon deux
+// appareils au même contenu mais à l'ordre différent se renverraient leurs
+// listes indéfiniment (les empreintes de référence étant celles du cloud).
+function _trierClesProfond(o) {
+  if (Array.isArray(o)) return o.map(_trierClesProfond);
+  if (o && typeof o === 'object') {
+    const r = {};
+    Object.keys(o).sort().forEach(k => { r[k] = _trierClesProfond(o[k]); });
+    return r;
+  }
+  return o;
+}
+function canonEgal(listeA, listeB, idField) {
+  if (!Array.isArray(listeA) || !Array.isArray(listeB) || listeA.length !== listeB.length) return false;
+  const canon = l => JSON.stringify(
+    l.map(_trierClesProfond).sort((a, b) => String(a && a[idField]).localeCompare(String(b && b[idField])))
+  );
+  return canon(listeA) === canon(listeB);
 }
 
 // Download : récupérer les données du cloud et les appliquer localement
@@ -32482,6 +32538,10 @@ async function downloadFromCloud(silent = false) {
       'aitallal_audit_log': 'auditLog',
     };
 
+    // v53-fix122(rev) : empreintes de la dernière sync — sert à détecter les clés
+    // non-listes modifiées LOCALEMENT depuis (à ne pas écraser par le download).
+    const refHashes = load('aitallal_cloud_hashes', {});
+
     // 1. Fusionner les tombstones AVANT de traiter les listes
     let remoteTombs = {};
     try { remoteTombs = JSON.parse(remoteData['aitallal_tombstones'] || '{}'); } catch (e) {}
@@ -32507,28 +32567,40 @@ async function downloadFromCloud(silent = false) {
         // Liste fusionnable par ID
         let localList = [];
         let remoteList = [];
+        let remoteOk = false;
         try { localList = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
-        try { remoteList = JSON.parse(remoteData[key] || '[]'); } catch (e) {}
+        try { remoteList = JSON.parse(remoteData[key] || '[]'); remoteOk = true; } catch (e) {}
         const idField = SYNC_RECORD_LISTS[stateKey];
         const merged = mergeRecordList(
           localList, remoteList, idField,
           (localTombs[stateKey] || {}),
           (remoteTombs[stateKey] || {})
         );
-        localStorage.setItem(key, JSON.stringify(merged.merged));
+        // v53-fix122(rev) : à contenu canonique égal → sérialisation DISTANTE (convergence)
+        localStorage.setItem(key, (remoteOk && canonEgal(merged.merged, remoteList, idField))
+          ? remoteData[key] : JSON.stringify(merged.merged));
       } else if (key === 'aitallal_tombstones') {
         // Géré séparément ci-dessous
         continue;
       } else {
         // Clés non-liste (paramètres, permissions_override, corbeille, user)
-        // → simple last-writer-wins par clé (remoteTs > localTs → on prend le remote)
-        localStorage.setItem(key, remoteData[key]);
+        // v53-fix122(rev) : ne pas écraser une clé modifiée LOCALEMENT depuis la
+        // dernière sync — sa modif serait perdue juste avant son envoi (vécu avec le
+        // pré-check : un réglage métier revenait tout seul à son ancienne valeur).
+        // On la garde ; l'étape 5 (empreintes = contenu distant) reprogrammera son envoi.
+        // Baseline inconnue (premier download de l'appareil) → on prend le cloud.
+        const localV = localStorage.getItem(key);
+        const modifLocale = localV !== null && refHashes[key] !== undefined && quickHash(localV) !== refHashes[key];
+        if (!modifLocale) localStorage.setItem(key, remoteData[key]);
       }
     }
 
     // 3. Sauvegarder les tombstones fusionnés
     state.tombstones = mergedTombs;
-    localStorage.setItem('aitallal_tombstones', JSON.stringify(mergedTombs));
+    // v53-fix122(rev) : même convergence pour les tombstones (ordre des clés non numériques)
+    const tombsEgaux = typeof remoteData['aitallal_tombstones'] === 'string' &&
+      JSON.stringify(_trierClesProfond(mergedTombs)) === JSON.stringify(_trierClesProfond(remoteTombs));
+    localStorage.setItem('aitallal_tombstones', tombsEgaux ? remoteData['aitallal_tombstones'] : JSON.stringify(mergedTombs));
 
     // 4. Recalculer le _recordHashes (puisque les data ont changé)
     const newRecordHashes = {};
