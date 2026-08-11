@@ -1,0 +1,28 @@
+{
+  "name": "AIT ALLAL GROUPE — Gestion",
+  "short_name": "Ait Allal",
+  "description": "Gestion immobilière AIT ALLAL Groupe — Ventes, Clients, Réservations, Contrats",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a1f3d",
+  "theme_color": "#0a1f3d",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzBhMWYzZCIvPjxwYXRoIGQ9Ik05NiAzMmw1NiA5NkgyMTBMOTYgMzJ6IiBmaWxsPSIjZDRhZjM3Ii8+PHRleHQgeD0iOTYiIHk9IjE3MCIgZm9udC1mYW1pbHk9InNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjE4IiBmaWxsPSIjZDRhZjM3IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BSVQgQUxMQUw8L3RleHQ+PC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzBhMWYzZCIvPjxwYXRoIGQ9Ik0yNTYgODBsMTUwIDI1NkgxMDZsMTUwLTI1NnoiIGZpbGw9IiNkNGFmMzciLz48dGV4dCB4PSIyNTYiIHk9IjQ1MCIgZm9udC1mYW1pbHk9InNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjZDRhZjM3IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BSVQgQUxMQUw8L3RleHQ+PC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
