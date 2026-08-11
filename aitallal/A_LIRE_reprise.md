@@ -1,23 +1,71 @@
 # AIT ALLAL GROUPE — Reprise de la conversation
 
-Ce dossier contient **tout** pour continuer dans une nouvelle page.
+Le projet vit désormais dans **git** (dépôt `parchis-tangerois`, dossier `aitallal/`) —
+plus de zips de sauvegarde manuels. Conventions et architecture : voir `CLAUDE.md` (même dossier).
 
-## Version actuelle : v53-fix121
+## Version actuelle : v53-fix122
 
-## Contenu du zip
-- `app/index.html` — l'application complète (version fix121, à jour)
-- `app/manifest.json`, `app/sw.js` — fichiers PWA (sw.js en fix121)
-- `app/index-ar.html` — la page de contrôle arabe en fichier SÉPARÉ (observation hors-ligne)
-- `app/elghersa_import.json` — les vraies données EL GHERSA (pour vérifier les calculs)
-- `make_ar.py` — le script qui fabrique la page arabe séparée à partir de index.html
-  ⚠️ OBSOLÈTE depuis fix120 : plusieurs ancrages ne correspondent plus (le rôle Observateur et
-  `renderControleAR` sont maintenant DANS index.html). `index-ar.html` a été mis à jour À LA MAIN
-  pour fix121. À réparer proprement si on veut réutiliser le script (voir note plus bas).
-- `aitallal-netlify-v53-fix121.zip` — **LE ZIP À DÉPLOYER SUR NETLIFY** (index.html + manifest.json + sw.js)
+## Contenu du dossier
+- `index.html` — l'application complète (v53-fix122)
+- `manifest.json`, `sw.js` — fichiers PWA (cache `aitallal-v53-fix122`)
+- `index-ar.html` — page de contrôle arabe autonome, **GÉNÉRÉE** par `python3 make_ar.py`
+  (script réparé en fix122 — ne plus l'éditer à la main)
+- `elghersa_import.json` — les vraies données EL GHERSA (chiffres de référence)
+- `outils/verifier.sh` — vérification complète avant livraison
+- `outils/deployer.sh` — fabrique `aitallal-netlify-v53-fix122.zip` après vérification
 
 ## À déployer
-Déploie `aitallal-netlify-v53-fix121.zip` sur Netlify, puis ferme/rouvre l'app DEUX fois
-(pour que le cache du service worker se mette à jour). Les données ne sont pas réinitialisées.
+`bash outils/deployer.sh` puis glisser le zip sur app.netlify.com (site aitallal), et fermer/rouvrir
+l'app DEUX fois (mise à jour du cache du service worker). Les données ne sont pas réinitialisées.
+⚠️ Au 11 août 2026, le site en ligne servait encore une **fix121 intermédiaire** (le zip final
+fix121 n'avait jamais été déployé) — le déploiement de fix122 corrige tout d'un coup.
+
+---
+
+## CE QU'ON A FAIT EN DERNIER (fix122) — panne Firebase diagnostiquée + sync fiabilisée
+
+**La panne « ça ne se sauvegarde plus sur Firebase »** (constatée sur tous les appareils) :
+les règles **Firebase Storage** étaient en « mode test » (validité 30 jours) et ont expiré —
+d'où le refus d'envoi des plans PDF, documents et photos de CIN. C'est la « période d'essai »
+dont Yassine se souvenait. La base de données (ventes, clients, paiements) est intacte et
+fonctionnelle : dernière sync réussie le 14 juillet 2026, aucune donnée perdue côté cloud.
+
+**➡️ ACTION YASSINE (2 minutes, pas encore faite au moment d'écrire ces lignes)** :
+console Firebase → Storage → Rules → coller et publier :
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /plans/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /documents/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+Puis dans l'app : Paramètres → Synchronisation → **« 🩺 Tester la connexion Firebase »**
+(nouveau bouton fix122) → tout doit être ✅.
+
+Fait dans fix122 :
+- **Sync fiabilisée** : anti-écrasement (fusion avant envoi si le cloud est plus récent — le
+  journal d'audit cloud avait reculé du 14 juillet au 10 juin, écrasé par une copie périmée) +
+  empreintes de référence calculées sur le contenu distant (des modifs locales pouvaient devenir
+  invisibles et ne plus jamais partir).
+- **Diagnostic intégré** : bouton « 🩺 Tester la connexion Firebase » (SDK → auth → lecture →
+  écriture test effacée → Storage), avec conseil ciblé et lien console à chaque échec.
+- **sw.js** : domaines `firebasedatabase.app`/`firebasestorage.app` exclus du cache.
+- **Écran de connexion bilingue** français/arabe (proposition fix120 réalisée).
+- **Mode Commercial — Brochure PDF élégante (3/4)** : bouton « 📄 Brochure PDF » sur la fiche
+  d'un bien → A4 deux pages (couverture photo/bordeaux, caractéristiques, résidence, proximité,
+  contact), « PDF propre » nommé `Brochure-<ref>.pdf`, prix indicatif uniquement.
+- **make_ar.py réparé** : ancres réalignées, étapes absorbées tolérées, doublon impossible,
+  gardes dures — `index-ar.html` est régénéré (et rattrape les retards de la maintenance manuelle).
+- Badge VERSION des Paramètres réaligné (était resté à fix120).
+
+Reste à faire (chantier Mode Commercial) : **(4) galerie photos + plans par type** — bloqué en
+attendant les photos de Yassine.
 
 ---
 
@@ -138,4 +186,6 @@ quelques minutes, ouvrir le compte observateur sur un autre appareil et vérifie
 - fix118 : écran "Types d'appartements" (chambres + type par bloc/numéro)
 - fix119 : ajout "salle de bain" (sdb) à l'écran des types
 - fix120 : rôle Observateur + page de contrôle arabe à la connexion
-- fix121 : … + Mode Commercial : plan du bâtiment (1/4) + simulateur (2/4) + élévation design du hero (CETTE VERSION)
+- fix121 : … + Mode Commercial : plan du bâtiment (1/4) + simulateur (2/4) + élévation design du hero
+- fix122 : panne Storage diagnostiquée (règles « mode test » expirées) + sync anti-écrasement +
+  diagnostic Firebase intégré + connexion bilingue + brochure PDF (3/4) + make_ar.py réparé (CETTE VERSION)
