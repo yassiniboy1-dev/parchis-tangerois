@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#5d2a63">
+<meta name="apple-mobile-web-app-title" content="Parchís">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="description" content="Le Parchís aux règles traditionnelles de Tanger — sur un iPhone ou en ligne, chacun le sien.">
 <meta property="og:title" content="Parchís Tangérois — البارشيس الطنجاوي">
 <meta property="og:description" content="Le Parchís aux règles de Tanger. Crée une partie et invite tes joueurs par WhatsApp.">
@@ -346,6 +348,13 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;
 .modal .notice{color:rgba(58,42,18,.62)}
 .rline .ic{flex:none;width:24px;text-align:center}
 #modal-win .box{text-align:center}
+#win-stats{margin:10px 0 6px;text-align:left}
+.bilan-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;background:rgba(93,42,99,.07);margin-bottom:6px;font-size:14px}
+.bilan-rang{width:26px;text-align:center;flex:none}
+.bilan-pastille{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
+.bilan-nom{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bilan-chiffres{font-size:13px;white-space:pre;color:rgba(58,42,18,.75);flex:none}
+.bilan-duree{text-align:center;font-size:13px;color:rgba(58,42,18,.65);margin-top:2px}
 #win-pastille{width:58px;height:58px;border-radius:50%;margin:6px auto 12px;border:3px solid #fff;
   background-image:radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%);
   box-shadow:0 8px 22px rgba(0,0,0,.55), inset 0 -4px 8px rgba(0,0,0,.3)}
@@ -386,7 +395,7 @@ body{
 <div class="ecran on" id="scr-accueil">
   <div class="haut-accueil">
     <button class="chip-profil" id="btn-profil"><span class="cp-ico">👤</span><span id="profil-nom">Joueur</span></button>
-    <span class="chip-ver">v3.7</span>
+    <span class="chip-ver">v3.8</span>
   </div>
   <div class="brand">
     <svg class="orn" width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
@@ -534,6 +543,7 @@ body{
   <div id="menu-sieges"></div>
   <button class="btn violet" id="btn-reprise" style="display:none">🪑 Reprendre un siège</button>
   <button class="btn violet" id="btn-perso-jeu">⚙️ Personnaliser les règles</button>
+  <button class="btn violet" id="btn-son">🔊 Sons et vibrations : oui</button>
   <button class="btn violet" id="btn-regles-jeu">📜 Aide — règles de Tanger</button>
   <button class="btn danger" id="btn-restart">🚪 Quitter la partie</button>
 </div></div>
@@ -563,6 +573,7 @@ body{
   <div id="win-pastille"></div>
   <h3 id="win-titre" class="serif">Victoire&nbsp;!</h3>
   <p id="win-sub"></p>
+  <div id="win-stats"></div>
   <button class="btn primary" id="btn-rejouer">🔁 Rejouer</button>
   <button class="btn violet" id="btn-retour-menu">Quitter</button>
 </div></div>
@@ -669,6 +680,7 @@ const G={
   seats:['h','ia','ia','ia'], noms:['','','',''], training:false,
   desRestants:[],
   pawns:[], lastMoved:[null,null,null,null], winner:null,
+  stats:null,
 };
 /* réseau */
 const NET={
@@ -680,6 +692,48 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; 
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 NET.uid=lsGet('pt_uid')||('u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36));
 lsSet('pt_uid',NET.uid);
+
+/* ---------- sons & retour haptique ----------
+   Tout est synthétisé en WebAudio (aucun fichier), vibration quand le
+   téléphone la propose. Un seul réglage pour les deux, gardé en local. */
+const SND={on:lsGet('pt_son')!=='0',ctx:null};
+function sndCtx(){
+  if(!SND.ctx){
+    try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC) SND.ctx=new AC(); }catch(e){}
+  }
+  /* iOS suspend le contexte hors geste utilisateur : on le réveille à chaque toucher */
+  if(SND.ctx&&SND.ctx.state==='suspended'){ try{ SND.ctx.resume(); }catch(e){} }
+  return SND.ctx;
+}
+document.addEventListener('pointerdown',()=>{ if(SND.on) sndCtx(); },{passive:true});
+function bip(t0,freq,dur,forme,vol){
+  const c=SND.ctx; if(!c) return;
+  const o=c.createOscillator(), g=c.createGain(), t=c.currentTime+t0;
+  o.type=forme||'sine'; o.frequency.value=freq;
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol||.13,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t+dur+.05);
+}
+const SONS={
+  de:()=>{ bip(0,210,.05,'triangle',.09); bip(.07,168,.06,'triangle',.08); },
+  capture:()=>{ bip(0,392,.1,'square',.06); bip(.1,262,.16,'square',.07); },
+  boire:()=>{ bip(0,523,.09,'sine',.11); bip(.09,659,.09,'sine',.11); bip(.18,784,.2,'sine',.12); },
+  faute:()=>{ bip(0,150,.26,'sawtooth',.08); bip(.03,112,.3,'sawtooth',.06); },
+  win:()=>{ [523,659,784,1047].forEach((f,i)=>bip(i*.12,f,.22,'triangle',.11)); },
+};
+function jouerSon(nom){
+  if(!SND.on||!SONS[nom]||!sndCtx()) return;
+  try{ SONS[nom](); }catch(e){}
+}
+function vibrer(motif){
+  if(!SND.on) return;
+  try{ if(navigator.vibrate) navigator.vibrate(motif); }catch(e){}
+}
+
+/* ---------- stats de partie (bilan de fin) ---------- */
+function statsNeufs(){ return {t0:Date.now(),caps:[0,0,0,0],fautes:[0,0,0,0],ordre:[]}; }
 
 const isIA=pi=>G.seats[pi]==='ia';
 function nomDe(pi){ return G.noms[pi]||PLAYERS[pi].nom; }
@@ -887,6 +941,7 @@ function sync(action){
     lastMoved:G.lastMoved.map(x=>x==null?-1:x),
     winner:G.winner==null?-1:G.winner,
     des:(R.mode==='rapide'&&G.desRestants.length)?G.desRestants.join(','):null,
+    stats:G.stats?{t0:G.stats.t0,caps:G.stats.caps.join(','),fautes:G.stats.fautes.join(','),ordre:G.stats.ordre.join(',')}:null,
     action:action||null,
   };
   NET.ref.child('etat').set(etat);
@@ -906,15 +961,21 @@ function applyEtat(v){
   G.winner=(v.winner==null||v.winner<0)?null:v.winner;
   G.phase=(v.phase==='anim')?'spect':v.phase;
   G.desRestants=(typeof v.des==='string'&&v.des)?v.des.split(',').map(Number):[];
+  if(v.stats&&typeof v.stats.t0==='number'){
+    G.stats={t0:v.stats.t0,
+      caps:String(v.stats.caps||'0,0,0,0').split(',').map(Number),
+      fautes:String(v.stats.fautes||'0,0,0,0').split(',').map(Number),
+      ordre:(typeof v.stats.ordre==='string'&&v.stats.ordre)?v.stats.ordre.split(',').map(Number):[]};
+  }
   clearSel(); update();
   drawDie(G.face); drawSixes(); drawDes();
   chip12.style.display=(G.val===12&&(G.phase==='move'||G.phase==='bonus'))?'inline-block':'none';
   const a=v.action||{};
-  if(a.t==='de'){ if(a.aucun) toast('Aucun coup possible pour '+nomDe(G.cur),'warn'); }
-  else if(a.t==='faute'){ flash('rougefx',FAUTES[a.ft][0],FAUTES[a.ft][1]); }
-  else if(a.t==='mange'){ toast('🍽️ '+nomDe(a.qui)+' mange '+nomDe(a.quoi)+' !'+(a.b?' Bonus +20':''),'cap'); }
-  else if(a.t==='boire'){ toast('🏁 '+nomDe(a.qui)+' entre dans la boire !'+(a.b?' Bonus +10':''),'ok'); }
-  else if(a.t==='trois6'){ flash('ambrefx','TROIS 6 !','Le dernier pion déplacé rentre à la maison'); }
+  if(a.t==='de'){ if(a.aucun) toast('Aucun coup possible pour '+nomDe(G.cur),'warn'); else jouerSon('de'); }
+  else if(a.t==='faute'){ flash('rougefx',FAUTES[a.ft][0],FAUTES[a.ft][1]); jouerSon('faute'); vibrer(80); }
+  else if(a.t==='mange'){ toast('🍽️ '+nomDe(a.qui)+' mange '+nomDe(a.quoi)+' !'+(a.b?' Bonus +20':''),'cap'); jouerSon('capture'); vibrer([25,40,25]); }
+  else if(a.t==='boire'){ toast('🏁 '+nomDe(a.qui)+' entre dans la boire !'+(a.b?' Bonus +10':''),'ok'); jouerSon('boire'); vibrer([15,30,15]); }
+  else if(a.t==='trois6'){ flash('ambrefx',R.mode==='rapide'?'TROIS DOUBLES !':'TROIS 6 !','Le dernier pion déplacé rentre à la maison'); jouerSon('faute'); vibrer(80); }
   else if(a.t==='bonusperdu'){ toast('Bonus +'+a.v+' perdu — aucun coup possible','warn'); }
   else if(a.t==='fin'){ showWin(a.qui); }
 }
@@ -971,36 +1032,60 @@ function majStatutTexte(){
 }
 
 /* ---------- déroulement ---------- */
+/* rapide : un double redonne la main, les deux dés se relancent */
+function relanceRapide(){
+  G.phase='roll';
+  majStatutTexte(); refreshDieState();
+  sync({t:'relance'});
+  if(isIA(G.cur)) iaRoll();
+}
+/* rapide : traite le tirage qui vient d'être fait (G.desRestants).
+   G.sixes compte ici les doubles d'affilée — l'invariant « sixes>0 ⇔ le tirage
+   courant est un double » permet la relance sans champ réseau supplémentaire.
+   Au 3e double le tirage n'est pas joué : dernier pion déplacé à la maison. */
+function tirageRapide(){
+  if(G.desRestants[0]===G.desRestants[1]){
+    G.sixes++;
+    if(G.sixes>=3&&R.troisSix){
+      G.face=G.desRestants[0];
+      G.desRestants.length=0;
+      drawDie(G.face); drawSixes(); drawDes();
+      tripleSix();
+      return;
+    }
+  }else G.sixes=0;
+  G.face=G.desRestants[0];
+  computeTurnMoves();
+  if(!G.moves.length&&G.desRestants.length===2){
+    G.desRestants.reverse(); G.face=G.desRestants[0]; computeTurnMoves();
+    if(!G.moves.length) G.desRestants.reverse();
+  }
+  G.face=G.desRestants[0]; drawDes(); drawDie(G.face); drawSixes();
+  chip12.style.display=(G.val===12)?'inline-block':'none';
+  if(!G.moves.length){
+    toast('Aucun coup possible','warn');
+    G.desRestants.length=0; drawDes();
+    G.phase='spect'; sync({t:'de',face:G.face,aucun:true});
+    setTimeout(()=>{ if(G.sixes>0) relanceRapide(); else nextPlayer(); },950);
+    return;
+  }
+  G.phase='move';
+  majStatutTexte();
+  sync({t:'de',face:G.face});
+  markSelectable();
+  if(isIA(G.cur)) iaPlayMove();
+}
 function doRoll(){
   if(G.phase!=='roll'||!amAuth()) return;
   if(NET.on&&NET.myPi==null&&!NET.isHote) return;
   G.phase='anim';
   dieEl.classList.remove('pulse');
   animDice(()=>{
+    jouerSon('de'); vibrer(8);
     if(R.mode==='rapide'){
       /* deux dés, joués séparément (l'ordre se change en touchant le 2e dé) */
       G.desRestants=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
-      G.sixes=0;
-      G.face=G.desRestants[0];
-      computeTurnMoves();
-      if(!G.moves.length&&G.desRestants.length===2){
-        G.desRestants.reverse(); G.face=G.desRestants[0]; computeTurnMoves();
-        if(!G.moves.length) G.desRestants.reverse();
-      }
-      G.face=G.desRestants[0]; drawDes(); drawDie(G.face);
-      chip12.style.display=(G.val===12)?'inline-block':'none';
-      if(!G.moves.length){
-        toast('Aucun coup possible','warn');
-        G.desRestants.length=0; drawDes();
-        G.phase='spect'; sync({t:'de',face:G.face,aucun:true});
-        setTimeout(nextPlayer,950);
-        return;
-      }
-      G.phase='move';
-      majStatutTexte();
-      sync({t:'de',face:G.face});
-      markSelectable();
-      if(isIA(G.cur)) iaPlayMove();
+      tirageRapide();
       return;
     }
     const f=1+Math.floor(Math.random()*6);
@@ -1027,7 +1112,9 @@ function doRoll(){
   });
 }
 function tripleSix(){
-  flash('ambrefx','TROIS 6 !','Le dernier pion déplacé rentre à la maison');
+  flash('ambrefx',R.mode==='rapide'?'TROIS DOUBLES !':'TROIS 6 !','Le dernier pion déplacé rentre à la maison');
+  jouerSon('faute'); vibrer(80);
+  if(G.stats) G.stats.fautes[actif()]++;
   G.phase='anim'; sync({t:'trois6'});
   const pi=actif(), pj=G.lastMoved[pi];
   setTimeout(()=>{
@@ -1071,6 +1158,8 @@ function afterMove(mv,fault,movedPjs,enBonus){
   const pi=actif();
   if(fault){
     flash('rougefx',FAUTES[fault][0],FAUTES[fault][1]);
+    jouerSon('faute'); vibrer(80);
+    if(G.stats) G.stats.fautes[pi]++;
     sync({t:'faute',ft:fault});
     setTimeout(()=>{
       movedPjs.forEach(pj=>{ G.pawns[pi][pj]={z:'h'}; });
@@ -1086,17 +1175,21 @@ function afterMove(mv,fault,movedPjs,enBonus){
   else caps=mv.cap?[mv.cap]:[];
   caps.forEach(c=>{
     G.pawns[c.pi][c.pj]={z:'h'};
+    if(G.stats) G.stats.caps[pi]++;
     let msg='🍽️ '+nomDe(pi)+' mange '+nomDe(c.pi)+' !';
     if(R.bonusCapture){ G.bonus.push(20); msg+=' Bonus +20'; }
     toast(msg,'cap');
+    jouerSon('capture'); vibrer([25,40,25]);
     sync({t:'mange',qui:pi,quoi:c.pi,b:R.bonusCapture});
   });
   if(mv.kind==='m'&&mv.dest.z==='g'){
     let msg='🏁 '+nomDe(pi)+' entre dans la boire !';
     if(R.bonusBoire){ G.bonus.push(10); msg+=' Bonus +10'; }
     toast(msg,'ok');
+    jouerSon('boire'); vibrer([15,30,15]);
     sync({t:'boire',qui:pi,b:R.bonusBoire});
     if(G.pawns[pi].every(p=>p.z==='g')){
+      if(G.stats&&G.stats.ordre.indexOf(pi)<0) G.stats.ordre.push(pi);
       if(R.mode==='equipes'&&!aFini(partenaire(pi))){
         toast('🏆 '+nomDe(pi)+' a fini — il joue maintenant pour '+nomDe(partenaire(pi))+' !','ok');
       }else{ update(); win(pi); return; }
@@ -1135,7 +1228,7 @@ function endOfAction(){
         toast('Aucun coup possible pour le second dé','warn');
         G.desRestants.length=0; drawDes();
         G.phase='spect'; sync({t:'de',face:G.face,aucun:true});
-        setTimeout(nextPlayer,900);
+        setTimeout(()=>{ if(G.sixes>0) relanceRapide(); else nextPlayer(); },900);
         return;
       }
       G.phase='move';
@@ -1145,6 +1238,7 @@ function endOfAction(){
       if(isIA(G.cur)) iaPlayMove();
       return;
     }
+    if(G.sixes>0){ relanceRapide(); return; }
     nextPlayer();
     return;
   }
@@ -1169,9 +1263,41 @@ function nextPlayer(){
   sync({t:'tour'});
   if(isIA(G.cur)&&amAuth()) iaRoll();
 }
+/* bilan de fin : classement, captures, fautes, durée */
+function construireBilan(){
+  const zone=document.getElementById('win-stats'); if(!zone) return;
+  zone.innerHTML='';
+  const st=G.stats;
+  const rows=[0,1,2,3].filter(q=>G.seats[q]!=='x').map(q=>({
+    q,
+    but:G.pawns[q].filter(p=>p.z==='g').length,
+    prog:G.pawns[q].reduce((s,p)=>s+progressOf(p,q),0),
+    fin:(st&&st.ordre.indexOf(q)>=0)?st.ordre.indexOf(q):99,
+  }));
+  rows.sort((a,b)=>(a.fin-b.fin)||(b.but-a.but)||(b.prog-a.prog));
+  const med=['🥇','🥈','🥉','4ᵉ'];
+  rows.forEach((r,i)=>{
+    const d=document.createElement('div'); d.className='bilan-row';
+    const rang=document.createElement('span'); rang.className='bilan-rang'; rang.textContent=med[i]||(i+1)+'ᵉ';
+    const past=document.createElement('span'); past.className='bilan-pastille'; past.style.background=PLAYERS[r.q].hex;
+    const nom=document.createElement('span'); nom.className='bilan-nom'; nom.textContent=nomDe(r.q);
+    const ch=document.createElement('span'); ch.className='bilan-chiffres';
+    ch.textContent='🏁 '+r.but+'/4   🍽️ '+(st?st.caps[r.q]:0)+'   ⚠️ '+(st?st.fautes[r.q]:0);
+    d.appendChild(rang); d.appendChild(past); d.appendChild(nom); d.appendChild(ch);
+    zone.appendChild(d);
+  });
+  if(st&&st.t0){
+    const mn=Math.max(1,Math.round((Date.now()-st.t0)/60000));
+    const d=document.createElement('div'); d.className='bilan-duree';
+    d.textContent='⏱️ Partie de '+(mn<60?(mn+' min'):(Math.floor(mn/60)+' h '+String(mn%60).padStart(2,'0')));
+    zone.appendChild(d);
+  }
+}
 function showWin(pi){
   const p=PLAYERS[pi];
   document.getElementById('win-pastille').style.background=p.hex;
+  construireBilan();
+  jouerSon('win'); vibrer([30,50,30,50,80]);
   if(R.mode==='equipes'){
     document.getElementById('win-titre').textContent=nomDe(pi)+' & '+nomDe(partenaire(pi))+' gagnent !';
     document.getElementById('win-sub').textContent='Les 8 pions de l’équipe sont dans la boire. Machallah.';
@@ -1456,7 +1582,8 @@ function refreshDieState(){
   dieEl.classList.toggle('pulse',active);
 }
 function drawSixes(){
-  document.getElementById('sixdots').textContent=G.sixes>0?('6 ×'+G.sixes+' '+'●'.repeat(G.sixes)+'○'.repeat(Math.max(0,3-G.sixes))):'';
+  const lib=(R.mode==='rapide')?'Double':'6';
+  document.getElementById('sixdots').textContent=G.sixes>0?(lib+' ×'+G.sixes+' '+'●'.repeat(G.sixes)+'○'.repeat(Math.max(0,3-G.sixes))):'';
 }
 function drawBanner(){
   const P=PLAYERS[G.cur];
@@ -1525,7 +1652,7 @@ document.getElementById('btn-perso-ok').addEventListener('click',()=>{
 /* ==========================================================
    MODE LOCAL
    ========================================================== */
-const MODESUB={classique:'Chacun pour soi',equipes:'Bleu+Vert contre Jaune+Rouge — le fini aide son partenaire',rapide:'Deux dés par tour, joués séparément'};
+const MODESUB={classique:'Chacun pour soi',equipes:'Bleu+Vert contre Jaune+Rouge — le fini aide son partenaire',rapide:'Deux dés par tour — un double fait rejouer, trois doubles = faute'};
 function majModeSub(){
   const a=document.getElementById('mode-sub-local'), b=document.getElementById('mode-sub-ligne');
   if(a) a.textContent=MODESUB[R.mode]||'';
@@ -1577,6 +1704,7 @@ function startLocal(){
 function demarrerJeu(){
   G.pawns=PLAYERS.map(()=>[{z:'h'},{z:'h'},{z:'h'},{z:'h'}]);
   G.lastMoved=[null,null,null,null];
+  G.stats=statsNeufs();
   G.bonus.length=0; G.sixes=0; G.face=0; G.val=0; G.winner=null;
   G.obligCap=new Set(); G.obligOuv=new Set(); G.obligSortie=new Set();
   G.cur=Math.max(0,G.seats.indexOf('h'));
@@ -1818,6 +1946,7 @@ function lancerEnLigne(){
     seq:Date.now(), w:NET.uid, cur:premier, face:0, val:0, sixes:0, phase:'roll',
     pawns:[0,1,2,3].map(()=>[0,1,2,3].map(()=>({z:'h'}))),
     lastMoved:[-1,-1,-1,-1], winner:-1, bonus:null,
+    stats:{t0:Date.now(),caps:'0,0,0,0',fautes:'0,0,0,0',ordre:''},
     action:{t:'debut'},
   };
   NET.ref.update(maj);
@@ -1844,6 +1973,7 @@ function rejouerEnLigne(){
       seq:Math.max(NET.appliedSeq+1,Date.now()), w:NET.uid, cur:0, face:0, val:0, sixes:0, phase:'roll',
       pawns:[0,1,2,3].map(()=>[0,1,2,3].map(()=>({z:'h'}))),
       lastMoved:[-1,-1,-1,-1], winner:-1, bonus:null,
+      stats:{t0:Date.now(),caps:'0,0,0,0',fautes:'0,0,0,0',ordre:''},
       action:{t:'debut'},
     }
   });
@@ -1920,6 +2050,15 @@ document.getElementById('btn-perso-jeu').addEventListener('click',()=>{
   if(NET.on&&!NET.isHote){ hideModals(); toast('Seul l’hôte peut modifier les règles','warn'); return; }
   hideModals(); buildPerso(); showModal('modal-perso');
 });
+function majBtnSon(){
+  const b=document.getElementById('btn-son');
+  if(b) b.textContent=SND.on?'🔊 Sons et vibrations : oui':'🔇 Sons et vibrations : non';
+}
+document.getElementById('btn-son').addEventListener('click',()=>{
+  SND.on=!SND.on; lsSet('pt_son',SND.on?'1':'0'); majBtnSon();
+  if(SND.on){ sndCtx(); jouerSon('de'); vibrer(15); }
+});
+majBtnSon();
 document.getElementById('btn-regles-jeu').addEventListener('click',()=>{ hideModals(); showModal('modal-regles'); });
 document.getElementById('btn-restart').addEventListener('click',()=>{ hideModals(); showModal('modal-confirm'); });
 document.getElementById('btn-confirm-oui').addEventListener('click',()=>{

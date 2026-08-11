@@ -1,0 +1,17 @@
+{
+  "name": "Parchís Tangérois",
+  "short_name": "Parchís",
+  "description": "Le Parchís aux règles traditionnelles de Tanger — sur un iPhone ou en ligne, chacun le sien.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#451d4e",
+  "theme_color": "#5d2a63",
+  "icons": [
+    { "src": "icons/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

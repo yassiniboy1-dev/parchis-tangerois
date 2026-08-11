@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.8)
 
 Jeu de Parchís aux règles traditionnelles de **Tanger**, pour Yassine.
 Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**, multijoueur en ligne via **Firebase Realtime Database**.
@@ -6,7 +6,7 @@ Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**
 ## Commandes
 
 ```bash
-node tests/moteur.test.js        # 42 tests des règles, exécutés contre index.html
+node tests/moteur.test.js        # 48 tests des règles, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie complète simulée entre 2 clients + 2 IA (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 node --check <(awk '/<script>$/{f=1;next}/<\/script>/{f=0}f' index.html)   # syntaxe du JS inline
@@ -31,7 +31,7 @@ Une fois connecté, Claude Code peut déployer directement sur Netlify et inspec
 
 ## Conventions impératives (retours utilisateur — ne jamais enfreindre)
 
-- **Un seul fichier** `index.html`. Livraison = zip contenant `index.html` pour Netlify.
+- **Un seul fichier** `index.html` pour tout le jeu. Depuis v3.8 le déploiement embarque en plus `manifest.webmanifest` + `icons/icone-192.png` + `icons/icone-512.png` (PWA — exception validée par Yassine via le backlog). Livraison = zip fabriqué par `outils/deployer.sh`.
 - **Jamais** `window.confirm` / `window.alert` / `prompt` (bloqués sur iPhone) → modals custom (`.modal`, `showModal`/`hideModals`).
 - **Accents écrits directement** dans le code et l'UI. Aucune séquence `\uXXXX` (seule exception : plages regex de diacritiques). Vérifier : `grep -c '\\\\u0' <script extrait>` doit rendre 0.
 - **UI en français**, mobile-first iPhone (safe-area, tap targets ≥ 36px, `touch-action:manipulation`).
@@ -52,7 +52,7 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 `R.mode` = `classique` | `equipes` | `rapide` — choisi dans le setup local ou par l'hôte au lobby (seg `#mode-local`/`#mode-ligne`, synchro live via `regles.mode`, préservé par le reset des règles).
 
 - **Équipes (2 vs 2)** : diagonales fixes Bleu+Vert contre Jaune+Rouge (`partenaire=(pi+2)%4`). Jamais de capture entre partenaires, barrage d'équipe valable partout, la sortie épargne le partenaire (`memeEquipe` dans `simMove`/`canLand`/`exitMove`/`threat`). Victoire quand LES DEUX ont fini ; un joueur fini continue de lancer et joue les pions de son partenaire : **tout le tour joue les pions de `actif()`** (computeTurnMoves/execMove/afterMove/markSelectable/onPawnTap…). Se joue à 4 obligatoirement.
-- **Rapide (2 dés)** : `G.desRestants` (synchro `etat.des`, chaîne "a,b"), chaque dé joué séparément, dé actif en tête de file, toucher le 2e dé (`#die2`) échange l'ordre. Pas de rejouer sur 6 ni de triple 6 ; obligations et fautes calculées par dé actif ; sortie sur un dé de 5 normale. Un dé injouable est perdu.
+- **Rapide (2 dés)** : `G.desRestants` (synchro `etat.des`, chaîne "a,b"), chaque dé joué séparément, dé actif en tête de file, toucher le 2e dé (`#die2`) échange l'ordre. **Doubles (v3.8, règle validée par Yassine)** : un double (n'importe quelle valeur) fait relancer les deux dés après les avoir joués ; le 3e double d'affilée n'est pas joué — dernier pion déplacé à la maison (corridor/boire protégés, comme le triple 6, même interrupteur `R.troisSix`). `G.sixes` compte les doubles (invariant : `sixes>0` ⇔ tirage courant = double → `tirageRapide`/`relanceRapide`). Pas de rejouer sur 6 seul ; obligations et fautes calculées par dé actif ; sortie sur un dé de 5 normale. Un dé injouable est perdu (mais un double injouable relance quand même).
 - **1 contre 1 / sièges vides** : siège `x` (« — ») dans le setup local ; en ligne, interrupteur hôte « Sièges vides → IA » (`NET.iaFill`, forcé en équipes) — désactivé, les sièges libres deviennent `t:'x'`. `nextPlayer` saute les sièges `x`, leurs pions sont masqués (`update`), minimum 2 joueurs actifs.
 
 ## Règles de Tanger (résumé moteur)
@@ -70,7 +70,8 @@ config Firebase → règles `R` (8 interrupteurs, défauts = règles de Tanger) 
 ## Protocole réseau (CRITIQUE — lire avant toute modif)
 
 Base : `parties/{CODE}` = `{v, creele, hote, statut: lobby|jeu|fini, sieges:{pi:{t:h|ia|l|x, nom, uid}}, regles, etat}`.
-`etat` = `{seq, w, pawns, cur, face, val, sixes, phase, bonus, bv, lastMoved, winner, des, action}`.
+`etat` = `{seq, w, pawns, cur, face, val, sixes, phase, bonus, bv, lastMoved, winner, des, stats, action}`.
+`stats` (v3.8, bilan de fin) = `{t0, caps:'0,0,0,0', fautes:'0,0,0,0', ordre:'2,0'}` — chaînes CSV (pas de tableaux Firebase), t0 posé au lancement, incréments par l'autorité dans `afterMove`/`tripleSix`, champ toléré absent à la lecture (`applyEtat`).
 
 - **Autorité** : `amAuth()` = local → true ; en ligne → `isIA(cur) ? isHote : (myPi===cur)`. Seule l'autorité exécute la logique et les timers ; les autres rendent via `applyEtat` (phase `anim` → `spect`).
 - **Seq anti-collision** : `sync()` écrit `seq = Math.max(NET.appliedSeq+1, Date.now())` + `w = NET.uid`, et pose `NET.lastW = NET.uid`.
@@ -118,14 +119,19 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 ## Tests
 
 - `tests/charge.js` : charge le vrai script d'`index.html` dans un contexte VM avec DOM factice.
-- `tests/moteur.test.js` : 42 assertions (dont mode équipes) règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, priorités ouverture/capture/repli via `fauteDuCoup`, 6→12, obligations et replis, corridor, interrupteurs).
+- `tests/moteur.test.js` : 48 assertions (dont mode équipes et doubles du mode rapide) règles (topologie 71 pas, barrages, captures/refuges, sortie double, sortie qui mange la salida, barrage mixte à ouvrir, priorités ouverture/capture/repli via `fauteDuCoup`, 6→12, obligations et replis, corridor, interrupteurs).
 - `tests/sim-multijoueur.js` : 2 vrais clients (VM) + faux Firebase partagé, partie aléatoire complète, **reprise de siège testée à l'action 12**, assertion de convergence d'état à chaque étape, journal des écritures `etat` en cas d'échec. Temps compressé ÷12. Plafond : 1500 pas de boucle (600 faisait échouer ~1 partie sur 10, légitimement longue).
+
+## v3.8 (fait — 2026-08-11)
+
+- **Doubles du mode Rapide** (règle validée par Yassine) : voir section Modes de jeu.
+- **Sons + retour haptique** : WebAudio synthétisé (`SND`/`SONS`/`jouerSon`/`bip`, aucun fichier audio), `vibrer` via `navigator.vibrate` (Android ; iOS Safari ne le propose pas). Sons : dé, capture, boire, faute (et trois 6 / trois doubles), victoire. Joués chez tous : autorité aux sites d'action, spectateurs dans `applyEtat`. Réglage unique « Sons et vibrations » dans le menu (`#btn-son`, localStorage `pt_son`). Contexte audio réveillé à chaque `pointerdown` (iOS le suspend hors geste).
+- **PWA** : `manifest.webmanifest` + `icons/icone-192/512.png` (générés depuis `visuels/icone.png` — qui est un JPEG malgré son nom — via canvas Chromium), `<link rel="manifest">` + meta `apple-mobile-web-app-title`. Les deux scripts de déploiement embarquent ces fichiers ; `deployer-api.sh` vérifie aussi que le manifest est servi en 200.
+- **Écran de fin enrichi** : bilan dans `modal-win` (`#win-stats`, `construireBilan`) — classement (ordre d'arrivée puis pions dans la boire puis progression), captures 🍽️, fautes ⚠️ (le triple 6/double compte comme faute), durée ⏱️ via `stats.t0`.
 
 ## Backlog (propositions à discuter avec Yassine)
 
-1. Sons discrets + retour haptique (dé, capture, boire, faute).
-2. Manifest PWA (« Ajouter à l'écran d'accueil ») — l'icône est faite (`visuels/icone.png`, favicon/apple-touch déjà inlinés) ; reste le manifest, qui demandera un fichier à côté d'`index.html` dans le zip.
-3. Écran de fin enrichi : classement, captures, fautes, durée.
-4. Historique des coups repliable pendant la partie.
-5. Réactions rapides entre joueurs (👏 😂 😱) synchronisées via `action`.
-6. ~~Fond d'accueil zellige subtil~~ — fait (SVG procédural dans `body::before`).
+1. Historique des coups repliable pendant la partie.
+2. Réactions rapides entre joueurs (👏 😂 😱) synchronisées via `action`.
+3. ~~Fond d'accueil zellige subtil~~ — fait (SVG procédural dans `body::before`).
+4. ~~Sons + haptique, manifest PWA, écran de fin enrichi~~ — faits en v3.8.
