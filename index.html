@@ -35,12 +35,18 @@
       if(z&&z.textContent.indexOf(msg)===-1) z.textContent=(z.textContent?z.textContent+' — ':'')+msg;
     }catch(e){}
   }
+  /* Safari masque l'origine des scripts internes/extensions en « webkit-masked-url » :
+     leurs échecs ne viennent pas du jeu, on les ignore (faux positif vécu sur iPhone). */
+  function etranger(u){ return typeof u==='string'&&(u.indexOf('webkit-masked-url')!==-1||u.indexOf('safari-extension')!==-1); }
   window.addEventListener('error',function(ev){
     if(ev&&ev.target&&ev.target!==window&&(ev.target.tagName==='SCRIPT'||ev.target.tagName==='LINK')){
-      montrer('Chargement bloqué : '+(ev.target.src||ev.target.href||'ressource'));
+      var src=ev.target.src||ev.target.href||'ressource';
+      if(etranger(src)) return;
+      montrer('Chargement bloqué : '+src);
       return;
     }
     if(!ev||!ev.message) return; /* événements vides ou cross-origin muets : sans intérêt */
+    if(etranger(ev.filename)) return;
     var l=ev.lineno?' (ligne '+ev.lineno+')':'';
     montrer('Erreur : '+ev.message+l);
   },true);
