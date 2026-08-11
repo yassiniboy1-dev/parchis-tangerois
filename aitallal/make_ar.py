@@ -1,8 +1,21 @@
 # -*- coding: utf-8 -*-
-import io
+"""
+make_ar.py — génère index-ar.html (page de contrôle arabe autonome de l'associé)
+à partir d'index.html. RÉPARÉ en v53-fix122 :
+  - ancres réalignées sur fix121+ (le rôle observateur, renderControleAR et le
+    garde d'uploadToCloud sont DANS index.html depuis fix120 → plus d'injection,
+    on adapte l'existant ; un doublon de renderControleAR est impossible) ;
+  - étapes de neutralisation tolérantes (si déjà fait → skip au lieu de crash) ;
+  - SRC/DST relatifs au script (surchargeable : make_ar.py [src] [dst]).
+Usage : python3 make_ar.py          (depuis le dossier aitallal/)
+La page générée : connexion auto en observateur arabe, AUCUNE écriture
+(localStorage, cloud, backups), service worker désactivé.
+"""
+import io, os, sys
 
-SRC = "/home/claude/app/index.html"
-DST = "/home/claude/app/index-ar.html"
+BASE = os.path.dirname(os.path.abspath(__file__))
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(BASE, "index.html")
+DST = sys.argv[2] if len(sys.argv) > 2 else os.path.join(BASE, "index-ar.html")
 
 text = io.open(SRC, encoding="utf-8").read()
 
@@ -24,6 +37,28 @@ def repl_all(s, old, new, label):
     c = s.count(old)
     assert c >= 1, "[%s] introuvable" % label
     return s.replace(old, new)
+
+
+def repl_or_skip(s, old, new, label, deja=None):
+    # Etape de NEUTRALISATION : si la transformation (ou son marqueur) est deja
+    # presente, on skippe au lieu de crasher — survit aux futures absorptions
+    # dans index.html et aux doubles executions.
+    marker = deja if deja else new
+    if marker in s:
+        print("[%s] deja present -> skip" % label)
+        return s
+    return repl_once(s, old, new, label)
+
+def supprimer_bloc(s, debut, fin, label, fin_inclus=False):
+    # Suppression tolerante d'un bloc [debut, fin) ; absent -> skip avec trace.
+    if debut not in s:
+        print("[%s] bloc absent -> skip" % label)
+        return s
+    i = s.index(debut)
+    j = s.index(fin, i)
+    if fin_inclus:
+        j += len(fin)
+    return s[:i] + s[j:]
 
 # ---- 1. <html> RTL + lang (document uniquement, pas les templates d'export) ----
 text = repl_first(text, '<html lang="fr">', '<html lang="ar" dir="rtl">', "html-rtl")
@@ -51,35 +86,26 @@ ribbon = '<body>\n<div id="ar-preview-ribbon">\u0645\u0639\u0627\u064a\u0646\u06
 text = repl_first(text, "<body>", ribbon, "body-ribbon")
 
 # ---- 4. desactiver le service worker (copie autonome, pas de conflit de cache) ----
-text = repl_once(text,
+text = repl_or_skip(text,
     "if ('serviceWorker' in navigator) {",
     "if (false /* AR preview: service worker desactive */ && 'serviceWorker' in navigator) {",
-    "sw-off")
+    "sw-off", deja="if (false /* AR preview")
 
 # ---- 5. desactiver le cloud (observation: aucune ecriture sur les donnees partagees) ----
-text = repl_once(text,
+text = repl_or_skip(text,
     "function initCloud() {\n  if (!window.FB || !window.FB.ready) {",
     "function initCloud() {\n  return; /* AR preview: cloud desactive \u2014 aucune ecriture sur les donnees partagees */\n  if (!window.FB || !window.FB.ready) {",
     "cloud-off")
 
 # ---- 6. role LECTURE SEULE (observateur) : uniquement les droits "voir" ----
-observateur = (
-    "      voir_audit: true,\n    }\n  },\n"
-    "  observateur: {\n"
-    "    label: '\u0645\u064f\u0631\u0627\u0642\u0628 \u2014 \u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637', icon: 'shield', color: 'comptable',\n"
-    "    perms: {\n"
-    "      voir_prix: true, voir_finances: true, voir_clients: true,\n"
-    "      modifier_clients: false, voir_ventes: true, creer_vente: false, reserver: false,\n"
-    "      voir_paiements: true, creer_paiement: false, generer_contrat: false,\n"
-    "      modifier_stock: false, importer_excel: false, gerer_utilisateurs: false,\n"
-    "      sauvegarder: false, supprimer: false, supprimer_clients: false, voir_parkings: true, modifier_parkings: false,\n"
-    "      voir_visites: false, gerer_visites: false,\n"
-    "      voir_depenses: false, gerer_depenses: false, voir_fournisseurs: false, gerer_fournisseurs: false,\n"
-    "      voir_agenda: false, gerer_rappels: false,\n"
-    "      voir_audit: false,\n"
-    "    }\n  }\n};"
-)
-text = repl_once(text, "      voir_audit: true,\n    }\n  }\n};", observateur, "role-observateur")
+text = repl_or_skip(text,
+    "label: 'Observateur (lecture seule)', icon: 'shield', color: 'comptable',",
+    "label: '\u0645\u064f\u0631\u0627\u0642\u0628 \u2014 \u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637', icon: 'shield', color: 'comptable',",
+    "role-label")
+text = repl_or_skip(text,
+    "      voir_visites: true, gerer_visites: false,\n      voir_depenses: true, gerer_depenses: false, voir_fournisseurs: true, gerer_fournisseurs: false,\n      voir_agenda: true, gerer_rappels: false,",
+    "      voir_visites: false, gerer_visites: false,\n      voir_depenses: false, gerer_depenses: false, voir_fournisseurs: false, gerer_fournisseurs: false,\n      voir_agenda: false, gerer_rappels: false,",
+    "role-perms")
 
 # ---- 7. CONNEXION AUTOMATIQUE en lecture seule (aucun ecran de login en francais) ----
 autologin = (
@@ -96,125 +122,47 @@ autologin = (
     "  }\n"
     "  // v53-fix50"
 )
-text = repl_once(text, "function render() {\n  // v53-fix50", autologin, "auto-login")
+text = repl_or_skip(text, "function render() {\n  // v53-fix50", autologin, "auto-login", deja="/* AR preview: connexion automatique en lecture seule")
 
-# ---- 7b. ECRAN UNIQUE DE CONTROLE (arabe, lecture seule) pour l'observateur ----
-render_controle = """
-function renderControleAR() {
-  const num = x => Number(x) || 0;
-  const fmt = n => Math.round(num(n)).toLocaleString('fr-FR');
-  const stock = state.stock || [], magasins = state.magasins || [], parkings = state.parkings || [];
-  const ventes = state.ventes || [], paiements = state.paiements || [];
-  const cnt = arr => ({
-    t: arr.length,
-    v: arr.filter(x => x.statut === 'Vendu').length,
-    r: arr.filter(x => x.statut === 'Réservé').length,
-    d: arr.filter(x => x.statut === 'Disponible').length
-  });
-  const A = cnt(stock), M = cnt(magasins), P = cnt(parkings);
-  const totV = A.v + M.v + P.v, totR = A.r + M.r + P.r, totD = A.d + M.d + P.d;
-  const ca = ventes.reduce((s, v) => s + num(v.montantTotal), 0);
-  const enc = paiements.reduce((s, p) => s + num(p.montant), 0);
-  const pct = ca > 0 ? Math.round(enc / ca * 100) : 0;
-  const caF = ventes.reduce((s, v) => s + num(v.montantFiscal), 0);
-  const encF = paiements.reduce((s, p) => s + num(p.montantFiscal), 0);
-  const pctF = caF > 0 ? Math.round(encF / caF * 100) : 0;
-  const statAr = st => st === 'Vendu' ? 'مباع' : (st === 'Réservé' ? 'محجوز' : 'متوفر');
-  const statCol = st => st === 'Vendu' ? '#0a7d4d' : (st === 'Réservé' ? '#64748b' : '#b8860b');
-  const itemRow = (titre, it) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:1px solid #f4f1e8;">
-        <div style="flex:1;font-size:13px;color:#0a1f3d;">${titre}<span style="color:#9aa3b2;"> · ${it.type || ''} · ${it.surface || '?'} m²</span></div>
-        <span style="font-size:11px;font-weight:700;color:${statCol(it.statut)};background:${statCol(it.statut)}1a;padding:3px 9px;border-radius:10px;">${statAr(it.statut)}</span>
-      </div>`;
-  const parBloc = {};
-  stock.forEach(s => { (parBloc[s.bloc || '?'] = parBloc[s.bloc || '?'] || []).push(s); });
-  const blocs = Object.keys(parBloc).sort();
-  const blocBox = b => {
-    const items = parBloc[b].slice().sort((x, y) => (num(x.etage) - num(y.etage)) || String(x.num || '').localeCompare(String(y.num || '')));
-    const v = items.filter(x => x.statut === 'Vendu').length;
-    const d = items.filter(x => x.statut === 'Disponible').length;
-    return `
-      <details style="background:#fff;border:1px solid #ece7d8;border-radius:14px;margin-bottom:10px;overflow:hidden;">
-        <summary style="display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;">
-          <span style="flex:1;font-weight:800;color:#0a1f3d;font-size:16px;">Bloc ${b}</span>
-          <span style="font-size:12px;color:#0a7d4d;font-weight:700;">مباع ${v}</span>
-          <span style="font-size:12px;color:#b8860b;font-weight:700;">متوفر ${d}</span>
-          <span style="color:#cbd5e1;font-size:13px;">▾</span>
-        </summary>
-        <div>${items.map(a => itemRow('شقة ' + (a.num || a.ref || ''), a)).join('')}</div>
-      </details>`;
-  };
-  const magItems = magasins.slice().sort((x, y) => String(x.ref || '').localeCompare(String(y.ref || '')));
-  const magBox = `
-      <details style="background:#fff;border:1px solid #ece7d8;border-radius:14px;margin-bottom:10px;overflow:hidden;">
-        <summary style="display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;">
-          <span style="flex:1;font-weight:800;color:#0a1f3d;font-size:16px;">المحلات</span>
-          <span style="font-size:12px;color:#0a7d4d;font-weight:700;">مباع ${M.v}</span>
-          <span style="font-size:12px;color:#b8860b;font-weight:700;">متوفر ${M.d}</span>
-          <span style="color:#cbd5e1;font-size:13px;">▾</span>
-        </summary>
-        <div>${magItems.map(m => itemRow('محل ' + (m.num || m.ref || ''), m)).join('')}</div>
-      </details>`;
-  const secTitre = (t, c) => `<div style="display:flex;align-items:center;gap:8px;margin:18px 4px 12px;"><div style="flex:1;font-size:15px;font-weight:800;color:#0a1f3d;">${t}</div><div style="font-size:12px;color:#64748b;">مباع ${c.v} · متوفر ${c.d} · من ${c.t}</div></div>`;
-  return `
-  <div style="max-width:560px;margin:0 auto;padding:20px 16px 70px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;direction:rtl;">
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-size:27px;font-weight:900;color:#0a1f3d;letter-spacing:0.5px;">الغرسة</div>
-      <div style="font-size:14px;color:#64748b;margin-top:2px;">مجموعة آيت علال \u2014 لوحة المتابعة</div>
-      <div style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;color:#fff;background:#0a1f3d;padding:4px 12px;border-radius:20px;">للمشاهدة فقط</div>
-    </div>
-    <div style="background:linear-gradient(135deg,#0a1f3d,#16335c);border-radius:18px;padding:22px 20px;color:#fff;margin-bottom:18px;box-shadow:0 10px 30px rgba(10,31,61,0.22);">
-      <div style="font-size:14px;opacity:0.85;">نسبة التقدّم في التحصيل</div>
-      <div style="font-size:48px;font-weight:900;line-height:1.05;margin:4px 0;">${pct}%</div>
-      <div style="height:12px;background:rgba(255,255,255,0.18);border-radius:8px;overflow:hidden;margin:12px 0;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#d4af37,#f0d472);border-radius:8px;"></div></div>
-      <div style="font-size:13px;opacity:0.92;">المُحصّل <strong>${fmt(enc)}</strong> درهم \u2014 من أصل <strong>${fmt(ca)}</strong> درهم</div>
-    </div>
-    <div style="background:#fff;border:1px solid #e9dcae;border-radius:16px;padding:16px 18px;margin-bottom:18px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div style="font-size:14px;font-weight:700;color:#0a1f3d;">الجزء المُصرّح به المُحصّل (Fiscal)</div>
-        <div style="font-size:30px;font-weight:900;color:#b8860b;">${pctF}%</div>
-      </div>
-      <div style="height:10px;background:#f1eee3;border-radius:7px;overflow:hidden;margin:10px 0;"><div style="height:100%;width:${pctF}%;background:linear-gradient(90deg,#b8860b,#e3c558);border-radius:7px;"></div></div>
-      <div style="font-size:12.5px;color:#64748b;">المُحصّل <strong style="color:#0a1f3d;">${fmt(encF)}</strong> درهم — من أصل <strong style="color:#0a1f3d;">${fmt(caF)}</strong> درهم</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:22px;">
-      <div style="background:#fff;border:1px solid #ece7d8;border-radius:14px;padding:18px 8px;text-align:center;"><div style="font-size:32px;font-weight:900;color:#0a7d4d;">${totV}</div><div style="font-size:13px;color:#0a7d4d;font-weight:700;">مباع</div></div>
-      <div style="background:#fff;border:1px solid #ece7d8;border-radius:14px;padding:18px 8px;text-align:center;"><div style="font-size:32px;font-weight:900;color:#b8860b;">${totD}</div><div style="font-size:13px;color:#b8860b;font-weight:700;">متوفر</div></div>
-      <div style="background:#fff;border:1px solid #ece7d8;border-radius:14px;padding:18px 8px;text-align:center;"><div style="font-size:32px;font-weight:900;color:#64748b;">${totR}</div><div style="font-size:13px;color:#64748b;font-weight:700;">محجوز</div></div>
-    </div>
-    ${secTitre('الشقق — حسب البلوك', A)}
-    <div style="font-size:11px;color:#94a3b8;margin:0 4px 10px;">اضغط على بلوك لعرض شققه</div>
-    ${blocs.map(blocBox).join('')}
-    ${secTitre('المحلات', M)}
-    ${magBox}
-    ${P.t > 0 ? secTitre('المواقف', P) : ''}
-    <div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:18px;line-height:1.6;">الأرقام مأخوذة من بيانات المشروع \u2014 للاطلاع والمراقبة فقط</div>
-  </div>`;
-}
-"""
-text = repl_once(text, "function render() {", render_controle.strip() + "\n\n" + "function render() {", "inject-controle")
+# ---- 7b. renderControleAR est DEJA dans index.html (fix120+) : on ADAPTE l'existant,
+#          aucune injection (un doublon ecraserait la version a jour — regression vecue).
+# 7b-1 : le <style> inline du return part dans le <style id="ar-preview"> du head
+text = repl_once(text,
+    "return `<style>summary{list-style:none;cursor:pointer;}summary::-webkit-details-marker{display:none;}</style>",
+    "return `",
+    "controle-style-prefix")
+# 7b-2 : supprimer le bouton "Se deconnecter" (la page AR est en connexion auto, sans logout)
+text = supprimer_bloc(text, '      <div style="margin-top:12px;">\n        <button data-action="logout"', '      </div>\n', "logout-btn-off", fin_inclus=True)
+# 7b-3 : supprimer attachObservateurEvents() + son commentaire (plus de logout a cabler)
+text = supprimer_bloc(text, "// v53-fix121 : l'observateur ne passe pas par attachEvents()", "function render() {", "attach-observateur-off")
+# 7b-4 : supprimer la branche observateur de render() (l'auto-login court-circuite avant)
+text = supprimer_bloc(text, "  } else if (state.user.role === 'observateur') {", "  } else {", "render-branche-observateur-off")
 
 # ---- 8. BLOCAGE DUR de toute ecriture cloud (defense en profondeur) ----
-text = repl_once(text,
-    "async function uploadToCloud(silent = false, forceFullUpload = false) {\n  if (!cloudConnected || !window.FB) {",
-    "async function uploadToCloud(silent = false, forceFullUpload = false) {\n  return false; /* AR preview: lecture seule, aucune ecriture cloud */\n  if (!cloudConnected || !window.FB) {",
+text = repl_or_skip(text,
+    "  if (state.user && state.user.role === 'observateur') return false; // v53-fix120 : lecture seule, aucune ecriture cloud\n",
+    "  return false; /* AR preview: lecture seule, aucune ecriture cloud */\n",
     "upload-off")
+if "  if (state.user && state.user.role === 'observateur') return; // v53-fix120 : lecture seule\n" in text:
+    text = text.replace("  if (state.user && state.user.role === 'observateur') return; // v53-fix120 : lecture seule\n", "", 1)
+else:
+    print("[backup-guard-off] garde absente -> skip")
 
 # ---- 9. SILENCE TOTALE du cloud (plus de toast/log/banniere de sync) ----
-text = repl_once(text,
+text = repl_or_skip(text,
     "function scheduleCloudUpload() {\n  if (!state.cloud || !state.cloud.enabled || !state.cloud.autoSyncEnabled) return;",
     "function scheduleCloudUpload() {\n  return; /* AR preview: aucune synchro cloud */\n  if (!state.cloud || !state.cloud.enabled || !state.cloud.autoSyncEnabled) return;",
-    "sched-upload-off")
-text = repl_once(text,
+    "sched-upload-off", deja="/* AR preview: aucune synchro cloud */")
+text = repl_or_skip(text,
     "function scheduleRetryUpload() {\n  if (_retryUploadTimer) clearTimeout(_retryUploadTimer);",
     "function scheduleRetryUpload() {\n  return; /* AR preview: pas de retry cloud */\n  if (_retryUploadTimer) clearTimeout(_retryUploadTimer);",
-    "sched-retry-off")
+    "sched-retry-off", deja="/* AR preview: pas de retry cloud */")
 
 # ---- 9b. AUCUNE ECRITURE localStorage (protege la session admin + les donnees partagees) ----
-text = repl_once(text,
+text = repl_or_skip(text,
     "function save(k, v) {\n  // v53-fix108",
     "function save(k, v) {\n  return true; /* AR preview: lecture seule, aucune ecriture localStorage */\n  // v53-fix108",
-    "save-off")
+    "save-off", deja="/* AR preview: lecture seule, aucune ecriture localStorage */")
 
 # ---- 10. ECRAN BLOC -> ETAGES (renderStockEtages) : traduction directe ----
 #         (chiffres et "Bloc X" restent en latin)
@@ -254,10 +202,10 @@ text = repl_once(text, "Aucun appartement \u00e0 cet \u00e9tage", "لا توجد
 text = repl_once(text, "Modifiez les filtres pour \u00e9largir la recherche.", "لا توجد عناصر للعرض.", "appt-empty-s")
 
 # ---- 12. Panneau filtres/tri masque pour l'observateur (version simple) ----
-text = repl_once(text,
+text = repl_or_skip(text,
     "function renderFilterPanel() {\n  const f = state.stockFilters;",
     "function renderFilterPanel() {\n  if (state.user && state.user.role === 'observateur') return ''; /* AR preview: liste simple */\n  const f = state.stockFilters;",
-    "filter-panel-off")
+    "filter-panel-off", deja="/* AR preview: liste simple */")
 
 # ---- 13. Carte d'un appartement (renderAppartCard) ----
 text = repl_once(text, '<div class="appt-title">Appartement ${b.num}</div>',
@@ -516,3 +464,11 @@ print("  RTL html:", '<html lang="ar" dir="rtl">' in text)
 print("  role observateur:", "observateur: {" in text)
 print("  auto-login:", "connexion automatique en lecture seule" in text)
 print("  upload bloque:", "lecture seule, aucune ecriture cloud" in text)
+
+# GARDES DURES : le script s'arrete si la page generee n'est pas sure
+assert text.count("function renderControleAR() {") == 1, "renderControleAR doit rester UNIQUE (doublon = regression fix120)"
+assert "return false; /* AR preview: lecture seule, aucune ecriture cloud */" in text, "uploadToCloud doit etre bloque en dur"
+assert "return true; /* AR preview: lecture seule, aucune ecriture localStorage */" in text, "save() doit etre bloque"
+assert '<html lang="ar" dir="rtl">' in text, "document RTL manquant"
+assert "connexion automatique en lecture seule" in text, "auto-login observateur manquant"
+print("Toutes les gardes finales passent.")

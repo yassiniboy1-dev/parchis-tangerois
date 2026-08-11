@@ -58,6 +58,21 @@
   <!-- v53-fix117 : لوحة القيادة - pourcentage paye par bien (colonne dans les tableaux), par bloc et par categorie (carte Paye + colonne dans la repartition). Calcul = encaisse / prix total. -->
   <!-- v53-fix118 : Configuration des types d apparts (bloc + n) - definir chambres + libelle F2/F3 une fois par type, applique a tous les appartements du meme n (etages 1-7). Retrait/8e exclu. -->
   <!-- v53-fix119 : Types apparts - ajout du champ الحمامات (sdb) a cote des chambres, applique a tous les appartements du meme type. Orientation laissee pour plus tard. -->
+  <!-- v53-fix120 : Role Observateur (lecture seule). A la connexion, ce role voit uniquement la page de controle arabe (vendu, % avance, % fiscal recu, blocs/appartements depliables). Aucune ecriture possible (cloud + sauvegardes bloques pour ce role). -->
+  <!-- v53-fix121 : Page de controle arabe — appartements et magasins affiches en TABLEAU (colonnes alignees + en-tetes) au lieu d une liste. Apparts : etage / n / surface / etat. Magasins : n / position / surface / etat. Plus lisible ; supprime le " · · " du au champ type vide. -->
+  <!-- v53-fix121 (suite) : sous chaque bien VENDU, ligne "المشتري : <nom>" (nom de l acheteur, en latin). Rattachement vente->client par ref ; les biens disponibles n affichent pas de nom. -->
+  <!-- v53-fix121 (suite) : bouton "Se deconnecter" ajoute sur la page observateur (cette branche faisait un return avant attachEvents, donc le bouton + le popup de confirmation sont cables via attachObservateurEvents). Corrige : impossible de se deconnecter en tant qu observateur. -->
+  <!-- v53-fix121 (suite) : connexion par MOT DE PASSE SEUL (le champ Login n est plus demande a l ecran de connexion ; doLogin cherche par mot de passe). Securite : le mot de passe doit etre unique par compte (verifie a la creation ET a la modification d un utilisateur). Le champ Login reste dans la gestion des comptes comme libelle interne. -->
+  <!-- v53-fix121 (suite) : creation/modification d un TYPE (catalogue) - ajout de "Nb de chambres" et "Nb de salles de bain" dans les Caracteristiques communes. Comme orientation/facades/vue, ces valeurs sont propagees a tous les appartements du type (apt.chambres / apt.sdb). Champ laisse vide = la valeur existante de l appart n est pas modifiee. -->
+  <!-- v53-fix121 (suite) : MODE COMMERCIAL — nouvelle vue "Plan & disponibilites" (renderLuxePlanBatiment). Selecteur de bloc, batiment affiche etage par etage (du plus haut au plus bas), chaque appartement = une case coloree (vert=Disponible, dore=Reserve, gris=Vendu) avec N° + surface. Clic sur une case = fiche du bien. Utilise uniquement les donnees existantes (aucune saisie). Accessible depuis la page d accueil du mode commercial. [Feature 1/4 du chantier mode commercial] -->
+  <!-- v53-fix121 (suite) : MODE COMMERCIAL — Simulateur de paiement (renderLuxeSimulateur), bouton sur la fiche d un bien. Prix indicatif (getPrixIndicatif) + choix apport (0-50%) et duree (12-84 mois) -> apport, mensualite et apercu d echeancier date. Estimation indicative, sans engagement (pas une offre de credit) ; mention conditions sur demande. Aucune ecriture en base. [Feature 2/4 du chantier mode commercial] -->
+  <!-- v53-fix121 (suite) : MODE COMMERCIAL — elevation DESIGN (CSS pur). Hero : grain photographique subtil (::before), fin cadre dore en retrait (::after), vignette renforcee, et entree orchestree en cascade (ornement -> titre -> sous-titre -> slogan -> prix -> boutons). Fiche d un bien : titre revele a l ouverture. Liste des residences : cartes en apparition decalee (opacite seule, le survol reste intact). Respecte prefers-reduced-motion. Aucune modification de la mise en page ni du JS. -->
+  <!-- v53-fix122 : SYNC FIABILISEE — (1) anti-ecrasement : uploadToCloud lit _meta distant avant chaque envoi et fusionne d abord si le cloud est plus recent (vecu : journal d audit ecrase par une copie perimee, il s arretait au 10 juin alors que _meta datait du 14 juillet) ; (2) apres un download, les empreintes de reference = contenu DISTANT et non le fusionne local (avant : des modifs locales jamais envoyees devenaient invisibles, « rien a envoyer ») + reprogrammation d envoi si le fusionne differe du cloud. -->
+  <!-- v53-fix122 : DIAGNOSTIC CLOUD — bouton « 🩺 Tester la connexion Firebase » (Parametres → Synchronisation) : SDK → auth anonyme → lecture base → ecriture test (aussitot effacee) → Storage, etape par etape avec ✓/✗, conseil cible et lien console. Detecte notamment les regles Storage expirees (« mode test » 30 jours de Firebase — cause reelle de la panne du 14 juillet : plans PDF et documents refusaient l envoi). -->
+  <!-- v53-fix122 : sw.js — domaines firebasedatabase.app / firebasestorage.app ajoutes a la liste sans interception (le repli long-polling de la Realtime DB pouvait etre servi depuis le cache) + CACHE_NAME bumpe en aitallal-v53-fix122. -->
+  <!-- v53-fix122 : ECRAN DE CONNEXION BILINGUE francais/arabe (titre, sous-titre, libelle, placeholder, bouton, lien mot de passe oublie, messages d erreur) — ilots RTL isoles (span dir=rtl), ids et data-action inchanges : la preservation valeur/focus/curseur de fix101 continue de fonctionner. -->
+  <!-- v53-fix122 : MODE COMMERCIAL — BROCHURE PDF elegante (feature 3/4) : bouton « 📄 Brochure PDF » sur la fiche d un bien → document A4 deux pages (couverture immersive photo/bordeaux + page detail caracteristiques/residence/proximite/contact) avec « PDF propre » nomme Brochure-<ref>.pdf (html2pdf embarque), impression, et visionneuse plein ecran si pop-ups bloques (type 'brochure' dans renderContratView). Prix UNIQUEMENT via getPrixIndicatif (« A partir de ») — jamais de part N. -->
+  <!-- v53-fix122 : badge VERSION des Parametres realigne (etait reste a v53-fix120). make_ar.py REPARE (ancres fix121+, etapes absorbees tolerees, doublon renderControleAR impossible) : index-ar.html est de nouveau GENERE depuis index.html au lieu d etre edite a la main. -->
   <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1588,7 +1603,7 @@
     color: white;
   }
 
-  /* v53-fix121 : Plan du bâtiment cliquable (Mode Commercial) */
+  /* v53-fix121 : Plan du bâtiment cliquable (وضع العرض التجاري) */
   .luxe-plan-page { background: var(--luxe-creme); min-height: 100vh; padding-bottom: 60px; }
   .luxe-plan-blocs { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; padding:0 20px 4px; }
   .luxe-plan-bloc-pill {
@@ -5415,7 +5430,7 @@ const state = {
   favoris: load(KEYS.favoris, []),
   // Modal "Marquer intéressé" : null ou { bienRef }
   favoriModal: null,
-  // v53-fix121 : simulateur de paiement (Mode Commercial). { bienRef, apportPct, dureeMois }
+  // v53-fix121 : simulateur de paiement (وضع العرض التجاري). { bienRef, apportPct, dureeMois }
   simulateur: null,
   // ============================================================
   // CORBEILLE — Éléments supprimés (gardés 30 jours)
@@ -8146,32 +8161,26 @@ function renderLogin() {
         <img src="${LOGO_LOGIN}" alt="AIT ALLAL GROUPE - الترويج العقاري" class="login-v30-logo" />
       </div>
 
-      <!-- Carte de connexion -->
+      <!-- Carte de connexion — v53-fix122 : bilingue français/arabe (îlots RTL isolés,
+           ids et data-action inchangés pour préserver fix101) -->
       <div class="login-v30-card">
-        <div class="login-v30-title">Connexion</div>
-        <div class="login-v30-subtitle">Espace de gestion immobilière</div>
+        <div class="login-v30-title">Connexion <span dir="rtl" lang="ar">· تسجيل الدخول</span></div>
+        <div class="login-v30-subtitle">Espace de gestion immobilière <span dir="rtl" lang="ar" style="display:block;">فضاء تدبير العقارات</span></div>
         <div id="login-error" style="margin-top:8px;"></div>
         <div class="field" style="margin-top:18px;">
-          <label>Login</label>
-          <div class="field-icon">
-            ${icon('user')}
-            <input type="text" id="login-input" autocomplete="username" autocapitalize="none" autocorrect="off" placeholder="اسم الدخول">
-          </div>
-        </div>
-        <div class="field">
-          <label>كلمة المرور</label>
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>كلمة المرور</span><span dir="rtl" lang="ar">كلمة السر</span></label>
           <div class="field-icon">
             ${icon('lock')}
-            <input type="password" id="password-input" autocomplete="current-password" placeholder="كلمة المرور">
+            <input type="password" id="password-input" autocomplete="current-password" placeholder="كلمة المرور · كلمة السر">
           </div>
         </div>
         <button class="btn btn-block login-v30-btn" data-action="login">
-          Se connecter
+          Se connecter <span dir="rtl" lang="ar">· تسجيل الدخول</span>
         </button>
 
         <div style="margin-top:18px;text-align:center;">
           <a data-action="ouvrir-reset-password" class="login-v30-forgot">
-            🔑 كلمة المرور admin oublié ?
+            🔑 كلمة المرور admin oublié ? <span dir="rtl" lang="ar">نسيت كلمة السر؟</span>
           </a>
         </div>
       </div>
@@ -8187,13 +8196,14 @@ function renderLogin() {
 function doLogin() {
   const password = document.getElementById('password-input').value;
   if (!password) {
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}Veuillez saisir votre mot de passe</div>`;
+    // v53-fix122 : messages d'erreur bilingues français/arabe
+    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}Veuillez saisir votre mot de passe<span dir="rtl" lang="ar" style="display:block;">المرجو إدخال كلمة السر</span></div>`;
     return;
   }
   // v53-fix121 : connexion par mot de passe seul (le login n'est plus demandé)
   const user = state.users.find(u => u.password === password && u.actif);
   if (!user) {
-    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}Mot de passe incorrect</div>`;
+    document.getElementById('login-error').innerHTML = `<div class="error-box">${icon('alert')}كلمة المرور incorrect<span dir="rtl" lang="ar" style="display:block;">كلمة السر غير صحيحة</span></div>`;
     document.getElementById('password-input').value = '';
     return;
   }
@@ -9216,6 +9226,9 @@ function renderLuxeFicheBien() {
         <button class="luxe-fiche-action-btn" data-action="luxe-simuler" data-ref="${esc(b.ref)}">
           🧮 Simuler un paiement
         </button>
+        <button class="luxe-fiche-action-btn" data-action="luxe-brochure" data-ref="${esc(b.ref)}">
+          📄 Brochure PDF
+        </button>
         <button class="luxe-fiche-action-btn" data-action="luxe-share-whatsapp" data-ref="${esc(b.ref)}">
           📱 WhatsApp
         </button>
@@ -9252,6 +9265,7 @@ function renderLuxeSimulateur() {
   const dureeOptions = [12, 24, 36, 48, 60, 72, 84];
   const apportOptions = [0, 10, 20, 30, 40, 50];
 
+  // Aperçu d'échéancier : 1er versement (apport) puis quelques mensualités
   const today = new Date();
   const moisFr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const ligneDate = i => { const d = new Date(today.getFullYear(), today.getMonth() + i, 1); return `${moisFr[d.getMonth()]} ${d.getFullYear()}`; };
@@ -9302,7 +9316,7 @@ function renderLuxeSimulateur() {
         </div>
 
         <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:18px;">
-          <thead><tr style="background:var(--luxe-creme);"><th style="padding:9px 8px;text-align:right;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--luxe-gris);">Échéance</th><th style="padding:9px 8px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--luxe-gris);">Montant</th></tr></thead>
+          <thead><tr style="background:var(--luxe-creme);"><th style="padding:9px 8px;text-align:right;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--luxe-gris);">Échéance</th><th style="padding:9px 8px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--luxe-gris);">المبلغ</th></tr></thead>
           <tbody>${echLignes}</tbody>
         </table>
 
@@ -15279,7 +15293,7 @@ function renderModalUser() {
       <div class="modal-fs-content">
         <div class="field"><label>Nom complet *</label><input type="text" value="${esc(f.nom)}" data-modal-input="nom"></div>
         <div class="field"><label>Login *</label><input type="text" value="${esc(f.login)}" data-modal-input="login" autocapitalize="none"></div>
-        <div class="field"><label>${isEdit ? 'كلمة المرور (vide = conserver)' : 'كلمة المرور *'}</label><input type="password" value="" data-modal-input="password"></div>
+        <div class="field"><label>${isEdit ? 'كلمة المرور (vide = conserver)' : 'كلمة المرور *'}</label><input type="password" value="" data-modal-input="password"><div style="font-size:11px;color:#64748b;margin-top:4px;">🔑 Sert à se connecter — doit être unique pour chaque compte.</div></div>
 
         <div style="margin-top:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -19062,7 +19076,7 @@ function renderParametres() {
 
     <!-- v53-fix69 : Badge de version visible pour diagnostic déploiement -->
     <div style="display:inline-block;padding:4px 10px;background:#0a1f3d;color:#d4af37;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:0.05em;margin-bottom:14px;">
-      VERSION : v53-fix119
+      VERSION : v53-fix122
     </div>
 
     <!-- Barre d'actions : tout ouvrir / tout fermer -->
@@ -19893,6 +19907,12 @@ transport|Gare LGV Tanger|5km">${esc(p.locPois || '')}</textarea>
             <strong>📤 Envoyer maintenant</strong> : force l'envoi immédiat sans attendre le prochain créneau.<br>
             <strong>📥 Télécharger</strong> : récupère la version cloud sur cet appareil (écrase la version locale).
           </div>
+
+          <!-- v53-fix122 : diagnostic pas-à-pas de la chaîne Firebase -->
+          <button class="btn btn-block" data-action="cloud-diagnostic" ${state.cloud.diagEnCours ? 'disabled' : ''} style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;font-weight:700;font-size:13px;padding:12px;margin-bottom:10px;">
+            ${state.cloud.diagEnCours ? '⏳ Diagnostic en cours…' : '🩺 Tester la connexion Firebase'}
+          </button>
+          ${renderCloudDiag()}
 
           <button class="btn btn-block" data-action="cloud-disable" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:12px;margin-top:10px;">
             🔌 Désactiver la synchronisation cloud
@@ -21885,6 +21905,11 @@ function attachEvents() {
   }));
 
   // Désactiver la synchronisation cloud
+  // v53-fix122 : diagnostic pas-à-pas de la connexion Firebase
+  document.querySelectorAll('[data-action="cloud-diagnostic"]').forEach(el => el.addEventListener('click', () => {
+    runCloudDiagnostic();
+  }));
+
   document.querySelectorAll('[data-action="cloud-disable"]').forEach(el => el.addEventListener('click', () => {
     showConfirm(
       'Désactiver la synchronisation cloud ?\n\nVos données locales seront conservées sur cet appareil mais ne seront plus synchronisées avec le cloud.\n\nLes données déjà uploadées dans le cloud restent accessibles depuis vos autres appareils.',
@@ -22301,6 +22326,14 @@ mosquee|Mosquée Mohammed V|1.5km`);
     const b = state.stock.find(s => s.ref === bienRef);
     if (!b) return;
     imprimerFicheLuxe(b);
+  }));
+
+  // v53-fix122 : Brochure PDF élégante (وضع العرض التجاري 3/4)
+  document.querySelectorAll('[data-action="luxe-brochure"]').forEach(el => el.addEventListener('click', () => {
+    const bienRef = el.dataset.ref;
+    const b = state.stock.find(s => s.ref === bienRef);
+    if (!b) return;
+    imprimerBrochureLuxe(b);
   }));
 
   // Email : préparer un email avec la fiche
@@ -26687,7 +26720,7 @@ function saveModele(modeleId) {
   }
 
   // v53-fix38 : PROPAGATION automatique vers tous les apparts du type
-  // Met à jour orientation/nbFacades/exposition/vue sur tous les apparts liés
+  // Met à jour orientation/nbFacades/exposition/vue/chambres/sdb sur tous les apparts liés (v53-fix121)
   state.stock = state.stock.map(apt => {
     if (refs.includes(apt.ref)) {
       return {
@@ -29426,6 +29459,216 @@ function validerVente(venteId, force = false) {
 // ============================================================
 // IMPRIMER FICHE BIEN LUXE — Génère une page A4 élégante à imprimer/enregistrer en PDF
 // ============================================================
+// ============================================================
+// v53-fix122 : BROCHURE PDF ÉLÉGANTE (وضع العرض التجاري — feature 3/4)
+// Document A4 en 2 pages : couverture immersive (photo du modèle ou dégradé
+// bordeaux) + page détail (caractéristiques, résidence, proximité, contact).
+// Prix UNIQUEMENT via getPrixIndicatif (« ابتداءً من ») — jamais de part N.
+// PDF propre nommé Brochure-<ref>.pdf (html2pdf embarqué) + impression +
+// fallback visionneuse plein écran si les pop-ups sont bloqués (iOS/PWA).
+// ============================================================
+function imprimerBrochureLuxe(b) {
+  const p = state.parametres;
+  const modele = getModeleDeAppart(b.ref);
+  const nomProj = p.nomProjet || '';
+  const villeP = p.villeProjet || '';
+  const prixInd = getPrixIndicatif(b);
+  const photoUrl = (modele && modele.photoUrl) ? modele.photoUrl : (p.heroImageUrl || '');
+  const description = (modele && modele.description) || '';
+  const projetDesc = p.projetDescription || '';
+  const etageLabel = (b.etage === 0 || b.etage === '0') ? 'Rez-de-chaussée' : ('Étage ' + b.etage);
+
+  // Caractéristiques du bien (champ vide → ligne omise)
+  const carac = [];
+  if (b.surface) carac.push(['Surface habitable', b.surface + ' m²']);
+  if (b.chambres) carac.push(['Chambres', String(b.chambres)]);
+  if (b.sdb) carac.push(['الحمامات', String(b.sdb)]);
+  carac.push(['Niveau', etageLabel]);
+  if (b.type) carac.push(['Type', b.type]);
+  const orient = b.orientation || (modele && modele.orientation) || '';
+  if (orient) carac.push(['Orientation', orient]);
+  if (modele && modele.exposition) carac.push(['Exposition', modele.exposition]);
+  if (modele && modele.vue) carac.push(['Vue', modele.vue]);
+  if (b.terrasse && Number(b.terrasse) > 0) carac.push(['Terrasse', b.terrasse + ' m²']);
+  if (b.balcon) carac.push(['Balcon', (typeof b.balcon === 'number' && b.balcon > 1) ? (b.balcon + ' m²') : 'Oui']);
+
+  // Atouts de la résidence (saisis en Paramètres, séparés par des virgules)
+  const atouts = (p.projetCaracteristiques || '').split(',').map(s => s.trim()).filter(Boolean);
+
+  // Points d'intérêt (format « catégorie|nom|distance » par ligne) — 6 max
+  const pois = (p.locPois || '').split('\n').map(l => l.split('|').map(s => s.trim()))
+    .filter(parts => parts.length >= 2 && parts[0] && parts[1]).slice(0, 6);
+
+  const contact = [];
+  if (p.socTelephone) contact.push(['📞', p.socTelephone]);
+  if (p.socEmail) contact.push(['✉️', p.socEmail]);
+  if (p.socSiteWeb) contact.push(['🌐', p.socSiteWeb]);
+  if (p.socSiegeSocial) contact.push(['📍', p.socSiegeSocial]);
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Brochure – ${esc(b.ref)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: A4; margin: 0; }
+  body { font-family: 'Inter', sans-serif; color: #2c2c2c; background: #fff; }
+  .page { width: 210mm; min-height: 296mm; margin: 0 auto; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+  .page:last-child { page-break-after: auto; }
+
+  /* ——— Page 1 : couverture ——— */
+  .couv { background: linear-gradient(160deg, #3d1219 0%, #6b1e2a 45%, #8b2635 100%); color: #fdf8f3; display: flex; flex-direction: column; }
+  .couv-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .couv-voile { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,8,10,0.55) 0%, rgba(20,8,10,0.25) 40%, rgba(20,8,10,0.78) 100%); }
+  .couv-cadre { position: absolute; inset: 9mm; border: 1px solid rgba(201,169,97,0.45); pointer-events: none; }
+  .couv-contenu { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 22mm 18mm 16mm; }
+  .monogramme { width: 21mm; height: 21mm; border: 1.5px solid #c9a961; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 30px; color: #c9a961; }
+  .maison { margin-top: 5mm; font-size: 12px; letter-spacing: 0.42em; text-transform: uppercase; color: #d4a574; }
+  .filet { width: 34mm; height: 1px; background: linear-gradient(90deg, transparent, #c9a961, transparent); margin: 9mm auto; }
+  .couv-projet { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 24px; color: #e9d9bd; }
+  .couv-titre { font-family: 'Playfair Display', serif; font-size: 44px; font-weight: 600; line-height: 1.15; margin-top: 4mm; }
+  .couv-sous { margin-top: 4mm; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(253,248,243,0.85); }
+  .couv-prix { margin-top: auto; border: 1px solid rgba(201,169,97,0.6); background: rgba(20,8,10,0.45); padding: 7mm 14mm; }
+  .couv-prix-libelle { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #d4a574; }
+  .couv-prix-valeur { font-family: 'Playfair Display', serif; font-size: 30px; color: #fdf8f3; margin-top: 2mm; }
+  .couv-prix-note { font-size: 10px; color: rgba(253,248,243,0.75); margin-top: 2mm; font-style: italic; }
+
+  /* ——— Page 2 : détail ——— */
+  .detail { padding: 16mm 17mm 14mm; display: flex; flex-direction: column; }
+  .entete { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #8b2635; padding-bottom: 4mm; }
+  .entete-marque { display: flex; align-items: center; gap: 4mm; }
+  .mini-mono { width: 10mm; height: 10mm; border: 1px solid #b87333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 14px; color: #8b2635; }
+  .entete-nom { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #2c2c2c; }
+  .entete-ref { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 15px; color: #6e6e6e; }
+  .section-titre { font-family: 'Playfair Display', serif; font-size: 19px; color: #8b2635; margin: 8mm 0 4mm; }
+  .section-titre::after { content: ''; display: block; width: 14mm; height: 1px; background: #b87333; margin-top: 1.5mm; }
+  .caracs { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 8mm; page-break-inside: avoid; }
+  .carac { display: flex; justify-content: space-between; border-bottom: 1px dotted #d8cfc2; padding: 2mm 0; font-size: 12.5px; }
+  .carac-label { color: #6e6e6e; }
+  .carac-valeur { font-weight: 600; color: #2c2c2c; }
+  .prose { font-size: 12.5px; line-height: 1.75; color: #444; text-align: justify; }
+  .atouts { display: flex; flex-wrap: wrap; gap: 2.5mm; page-break-inside: avoid; }
+  .atout { border: 1px solid #d4a574; color: #7a5a2e; background: #fdf8f3; border-radius: 20px; padding: 1.8mm 4.5mm; font-size: 11px; }
+  .pois { list-style: none; columns: 2; column-gap: 10mm; font-size: 12px; color: #444; }
+  .pois li { padding: 1.6mm 0; border-bottom: 1px dotted #d8cfc2; break-inside: avoid; }
+  .pois .dist { color: #8b2635; font-weight: 600; }
+  .contact { margin-top: auto; background: #2c2c2c; color: #fdf8f3; padding: 7mm 8mm; page-break-inside: avoid; }
+  .contact-titre { font-family: 'Playfair Display', serif; font-size: 16px; color: #d4a574; margin-bottom: 3mm; }
+  .contact-lignes { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 8mm; font-size: 11.5px; }
+  .mentions { margin-top: 4mm; font-size: 9px; color: #8a8a8a; text-align: center; line-height: 1.6; }
+
+  .no-print { position: fixed; top: 12px; right: 12px; z-index: 50; display: flex; gap: 8px; }
+  .no-print button { border: none; border-radius: 8px; padding: 10px 16px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+  .btn-pdf { background: #8b2635; color: #fff; }
+  .btn-imprimer { background: #fff; color: #2c2c2c; }
+  @media print { .no-print { display: none !important; } }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+</head>
+<body>
+<div class="no-print">
+  <button class="btn-pdf" onclick="downloadCleanPdf()">📥 PDF propre</button>
+  <button class="btn-imprimer" onclick="window.print()">🖨️ طباعة</button>
+</div>
+<div id="brochure-root">
+
+  <div class="page couv">
+    ${photoUrl ? `<img class="couv-photo" src="${esc(photoUrl)}" alt="">` : ''}
+    <div class="couv-voile"></div>
+    <div class="couv-cadre"></div>
+    <div class="couv-contenu">
+      <div class="monogramme">A</div>
+      <div class="maison">Ait Allal Groupe</div>
+      <div class="filet"></div>
+      ${nomProj ? `<div class="couv-projet">Résidence ${esc(nomProj)}${villeP ? ` — ${esc(villeP)}` : ''}</div>` : ''}
+      <div class="couv-titre">Appartement N° ${esc(b.num || b.ref)}</div>
+      <div class="couv-sous">Bloc ${esc(b.bloc || '')} · ${esc(etageLabel)}${b.surface ? ` · ${esc(b.surface)} m²` : ''}</div>
+      ${prixInd ? `
+      <div class="couv-prix">
+        <div class="couv-prix-libelle">ابتداءً من</div>
+        <div class="couv-prix-valeur">${esc(formatPrixLuxe(prixInd))}</div>
+        <div class="couv-prix-note">Conditions et modalités sur demande</div>
+      </div>` : `<div class="couv-prix"><div class="couv-prix-libelle">Prix sur demande</div></div>`}
+    </div>
+  </div>
+
+  <div class="page detail">
+    <div class="entete">
+      <div class="entete-marque">
+        <div class="mini-mono">A</div>
+        <div class="entete-nom">Ait Allal Groupe${nomProj ? ` — ${esc(nomProj)}` : ''}</div>
+      </div>
+      <div class="entete-ref">Réf. ${esc(b.ref)}</div>
+    </div>
+
+    <div class="section-titre">الخصائص</div>
+    <div class="caracs">
+      ${carac.map(c => `<div class="carac"><span class="carac-label">${esc(c[0])}</span><span class="carac-valeur">${esc(c[1])}</span></div>`).join('')}
+    </div>
+
+    ${description ? `
+    <div class="section-titre">Le bien</div>
+    <div class="prose">${description.split('\n').filter(Boolean).map(par => `<p style="margin-bottom:2.5mm;">${esc(par)}</p>`).join('')}</div>` : ''}
+
+    ${(projetDesc || atouts.length) ? `
+    <div class="section-titre">La résidence</div>
+    ${projetDesc ? `<div class="prose" style="margin-bottom:3.5mm;">${projetDesc.split('\n').filter(Boolean).map(par => `<p style="margin-bottom:2.5mm;">${esc(par)}</p>`).join('')}</div>` : ''}
+    ${atouts.length ? `<div class="atouts">${atouts.map(a => `<span class="atout">${esc(a)}</span>`).join('')}</div>` : ''}` : ''}
+
+    ${pois.length ? `
+    <div class="section-titre">À proximité</div>
+    <ul class="pois">
+      ${pois.map(parts => `<li>${esc(parts[1])}${parts[2] ? ` — <span class="dist">${esc(parts[2])}</span>` : ''}</li>`).join('')}
+    </ul>` : ''}
+
+    <div class="contact">
+      <div class="contact-titre">${esc(p.socRaisonSociale || 'AIT ALLAL GROUPE')}</div>
+      <div class="contact-lignes">
+        ${contact.map(c => `<div>${c[0]} ${esc(c[1])}</div>`).join('')}
+      </div>
+    </div>
+    <div class="mentions">
+      Document commercial non contractuel — prix indicatif susceptible de modification sans préavis.<br>
+      Édité le ${new Date().toLocaleDateString('fr-FR')} · ${esc(p.socRaisonSociale || 'AIT ALLAL GROUPE')}${villeP ? ` · ${esc(villeP)}` : ''}
+    </div>
+  </div>
+
+</div>
+<script>
+  function downloadCleanPdf() {
+    const element = document.getElementById('brochure-root');
+    const boutons = document.querySelectorAll('.no-print');
+    boutons.forEach(function (bt) { bt.style.display = 'none'; });
+    const opt = {
+      margin: 0,
+      filename: 'Brochure-${esc(b.ref)}.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+    html2pdf().set(opt).from(element).save().then(function () {
+      boutons.forEach(function (bt) { bt.style.display = ''; });
+    }).catch(function () {
+      boutons.forEach(function (bt) { bt.style.display = ''; });
+    });
+  }
+<\/script>
+</body>
+</html>`;
+
+  // Livraison : pop-up si permis, sinon visionneuse plein écran (iOS/PWA)
+  const w = window.open('', '_blank');
+  if (!w) {
+    afficherDocumentPleinEcran('brochure', `Brochure ${b.ref}`, html);
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+}
+
 function imprimerFicheLuxe(b) {
   const modele = getModeleDeAppart(b.ref);
   const nomProj = state.parametres.nomProjet || '';
@@ -29849,6 +30092,7 @@ function renderContratView() {
   if (cv.type === 'contrat-ar') { accentColor = '#8b2635'; icon = '📜'; }
   else if (cv.type === 'contrat-fr') { accentColor = '#1e40af'; icon = '📄'; }
   else if (cv.type === 'recu') { accentColor = '#047857'; icon = '🧾'; }
+  else if (cv.type === 'brochure') { accentColor = '#b87333'; icon = '📄'; } // v53-fix122
 
   // v50 : Utiliser une URL Blob au lieu de srcdoc
   // Raison : Safari iOS ne permet pas d'imprimer un iframe srcdoc
@@ -31518,6 +31762,131 @@ function interpretCloudError(errCode, errMsg) {
   };
 }
 
+// ============================================================
+// v53-fix122 : DIAGNOSTIC PAS-À-PAS de la chaîne Firebase
+// SDK → auth anonyme → lecture base → écriture test (aussitôt effacée) → Storage.
+// C'est ce test qui a permis de trouver la panne du 14 juillet (règles Storage
+// expirées : le « mode test » Firebase n'est valable que 30 jours).
+// ============================================================
+async function runCloudDiagnostic() {
+  if (state.user && state.user.role === 'observateur') return; // lecture seule
+  if (state.cloud.diagEnCours) return;
+  const d = { enCours: true, etapes: [], verdict: '', lienConsole: '', lienLabel: '' };
+  state.cloud.diag = d;
+  state.cloud.diagEnCours = true;
+  render();
+  const FB_CONSOLE = 'https://console.firebase.google.com/project/ait-allal-groupe';
+  const etape = (nom) => { const e = { nom, statut: 'encours', detail: '' }; d.etapes.push(e); render(); return e; };
+  const finEtape = (e, ok, detail) => { e.statut = ok ? 'ok' : 'echec'; e.detail = detail || ''; render(); };
+  const terminer = () => {
+    d.verdict = d.etapes.some(x => x.statut === 'echec') ? 'echec' : 'ok';
+    d.enCours = false;
+    state.cloud.diagEnCours = false;
+    render();
+  };
+
+  // 1. SDK chargé ?
+  let e = etape('Chargement du SDK Firebase');
+  if (!window.FB || !window.FB.ready) {
+    finEtape(e, false, "Le SDK Firebase n'est pas chargé. Vérifier la connexion internet (ou un bloqueur qui filtre gstatic.com), puis fermer et rouvrir l'app.");
+    terminer(); return;
+  }
+  finEtape(e, true, 'SDK initialisé');
+
+  // 2. Authentification anonyme
+  e = etape('Authentification anonyme');
+  try {
+    const cred = await window.FB.signInAnonymously(window.FB.auth);
+    finEtape(e, true, 'Appareil authentifié (' + String(cred.user.uid).slice(0, 8) + '…)');
+  } catch (err) {
+    const info = interpretCloudError(err.code, err.message);
+    finEtape(e, false, info.title + ' — ' + info.explain);
+    d.lienConsole = info.consoleUrl || (FB_CONSOLE + '/authentication/providers');
+    d.lienLabel = info.consoleLabel || '🔧 Ouvrir Firebase';
+    terminer(); return;
+  }
+
+  // 3. Lecture de la base
+  e = etape('Lecture de la base de données');
+  try {
+    const snap = await window.FB.get(window.FB.ref(window.FB.db, `${CLOUD_SHARED_PATH}/_meta`));
+    if (snap.exists()) {
+      const m = snap.val() || {};
+      finEtape(e, true, m.lastUpdate
+        ? 'Dernier envoi reçu par le cloud : ' + new Date(m.lastUpdate).toLocaleString('fr-FR') + ' (' + (m.appVersion || 'version inconnue') + ')'
+        : 'Lecture autorisée');
+    } else {
+      finEtape(e, true, 'Lecture autorisée (nœud vide)');
+    }
+  } catch (err) {
+    const info = interpretCloudError(err.code, err.message);
+    finEtape(e, false, info.title + ' — ' + info.explain);
+    d.lienConsole = FB_CONSOLE + '/database/ait-allal-groupe-default-rtdb/rules';
+    d.lienLabel = '🔧 Ouvrir les règles de la base';
+    terminer(); return;
+  }
+
+  // 4. Écriture dans la base (test réel sur un nœud à part, aussitôt effacé)
+  e = etape('Écriture dans la base (test aussitôt effacé)');
+  try {
+    const diagRef = window.FB.ref(window.FB.db, `${CLOUD_SHARED_PATH}/_diag`);
+    await window.FB.set(diagRef, { ts: Date.now(), device: getDeviceId() });
+    await window.FB.set(diagRef, null);
+    finEtape(e, true, 'Écriture autorisée — la synchronisation des données peut fonctionner');
+  } catch (err) {
+    const info = interpretCloudError(err.code, err.message);
+    finEtape(e, false, info.title + ' — ' + info.explain);
+    d.lienConsole = FB_CONSOLE + '/database/ait-allal-groupe-default-rtdb/rules';
+    d.lienLabel = '🔧 Ouvrir les règles de la base';
+  }
+
+  // 5. Firebase Storage (plans PDF & documents) — on demande l'URL d'un fichier
+  // volontairement inexistant : « object-not-found » = règles OK ; « unauthorized »
+  // = règles expirées ou absentes (c'était la panne du 14 juillet).
+  e = etape('Firebase Storage (plans & documents)');
+  try {
+    const probeRef = window.FB.storageRef(window.FB.storage, 'documents/_diag_sonde_' + Date.now());
+    await window.FB.getDownloadURL(probeRef);
+    finEtape(e, true, 'Accès Storage autorisé');
+  } catch (err) {
+    const code = String((err && err.code) || '');
+    if (code.includes('object-not-found')) {
+      finEtape(e, true, 'Règles Storage OK — envoi des plans et documents autorisé');
+    } else if (code.includes('unauthorized') || code.includes('unauthenticated')) {
+      finEtape(e, false, 'ACCÈS REFUSÉ — les règles Storage ont expiré (le « mode test » Firebase ne dure que 30 jours). Les plans PDF et les documents/CIN ne peuvent plus être envoyés. Corriger dans la console Firebase → Storage → Rules : autoriser lecture/écriture pour les utilisateurs authentifiés sur plans/ et documents/ (règles sans date d\'expiration).');
+      d.lienConsole = FB_CONSOLE + '/storage/ait-allal-groupe.firebasestorage.app/rules';
+      d.lienLabel = '🔧 Ouvrir les règles Storage';
+    } else {
+      finEtape(e, false, code + ' — ' + ((err && err.message) || 'erreur inattendue'));
+    }
+  }
+
+  terminer();
+}
+
+// v53-fix122 : rendu du panneau de diagnostic (appelé depuis la section cloud des Paramètres)
+function renderCloudDiag() {
+  const d = state.cloud.diag;
+  if (!d) return '';
+  const ico = (s) => s === 'ok' ? '✅' : s === 'echec' ? '❌' : '⏳';
+  return `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#334155;">🩺 Diagnostic de la connexion Firebase</div>
+      ${d.etapes.map(et => `
+        <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+          <span style="flex-shrink:0;">${ico(et.statut)}</span>
+          <div style="min-width:0;">
+            <div style="font-size:12px;font-weight:600;color:#0f172a;">${esc(et.nom)}</div>
+            ${et.detail ? `<div style="font-size:11px;color:${et.statut === 'echec' ? '#991b1b' : '#64748b'};line-height:1.5;">${esc(et.detail)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+      ${!d.enCours ? (d.verdict === 'ok'
+        ? `<div style="margin-top:8px;padding:8px 10px;background:#d1fae5;border-radius:6px;font-size:12px;color:#065f46;font-weight:600;">✅ Toute la chaîne fonctionne — la synchronisation est opérationnelle.</div>`
+        : `<div style="margin-top:8px;padding:8px 10px;background:#fee2e2;border-radius:6px;font-size:12px;color:#991b1b;font-weight:600;">❌ Un maillon est en panne — voir l'étape en rouge ci-dessus.</div>
+           ${d.lienConsole ? `<a href="${esc(d.lienConsole)}" target="_blank" rel="noopener" class="btn btn-block" style="margin-top:8px;background:#7c3aed;color:white;font-size:12px;font-weight:700;padding:10px;text-align:center;text-decoration:none;display:block;border-radius:8px;">${esc(d.lienLabel || '🔧 Ouvrir la console Firebase')}</a>` : ''}`) : ''}
+    </div>`;
+}
+
 // Initialiser la connexion Firebase (appelé une fois au démarrage)
 
 // v53-fix109 : sync du semis EL GHERSA. Pousse les donnees vers le cloud UNE SEULE FOIS
@@ -31661,7 +32030,7 @@ async function creerSauvegarde(reason, silent) {
       ts: now,
       date: new Date(now).toLocaleString('fr-FR'),
       device: getDeviceId(),
-      version: 'v53-fix119',
+      version: 'v53-fix122',
       reason: reason || 'manuelle',
       counts: _backupCounts(),
     };
@@ -31747,7 +32116,7 @@ async function restaurerSauvegarde(id) {
     // 3) rendre le cloud autoritaire = données de la sauvegarde
     const cloudUpdates = {};
     Object.keys(data).forEach(key => { cloudUpdates['data/' + key] = data[key]; });
-    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix119', restoredFrom: id };
+    cloudUpdates['_meta'] = { lastUpdate: now, deviceId: getDeviceId(), deviceInfo: navigator.userAgent.slice(0, 100), appVersion: 'v53-fix122', restoredFrom: id };
     await window.FB.update(window.FB.ref(window.FB.db, CLOUD_SHARED_PATH), cloudUpdates);
     // 4) écraser le local + aligner hashes/lastSync pour éviter tout re-merge
     const newHashes = {};
@@ -31836,6 +32205,22 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
     if (!silent) showToast('warning', '⏳ Une synchronisation est déjà en cours...');
     return false;
   }
+  // v53-fix122 : ANTI-ÉCRASEMENT — si le cloud a reçu une mise à jour depuis notre
+  // dernière sync, fusionner d'abord. Sinon on repousserait des listes périmées
+  // par-dessus les modifs des autres appareils (vécu : journal d'audit revenu en arrière).
+  // Lecture minuscule de _meta (~150 octets) ; sauté sur envoi forcé (récupération).
+  if (!forceFullUpload) {
+    try {
+      const preSnap = await window.FB.get(window.FB.ref(window.FB.db, `${CLOUD_SHARED_PATH}/_meta`));
+      const preTs = preSnap.exists() ? ((preSnap.val() || {}).lastUpdate || 0) : 0;
+      if (preTs > (state.cloud.lastSync || 0)) {
+        console.log('[Cloud] ⚠️ Cloud plus récent que notre dernière sync → fusion avant envoi');
+        await downloadFromCloud(true);
+      }
+    } catch (e) {
+      console.warn('[Cloud] Vérification _meta avant envoi impossible :', e && e.message);
+    }
+  }
   pendingSync = true;
   state.cloud.status = 'syncing';
   if (state.page === 'parametres') render();
@@ -31883,7 +32268,7 @@ async function uploadToCloud(silent = false, forceFullUpload = false) {
       lastUpdate: now,
       deviceId: getDeviceId(),
       deviceInfo: navigator.userAgent.slice(0, 100),
-      appVersion: 'v53-fix119',
+      appVersion: 'v53-fix122',
       changedKeys: changedKeys,  // utile pour debug
     };
 
@@ -32120,10 +32505,13 @@ async function downloadFromCloud(silent = false) {
     save('aitallal_record_hashes', newRecordHashes);
 
     // 5. Recalculer aussi les hashes par-clé (pour la prochaine sync diff)
+    // v53-fix122 : la référence = contenu DISTANT, pas le résultat fusionné local.
+    // Avant, on hachait le local fusionné : des modifs locales jamais envoyées
+    // devenaient « déjà synchronisées » et ne repartaient plus jamais vers le cloud.
     const newHashes = {};
     for (const key of CLOUD_KEYS_TO_SYNC) {
-      const v = localStorage.getItem(key);
-      if (v !== null) newHashes[key] = quickHash(v);
+      if (remoteData[key] !== undefined) newHashes[key] = quickHash(remoteData[key]);
+      // clé absente du cloud : pas d'empreinte → la clé locale restera « à envoyer »
     }
     save('aitallal_cloud_hashes', newHashes);
 
@@ -32135,6 +32523,10 @@ async function downloadFromCloud(silent = false) {
 
     // v53-fix45 : Soft reload — recharger l'état depuis localStorage SANS rafraîchir toute la page
     softReloadStateFromStorage();
+
+    // v53-fix122 : si le résultat fusionné diffère encore du cloud (modifs locales
+    // conservées par le merge), reprogrammer leur envoi — avant, elles restaient muettes.
+    if (cloudUploadNeededAfterMerge()) scheduleCloudUpload();
 
     if (!silent) showToast('success', `☁️ Données fusionnées (${Math.round(bytesDownloaded/1024)} KB téléchargés)`);
     render();
