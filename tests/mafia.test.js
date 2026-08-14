@@ -167,6 +167,18 @@ console.log('— langues (français / arabe) —');
   T('retour au français',X.t('ph_vote')==='🗳️ Vote');
 }
 
+console.log('— bots —');
+{
+  const j=js(['tueur','medecin','civil','civil'],[3]);
+  T('bot tueur : jamais lui-même ni un mort',
+    [...Array(30)].every(()=>{ const c=X.choixBotNuit(j,0,-1); return c!==0&&c!==3&&c>=1; }));
+  T('bot médecin : peut se choisir, jamais le protégé d\'hier ni un mort',
+    [...Array(30)].every(()=>{ const c=X.choixBotNuit(j,1,2); return c!==2&&c!==3&&c>=0; }));
+  T('bot vote : jamais lui-même ni un mort',
+    [...Array(30)].every(()=>{ const c=X.choixBotVote(j,2); return c!==2&&c!==3&&c>=0; }));
+  T('aucun choix possible → -1',X.choixBotVote(js(['civil','civil'],[1]),0)===-1);
+}
+
 console.log('— narrateur —');
 {
   const fr=Object.keys(X.NARR.fr).sort(), ar=Object.keys(X.NARR.ar).sort();

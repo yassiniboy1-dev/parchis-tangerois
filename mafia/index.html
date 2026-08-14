@@ -267,6 +267,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
     </div>
   </div>
   <div class="panneau" id="lobby-joueurs"></div>
+  <button class="btn sombre" id="btn-bot" style="display:none" data-i18n="ajouter_bot">🤖 Ajouter un bot</button>
   <div class="panneau" id="lobby-regles">
     <div class="regle"><div class="lib"><span data-i18n="r_tueurs">Nombre de tueurs</span> <small data-i18n="r_tueurs_s">2 tueurs à partir de 6 joueurs</small></div>
       <div class="seg" id="seg-tueurs" style="width:110px">
@@ -424,7 +425,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.7
+   MAFIA — مافيا  v1.8
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -534,6 +535,7 @@ fr:{
   sons_on:"🔊 Sons : activés", sons_off:"🔇 Sons : coupés",
   voix_on:"🗣️ Narrateur vocal : activé", voix_off:"🤐 Narrateur vocal : coupé",
   voix_test:"Le narrateur est prêt. Que la médina tremble…",
+  ajouter_bot:"🤖 Ajouter un bot",
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
@@ -618,6 +620,7 @@ ar:{
   sons_on:"🔊 الأصوات: مفعلة", sons_off:"🔇 الأصوات: مقطوعة",
   voix_on:"🗣️ الراوي الصوتي: مفعل", voix_off:"🤐 الراوي الصوتي: مقطوع",
   voix_test:"الراوي جاهز. فلترتجف المدينة…",
+  ajouter_bot:"🤖 أضف روبوتا",
 },
 };
 let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
@@ -735,6 +738,21 @@ function resoudreNuit(joueurs,actes,lastProt,rnd){
   const mort=(cible>=0&&!sauve&&joueurs[cible]&&joueurs[cible].vif)?cible:-1;
   return {mort,sauve:sauve?1:0,prot,insp};
 }
+/* ---- bots 🤖 (pour tester seul ou compléter une table) ---- */
+const NOMS_BOTS=['🤖 Rachid','🤖 Samira','🤖 Hamid','🤖 Naïma','🤖 Karim','🤖 Zineb','🤖 Fouad','🤖 Latifa','🤖 Omar','🤖 Salma','🤖 Driss'];
+function choixBotNuit(joueurs,i,prot,rnd){
+  rnd=rnd||Math.random;
+  const j=joueurs[i];
+  let c=joueurs.map((x,k)=>x.vif?k:-1).filter(k=>k>=0);
+  if(j.role==='medecin') c=c.filter(k=>k!==prot);
+  else c=c.filter(k=>k!==i);
+  return c.length?c[Math.floor(rnd()*c.length)]:-1;
+}
+function choixBotVote(joueurs,i,rnd){
+  rnd=rnd||Math.random;
+  const c=joueurs.map((x,k)=>(x.vif&&k!==i)?k:-1).filter(k=>k>=0);
+  return c.length?c[Math.floor(rnd()*c.length)]:-1;
+}
 /* votes = {uid:cibleIdx} des vivants. Égalité → personne (-1). */
 function depouillerVote(joueurs,votes){
   const tally={};
@@ -818,7 +836,7 @@ function normaliserEtat(v){
   if(!js.length) throw new Error('joueurs vides');
   const joueurs=js.map(j=>{
     if(!j||typeof j.uid!=='string'||typeof j.role!=='string') throw new Error('joueur invalide');
-    return {uid:j.uid,nom:j.nom||'Joueur',role:j.role,vif:j.vif?1:0,mort:j.mort||''};
+    return {uid:j.uid,nom:j.nom||'Joueur',role:j.role,vif:j.vif?1:0,mort:j.mort||'',bot:j.bot?1:0};
   });
   return {
     seq:v.seq,w:v.w||'',m:v.m||1,ph:v.ph,nuit:v.nuit||0,
@@ -920,8 +938,49 @@ function resoudreVoteHote(){
     x.ph=x.gagnant?'fin':'crep';
   });
 }
+/* l'hôte joue les gestes des bots (feuilles à leur uid, comme un joueur) —
+   un seul tirage par bot et par phase (garde NET.faits), petit délai pour
+   laisser la phase s'afficher */
+function jouerBots(){
+  if(!NET.on||!NET.isHote||!G.etat||NET.statut!=='jeu') return;
+  const e=G.etat;
+  const ecrire=(chemin,valeur,cle)=>{
+    if(NET.faits[cle]) return;
+    NET.faits[cle]=1;
+    setTimeout(()=>{
+      try{
+        if(!NET.on||!NET.ref||!G.etat) return;
+        if(G.etat.m!==e.m||G.etat.ph!==e.ph||G.etat.nuit!==e.nuit) return;
+        NET.ref.child(chemin).set(valeur);
+      }catch(err){}
+    },400+Math.random()*900);
+  };
+  if(e.ph==='roles'){
+    const k=keyRoles();
+    e.joueurs.forEach(j=>{
+      if(j.bot&&!(G.prets[k]||{})[j.uid]) ecrire('prets/'+k+'/'+j.uid,1,'bot:'+k+':'+j.uid);
+    });
+  }else if(e.ph==='nuit'){
+    const k=keyNuit();
+    e.joueurs.forEach((j,i)=>{
+      if(j.bot&&j.vif&&typeof (G.actes[k]||{})[j.uid]!=='number'){
+        const c=choixBotNuit(e.joueurs,i,e.prot);
+        if(c>=0) ecrire('actes/'+k+'/'+j.uid,c,'bot:'+k+':'+j.uid);
+      }
+    });
+  }else if(e.ph==='vote'){
+    const k=keyVote();
+    e.joueurs.forEach((j,i)=>{
+      if(j.bot&&j.vif&&typeof (G.votes[k]||{})[j.uid]!=='number'){
+        const c=choixBotVote(e.joueurs,i);
+        if(c>=0) ecrire('votes/'+k+'/'+j.uid,c,'bot:'+k+':'+j.uid);
+      }
+    });
+  }
+}
 function veillerHote(){
   if(!NET.on||!NET.isHote||!G.etat||NET.statut==='lobby') return;
+  jouerBots();
   const e=G.etat;
   if(e.ph==='roles'){
     const pr=G.prets[keyRoles()]||{};
@@ -1068,12 +1127,12 @@ function quitterLigne(){
 function lancerPartie(){
   if(!NET.isHote||NET.statut!=='lobby') return;
   const liste=Object.entries(G.joueursLobby)
-    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0}))
+    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0,bot:(o&&o.bot)?1:0}))
     .sort((a,b)=>a.ts-b.ts);
   const err=validerComposition(liste.length,RG);
   if(err){ toast(err,'warn'); return; }
   const roles=composerRoles(liste.length,RG);
-  const joueurs=liste.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:''}));
+  const joueurs=liste.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0}));
   const seq=Date.now();
   NET.appliedSeq=seq;
   G.etat={seq,w:NET.uid,m:1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
@@ -1089,7 +1148,7 @@ function rejouer(){
   if(!NET.isHote||!G.etat) return;
   NET.faits={};
   const roles=composerRoles(G.etat.joueurs.length,RG);
-  const joueurs=G.etat.joueurs.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:''}));
+  const joueurs=G.etat.joueurs.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0}));
   const seq=Math.max(NET.appliedSeq+1,Date.now());
   NET.appliedSeq=seq;
   G.etat={seq,w:NET.uid,m:G.etat.m+1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
@@ -1234,6 +1293,15 @@ function renderLobby(){
   const bl=document.getElementById('btn-lancer');
   bl.style.display=estH?'block':'none';
   bl.disabled=!!err;
+  document.getElementById('btn-bot').style.display=(estH&&liste.length<12)?'block':'none';
+}
+function ajouterBot(){
+  if(!NET.isHote||NET.statut!=='lobby'||!NET.ref) return;
+  const pris=Object.keys(G.joueursLobby);
+  if(pris.length>=12) return;
+  let n=0;
+  while(pris.indexOf('bot'+n)>=0) n++;
+  NET.ref.child('joueurs/bot'+n).set({nom:NOMS_BOTS[n%NOMS_BOTS.length],ts:Date.now(),bot:1});
 }
 
 /* ----- jeu ----- */
@@ -1465,6 +1533,7 @@ function ouvrirReprise(){
   if(!G.etat) return;
   const zone=document.getElementById('reprise-rows'); zone.innerHTML='';
   G.etat.joueurs.forEach((j,i)=>{
+    if(j.bot) return; /* on ne « reprend » pas la place d'un robot */
     const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
     row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+
       '<span class="sousj">'+(j.vif?t('en_vie'):t('mort_lbl'))+'</span></span>';
@@ -1740,6 +1809,7 @@ function brancher(){
       NET.ref.child('regles').set(Object.assign({},RG));
     });
   });
+  document.getElementById('btn-bot').addEventListener('click',ajouterBot);
   document.getElementById('btn-lancer').addEventListener('click',lancerPartie);
   document.getElementById('btn-quitter-lobby').addEventListener('click',()=>{
     document.getElementById('quitter-txt').textContent=

@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.7)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.8)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -10,7 +10,7 @@ Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS +
 ```bash
 node tests/moteur.test.js        # 42 tests des règles Parchís, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie Parchís simulée entre 2 clients + 2 IA (lancer 3×)
-node tests/mafia.test.js         # 59 tests des règles Mafia, exécutés contre mafia/index.html
+node tests/mafia.test.js         # 63 tests des règles Mafia, exécutés contre mafia/index.html
 node tests/sim-mafia.js          # partie Mafia complète, 5 clients VM + reprise de téléphone (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 bash outils/deployer-mafia.sh    # fabrique mafia-netlify.zip à glisser sur Netlify
@@ -137,9 +137,11 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.7, `mafia/index.html` + PWA)
+# Mafia — مافيا (v1.8, `mafia/index.html` + PWA)
 
-Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
+Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local). Choix validés avec Yassine le 14/08/2026.
+
+**Bots 🤖 (v1.8, pour tester seul ou compléter une table)** : bouton hôte « Ajouter un bot » au lobby (`joueurs/botN` avec `bot:1`, noms `NOMS_BOTS`). L'hôte joue leurs gestes (`jouerBots` dans `veillerHote` : feuilles actes/votes/prets à leur uid, un tirage par bot et par phase — garde `NET.faits`, délai 0,4-1,3 s, `choixBotNuit`/`choixBotVote` purs et testés). Les bots ne sont jamais proposés à la reprise ni marqués 📴. Un humain + 3 bots = partie de test complète.
 
 ## Règles (résumé moteur)
 
@@ -186,7 +188,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Tests Mafia
 
 - `tests/charge-mafia.js` : extraction du script de `mafia/index.html` en VM (réutilise le DOM factice de `charge.js`).
-- `tests/mafia.test.js` : 59 assertions (narrateur — parité/déterminisme —, code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
+- `tests/mafia.test.js` : 63 assertions (bots, narrateur — parité/déterminisme —, code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
 - `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme) **et nuit 1 forcée sans le geste d'un retardataire** (bouton hôte) **et reprise du téléphone de l'hôte avec transfert d'arbitrage**, convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
 
 ## Déploiement
