@@ -160,6 +160,12 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 .rangj:last-child{border-bottom:0}
 .rangj .av{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
   font-weight:800;font-size:15px;color:#1a1510;background:linear-gradient(160deg,#8d8375,#5e574c)}
+.av.av-emo{background:#1d1a24;border:1px solid #2c2836;font-size:20px}
+.cel .av.av-emo{font-size:24px}
+.grille-av{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px}
+.grille-av button{border:1px solid #241f2c;border-radius:12px;background:#15121b;font-size:24px;
+  padding:8px 0;min-height:44px;cursor:pointer}
+.grille-av button.sel{border-color:#fff;box-shadow:0 0 0 2px #fff}
 .rangj .nomj{flex:1;font-weight:700;color:#c4bbaa;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rangj .sousj{display:block;font-size:11.5px;color:#675f53;font-weight:700}
 .rangj.mort .nomj{color:#5e574c;text-decoration:line-through}
@@ -212,6 +218,39 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 .modal h3{font-family:'Marcellus',serif;color:#d9cba6;font-size:19px;text-align:center;letter-spacing:.05em;margin-bottom:10px}
 .modal p{font-size:13.5px;color:#8d8375;line-height:1.55;margin:8px 0}
 .modal .btn{margin-top:12px}
+
+/* ---------- cinématiques de phase ---------- */
+#cine{position:fixed;inset:0;z-index:45;display:none;pointer-events:none;
+  align-items:center;justify-content:center;text-align:center;padding:24px}
+#cine.on{display:flex;animation:cineFond 2.6s ease forwards}
+#cine .cine-in{animation:cineTexte 2.6s ease forwards}
+#cine .cine-ic{font-size:64px;display:block;margin-bottom:14px;
+  filter:drop-shadow(0 4px 18px rgba(0,0,0,.6))}
+#cine .cine-t1{font-family:'Marcellus',Georgia,serif;font-size:26px;color:#e8d9ae;
+  letter-spacing:.06em;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+#cine .cine-t2{font-family:'Marcellus',Georgia,serif;font-style:italic;font-size:15px;
+  color:#c9b98c;margin-top:10px;line-height:1.5;max-width:420px;margin-left:auto;margin-right:auto}
+#cine.nuitfx{background:radial-gradient(120% 100% at 50% 0%,rgba(16,13,34,.97),rgba(4,3,10,.99))}
+#cine.aubefx{background:radial-gradient(120% 100% at 50% 0%,rgba(64,44,20,.96),rgba(10,8,6,.99))}
+#cine.mortfx{background:radial-gradient(120% 100% at 50% 0%,rgba(56,12,12,.96),rgba(8,3,3,.99))}
+#cine.votefx{background:radial-gradient(120% 100% at 50% 0%,rgba(40,34,14,.96),rgba(8,7,3,.99))}
+#cine.finfx{background:radial-gradient(120% 100% at 50% 0%,rgba(20,40,24,.96),rgba(3,8,4,.99))}
+@keyframes cineFond{0%{opacity:0}12%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes cineTexte{0%{opacity:0;transform:translateY(14px) scale(.96)}
+  18%{opacity:1;transform:none}78%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#cine.on{display:none}}
+
+/* confettis (victoire du village) */
+.confetti{position:absolute;top:-14px;width:9px;height:9px;border-radius:2px;
+  animation:confChute 2.8s linear forwards;opacity:.9}
+@keyframes confChute{to{transform:translateY(78vh) rotate(560deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.confetti{display:none}}
+
+/* minuteur de débats */
+#minuteur{display:none;margin:10px auto 0;text-align:center;font-weight:800;
+  font-size:15px;color:#c9b98c;letter-spacing:.08em}
+#minuteur.fini{color:#e0a9a2;animation:minPulse 1s ease infinite}
+@keyframes minPulse{50%{opacity:.45}}
 
 /* ---------- toasts ---------- */
 #toasts{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;
@@ -277,6 +316,11 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
     <div class="regle"><div class="lib"><span data-i18n="r_medecin">Médecin 💉</span> <small data-i18n="r_medecin_s">protège une personne chaque nuit</small></div><div class="switch" id="sw-medecin"></div></div>
     <div class="regle"><div class="lib"><span data-i18n="r_detective">Détective 🔍</span> <small data-i18n="r_detective_s">inspecte une personne chaque nuit</small></div><div class="switch" id="sw-detective"></div></div>
     <div class="regle"><div class="lib"><span data-i18n="r_reveler">Révéler le rôle des morts</span> <small data-i18n="r_reveler_s">sinon, mystère jusqu'à la fin</small></div><div class="switch" id="sw-reveler"></div></div>
+    <div class="regle"><div class="lib"><span data-i18n="r_minuteur">Minuteur de débats ⏳</span> <small data-i18n="r_minuteur_s">alerte quand le temps est écoulé</small></div>
+      <div class="seg" id="seg-minuteur" style="width:150px">
+        <button data-v="0">∞</button><button data-v="120">2ʼ</button><button data-v="300">5ʼ</button>
+      </div>
+    </div>
     <div class="consigne marge" id="lobby-compo"></div>
   </div>
   <div class="err" id="lobby-notice"></div>
@@ -338,6 +382,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
       <div class="dedans" id="carte-rapport-in"></div>
     </div>
     <div class="panneau marge" id="jour-liste"></div>
+    <div id="minuteur"></div>
     <p class="consigne marge" data-i18n="debats">Débattez à voix haute : qui est suspect ?</p>
     <button class="btn marge" id="btn-vers-vote" style="display:none" data-i18n="vers_vote">🗳️ Passer au vote</button>
   </div>
@@ -362,9 +407,12 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   </div>
 
   <!-- fin -->
-  <div id="pan-fin" style="display:none">
+  <div id="pan-fin" style="display:none;position:relative;overflow:hidden">
+    <div id="fin-confettis"></div>
     <div class="annonce" id="fin-annonce"></div>
     <div class="panneau" id="fin-liste"></div>
+    <div class="panneau" id="fin-deroule"></div>
+    <div class="panneau" id="fin-intuitions" style="display:none"></div>
     <button class="btn marge" id="btn-rejouer" style="display:none" data-i18n="rejouer_btn">🔁 Rejouer (mêmes joueurs)</button>
     <button class="btn sombre" id="btn-quitter-fin" data-i18n="quitter">Quitter</button>
   </div>
@@ -413,6 +461,12 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <button class="btn sombre" id="btn-ann-quitter" data-i18n="rester">Rester</button>
 </div></div>
 
+<div class="modal" id="modal-avatar"><div class="box">
+  <h3 data-i18n="avatar_t">Choisis ton avatar</h3>
+  <div class="grille-av" id="grille-av"></div>
+  <button class="btn sombre" id="btn-fermer-avatar" data-i18n="fermer">Fermer</button>
+</div></div>
+
 <div class="modal" id="modal-reprise"><div class="box">
   <h3 data-i18n="reprise_t">Reprendre ta place</h3>
   <p data-i18n="reprise_p">Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :</p>
@@ -420,12 +474,14 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <button class="btn sombre" id="btn-fermer-reprise" data-i18n="regarder">Juste regarder</button>
 </div></div>
 
+<div id="cine"><div class="cine-in"><span class="cine-ic"></span><div class="cine-t1"></div><div class="cine-t2"></div></div></div>
+
 <div id="toasts"></div>
 
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.8
+   MAFIA — مافيا  v2.0
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -442,7 +498,7 @@ const FIREBASE_CONFIG={
 };
 
 /* ---------- règles (l'hôte les règle au lobby) ---------- */
-const RG={ tueurs:1, medecin:true, detective:true, reveler:true };
+const RG={ tueurs:1, medecin:true, detective:true, reveler:true, minuteur:0 };
 
 const ROLES={ tueur:{ic:'🔪'}, medecin:{ic:'💉'}, detective:{ic:'🔍'}, civil:{ic:'🌿'} };
 /* illustrations des cartes de rôles (Nano Banana Pro, WebP inlinés) */
@@ -536,6 +592,14 @@ fr:{
   voix_on:"🗣️ Narrateur vocal : activé", voix_off:"🤐 Narrateur vocal : coupé",
   voix_test:"Le narrateur est prêt. Que la médina tremble…",
   ajouter_bot:"🤖 Ajouter un bot",
+  r_minuteur:"Minuteur de débats ⏳", r_minuteur_s:"alerte quand le temps est écoulé",
+  debats_finis:"⏰ Temps écoulé — place au vote !",
+  fin_deroule:"📜 Déroulé de la partie",
+  fin_intuitions:"🌿 Les intuitions des civils (pour rire)",
+  d_nuit:"Nuit {n}", d_vote:"Jour {n}",
+  d_sauve:"✨ sauvé par le médecin", d_calme:"🕊️ personne", d_egalite:"🤝 égalité",
+  intuition_ligne:"{p} suspectait : {l}",
+  avatar_t:"Choisis ton avatar", avatar_touche:"touche pour choisir ton avatar",
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
@@ -621,6 +685,14 @@ ar:{
   voix_on:"🗣️ الراوي الصوتي: مفعل", voix_off:"🤐 الراوي الصوتي: مقطوع",
   voix_test:"الراوي جاهز. فلترتجف المدينة…",
   ajouter_bot:"🤖 أضف روبوتا",
+  r_minuteur:"مؤقت النقاش ⏳", r_minuteur_s:"تنبيه عند انتهاء الوقت",
+  debats_finis:"⏰ انتهى الوقت — حان وقت التصويت!",
+  fin_deroule:"📜 مجريات اللعبة",
+  fin_intuitions:"🌿 حدس المدنيين (للضحك)",
+  d_nuit:"الليلة {n}", d_vote:"النهار {n}",
+  d_sauve:"✨ أنقذه الطبيب", d_calme:"🕊️ لا أحد", d_egalite:"🤝 تعادل",
+  intuition_ligne:"{p} كان يشك في: {l}",
+  avatar_t:"اختر صورتك", avatar_touche:"المس لاختيار صورتك",
 },
 };
 let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
@@ -836,12 +908,14 @@ function normaliserEtat(v){
   if(!js.length) throw new Error('joueurs vides');
   const joueurs=js.map(j=>{
     if(!j||typeof j.uid!=='string'||typeof j.role!=='string') throw new Error('joueur invalide');
-    return {uid:j.uid,nom:j.nom||'Joueur',role:j.role,vif:j.vif?1:0,mort:j.mort||'',bot:j.bot?1:0};
+    return {uid:j.uid,nom:j.nom||'Joueur',role:j.role,vif:j.vif?1:0,mort:j.mort||'',bot:j.bot?1:0,av:j.av||''};
   });
   return {
     seq:v.seq,w:v.w||'',m:v.m||1,ph:v.ph,nuit:v.nuit||0,
     joueurs,prot:(typeof v.prot==='number')?v.prot:-1,
     res:v.res||null,gagnant:v.gagnant||null,
+    hist:Object.values(v.hist||{}),
+    finDebat:(typeof v.finDebat==='number')?v.finDebat:0,
   };
 }
 function traiterPartie(snap){
@@ -882,6 +956,7 @@ function traiterPartie(snap){
       if(NET.isHote){ try{ veillerHote(); }catch(err){} planVeille(); }
       try{ sonsPhase(); }catch(err){}
       try{ narrerPhase(); }catch(err){}
+      try{ cinePhase(); }catch(err){}
       render();
       if(p.statut==='jeu'&&G.myIdx==null&&!NET.reprisePropose){
         NET.reprisePropose=true; ouvrirReprise();
@@ -920,8 +995,10 @@ function resoudreNuitHote(){
     x.res={t:'nuit',mort:r.mort,sauve:r.sauve,
       role:(r.mort>=0&&RG.reveler)?x.joueurs[r.mort].role:'',
       inspC:r.insp?r.insp.c:-1,inspR:r.insp?r.insp.r:''};
+    x.hist=(x.hist||[]).concat([{t:'n',n:x.nuit,mort:r.mort,sauve:r.sauve}]);
     x.gagnant=verifierVictoire(x.joueurs);
     x.ph=x.gagnant?'fin':'jour';
+    x.finDebat=(x.ph==='jour'&&RG.minuteur>0)?Date.now()+RG.minuteur*1000:0;
   });
 }
 function resoudreVoteHote(){
@@ -934,8 +1011,10 @@ function resoudreVoteHote(){
     if(r.elimine>=0){ x.joueurs[r.elimine].vif=0; x.joueurs[r.elimine].mort='vote'+x.nuit; }
     x.res={t:'vote',elimine:r.elimine,tally:r.tally,
       role:(r.elimine>=0&&RG.reveler)?x.joueurs[r.elimine].role:''};
+    x.hist=(x.hist||[]).concat([{t:'v',n:x.nuit,elim:r.elimine}]);
     x.gagnant=verifierVictoire(x.joueurs);
     x.ph=x.gagnant?'fin':'crep';
+    x.finDebat=0;
   });
 }
 /* l'hôte joue les gestes des bots (feuilles à leur uid, comme un joueur) —
@@ -1058,7 +1137,7 @@ function rejoindrePartie(){
 function rejoindreRef(code){
   if(NET.ref) NET.ref.off(); /* jamais deux écouteurs (course autoRejoindre / clic) */
   NET.on=true; NET.code=code; NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
-  NET.presenceFaite=false; NET.presVus={}; NET.cleSon=null; NET.cleNarr=null;
+  NET.presenceFaite=false; NET.presVus={}; NET.cleSon=null; NET.cleNarr=null; NET.cleCine=null;
   G.etat=null; G.myIdx=null; G.sel=null; G.selKey='';
   lsSet('mf_code',code); lsSet('mf_actif','1');
   NET.ref=NET.db.ref('parties/'+code);
@@ -1127,15 +1206,16 @@ function quitterLigne(){
 function lancerPartie(){
   if(!NET.isHote||NET.statut!=='lobby') return;
   const liste=Object.entries(G.joueursLobby)
-    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0,bot:(o&&o.bot)?1:0}))
+    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0,bot:(o&&o.bot)?1:0,av:(o&&o.av)||''}))
     .sort((a,b)=>a.ts-b.ts);
   const err=validerComposition(liste.length,RG);
   if(err){ toast(err,'warn'); return; }
   const roles=composerRoles(liste.length,RG);
-  const joueurs=liste.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0}));
+  const joueurs=liste.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0,
+    av:j.av||(j.bot?'🤖':'')}));
   const seq=Date.now();
   NET.appliedSeq=seq;
-  G.etat={seq,w:NET.uid,m:1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
+  G.etat={seq,w:NET.uid,m:1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null,hist:[],finDebat:0};
   NET.ref.update({
     statut:'jeu',
     regles:Object.assign({},RG),
@@ -1148,10 +1228,10 @@ function rejouer(){
   if(!NET.isHote||!G.etat) return;
   NET.faits={};
   const roles=composerRoles(G.etat.joueurs.length,RG);
-  const joueurs=G.etat.joueurs.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0}));
+  const joueurs=G.etat.joueurs.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:'',bot:j.bot?1:0,av:j.av||''}));
   const seq=Math.max(NET.appliedSeq+1,Date.now());
   NET.appliedSeq=seq;
-  G.etat={seq,w:NET.uid,m:G.etat.m+1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
+  G.etat={seq,w:NET.uid,m:G.etat.m+1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null,hist:[],finDebat:0};
   NET.ref.update({statut:'jeu',actes:null,votes:null,prets:null,etat:G.etat});
   render();
 }
@@ -1217,7 +1297,7 @@ function showEcran(id){
 }
 function showModal(id){ hideModals(); document.getElementById(id).classList.add('on'); }
 function hideModals(){
-  ['modal-aide','modal-carte','modal-menu','modal-quitter','modal-reprise'].forEach(m=>{
+  ['modal-aide','modal-carte','modal-menu','modal-quitter','modal-reprise','modal-avatar'].forEach(m=>{
     document.getElementById(m).classList.remove('on');
   });
 }
@@ -1230,7 +1310,10 @@ function toast(txt,cls){
   setTimeout(()=>{ try{ z.removeChild(t); }catch(e){} },2600);
 }
 const TEINTES=['#c98f5f','#8fa5c9','#9fc98f','#c9be8f','#b98fc9','#c98f9b','#8fc9c0','#a9a9a9','#d0a878','#7fa88f','#a87f9f','#95a3b8'];
-function avatar(i,nom){
+const AVATARS=['🦊','🐺','🦉','🐈','🐪','🦅','🐍','🦂','🕊️','🐟','🦁','🐭',
+  '🎩','👳','🧕','👴','👵','🥷','🫖','🌵','🌙','⭐','🔥','💎'];
+function avatar(i,nom,av){
+  if(av) return '<span class="av av-emo">'+av+'</span>';
   return '<span class="av" style="background:linear-gradient(160deg,'+TEINTES[i%TEINTES.length]+',#3a352d)">'+
     (nom||'?').trim().charAt(0).toUpperCase()+'</span>';
 }
@@ -1255,18 +1338,22 @@ function compoTexte(n,rg){
 function renderLobby(){
   document.getElementById('code-affiche').textContent=NET.code||'—';
   const liste=Object.entries(G.joueursLobby)
-    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0}))
+    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0,av:(o&&o.av)||((o&&o.bot)?'🤖':'')}))
     .sort((a,b)=>a.ts-b.ts);
   const zone=document.getElementById('lobby-joueurs'); zone.innerHTML='';
   liste.forEach((j,i)=>{
     const row=document.createElement('div'); row.className='rangj';
     const marques=[];
     if(j.uid===NET.hoteUid) marques.push(t('hote'));
-    if(j.uid===NET.uid) marques.push(t('toi'));
+    if(j.uid===NET.uid) marques.push(t('toi')+' · '+t('avatar_touche'));
     if(estHorsLigne(j.uid)) marques.push('📴');
-    row.innerHTML=avatar(i,j.nom)+
+    row.innerHTML=avatar(i,j.nom,j.av)+
       '<span class="nomj">'+echap(j.nom)+
       '<span class="sousj">'+marques.join(' · ')+'</span></span>';
+    if(j.uid===NET.uid){
+      row.style.cursor='pointer';
+      row.addEventListener('click',ouvrirAvatar);
+    }
     if(NET.isHote&&j.uid!==NET.uid){
       const b=document.createElement('button'); b.className='btn danger mini'; b.textContent=t('retirer');
       b.addEventListener('click',()=>NET.ref.child('joueurs/'+j.uid).remove());
@@ -1279,6 +1366,10 @@ function renderLobby(){
   const seg=document.getElementById('seg-tueurs');
   seg.querySelectorAll('button').forEach(b=>{
     b.classList.toggle('on',Number(b.dataset.v)===(RG.tueurs||1));
+    b.disabled=!estH;
+  });
+  document.getElementById('seg-minuteur').querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',Number(b.dataset.v)===(RG.minuteur||0));
     b.disabled=!estH;
   });
   [['sw-medecin','medecin'],['sw-detective','detective'],['sw-reveler','reveler']].forEach(([id,k])=>{
@@ -1294,6 +1385,22 @@ function renderLobby(){
   bl.style.display=estH?'block':'none';
   bl.disabled=!!err;
   document.getElementById('btn-bot').style.display=(estH&&liste.length<12)?'block':'none';
+}
+function ouvrirAvatar(){
+  if(!NET.on||NET.statut!=='lobby') return;
+  const zone=document.getElementById('grille-av'); zone.innerHTML='';
+  const actuel=(G.joueursLobby[NET.uid]||{}).av||'';
+  AVATARS.forEach(a=>{
+    const b=document.createElement('button');
+    b.textContent=a;
+    if(a===actuel) b.className='sel';
+    b.addEventListener('click',()=>{
+      NET.ref.child('joueurs/'+NET.uid+'/av').set(a);
+      hideModals();
+    });
+    zone.appendChild(b);
+  });
+  showModal('modal-avatar');
 }
 function ajouterBot(){
   if(!NET.isHote||NET.statut!=='lobby'||!NET.ref) return;
@@ -1336,7 +1443,7 @@ function grilleJoueurs(contId,opts){
   G.etat.joueurs.forEach((j,i)=>{
     if(!j.vif) return;
     const c=document.createElement('button'); c.className='cel';
-    c.innerHTML=avatar(i,j.nom)+'<span class="nm">'+echap(j.nom)+'</span>';
+    c.innerHTML=avatar(i,j.nom,j.av)+'<span class="nm">'+echap(j.nom)+'</span>';
     if(opts.interdits&&opts.interdits.has(i)) c.classList.add('off');
     if(G.sel===i&&G.selKey===opts.cle) c.classList.add('sel');
     c.addEventListener('click',()=>{
@@ -1357,7 +1464,7 @@ function listeEtat(contId,revelerTout){
     if(!j.vif&&(revelerTout||RG.reveler)) sous=t('mort_lbl')+' — '+nomRole(j.role)+' '+ROLES[j.role].ic;
     if(revelerTout) sous=nomRole(j.role)+' '+ROLES[j.role].ic+(j.vif?'':' — '+t('mort_lbl'));
     if(j.vif&&estHorsLigne(j.uid)) sous+=' 📴';
-    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+(i===G.myIdx?' ('+t('toi')+')':'')+
+    row.innerHTML=avatar(i,j.nom,j.av)+'<span class="nomj">'+echap(j.nom)+(i===G.myIdx?' ('+t('toi')+')':'')+
       '<span class="sousj">'+sous+'</span></span>';
     zone.appendChild(row);
   });
@@ -1504,11 +1611,13 @@ function render(){
       .filter(p2=>typeof p2[1]==='number'&&p2[1]>0&&e.joueurs[p2[0]])
       .sort((a,b)=>b[1]-a[1]);
     const max=paires.length?paires[0][1]:1;
-    paires.forEach(([i,n2])=>{
+    paires.forEach(([i,n2],rang)=>{
       const d=document.createElement('div'); d.className='rangv';
       d.innerHTML='<span style="flex:0 0 90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echap(e.joueurs[i].nom)+'</span>'+
-        '<span class="barre" style="flex:0 1 '+Math.round(100*n2/max)+'%"></span><span class="nb">'+n2+'</span>';
+        '<span class="barre" style="flex:0 1 0%;transition:flex-basis .7s ease '+(rang*0.15)+'s"></span><span class="nb">'+n2+'</span>';
       tz.appendChild(d);
+      const barre=d.children[1], cible=Math.round(100*n2/max);
+      setTimeout(()=>{ try{ barre.style.flexBasis=cible+'%'; }catch(err){} },30);
     });
     document.getElementById('btn-vers-nuit').style.display=NET.isHote?'block':'none';
   }else if(e.ph==='fin'){
@@ -1523,10 +1632,61 @@ function render(){
     }
     az.innerHTML+='<div class="narratif">'+echap(narratifPour(e))+'</div>';
     listeEtat('fin-liste',true);
+    /* déroulé de la partie */
+    const dz=document.getElementById('fin-deroule');
+    let dh='<div class="consigne">'+t('fin_deroule')+'</div>';
+    (e.hist||[]).forEach(h=>{
+      if(!h) return;
+      let quoi;
+      if(h.t==='n') quoi=(h.mort>=0&&e.joueurs[h.mort])?('💀 '+echap(e.joueurs[h.mort].nom)):(h.sauve?t('d_sauve'):t('d_calme'));
+      else quoi=(h.elim>=0&&e.joueurs[h.elim])?('⚖️ '+echap(e.joueurs[h.elim].nom)):t('d_egalite');
+      dh+='<div class="rangv" style="display:flex;gap:8px;padding:5px 2px;font-size:13.5px;font-weight:700;color:#a89f90">'+
+        '<span style="flex:0 0 84px;color:#675f53">'+(h.t==='n'?t('d_nuit',{n:h.n}):t('d_vote',{n:h.n}))+'</span><span>'+quoi+'</span></div>';
+    });
+    dz.innerHTML=dh;
+    /* intuitions des civils, pour rire */
+    const iz=document.getElementById('fin-intuitions');
+    const intu=intuitionsCivils(e.joueurs,G.actes,e.m);
+    if(intu.length){
+      iz.style.display='block';
+      iz.innerHTML='<div class="consigne">'+t('fin_intuitions')+'</div>'+
+        intu.map(x=>'<div style="font-size:13px;color:#a89f90;padding:4px 2px">'+
+          t('intuition_ligne',{p:echap(x.nom),l:echap(x.cibles.join(', '))})+'</div>').join('');
+    }else iz.style.display='none';
+    /* confettis pour le village */
+    const cz=document.getElementById('fin-confettis'); cz.innerHTML='';
+    if(e.gagnant==='village'){
+      const teintes=['#e3c877','#d9a93c','#fffaf0','#b9a97f'];
+      for(let i=0;i<18;i++){
+        const s=document.createElement('span');
+        s.className='confetti';
+        s.style.left=(3+Math.random()*94)+'%';
+        s.style.background=teintes[i%teintes.length];
+        s.style.animationDelay=(Math.random()*1.4)+'s';
+        cz.appendChild(s);
+      }
+    }
     document.getElementById('btn-rejouer').style.display=NET.isHote?'block':'none';
   }
 }
 function echap(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* intuitions nocturnes des civils (révélées à la fin, pour rire) :
+   liste [{nom, cibles:[noms…]}] à partir des feuilles actes de la manche */
+function intuitionsCivils(joueurs,actes,m){
+  const out=[];
+  joueurs.forEach(j=>{
+    if(j.role!=='civil'||j.bot) return;
+    const cibles=[];
+    for(let n=1;n<=40;n++){
+      const a=actes['m'+m+'n'+n];
+      if(!a) continue;
+      const c=a[j.uid];
+      if(typeof c==='number'&&joueurs[c]) cibles.push(joueurs[c].nom);
+    }
+    if(cibles.length) out.push({nom:j.nom,cibles});
+  });
+  return out;
+}
 
 /* ----- reprise de téléphone ----- */
 function ouvrirReprise(){
@@ -1535,7 +1695,7 @@ function ouvrirReprise(){
   G.etat.joueurs.forEach((j,i)=>{
     if(j.bot) return; /* on ne « reprend » pas la place d'un robot */
     const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
-    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+
+    row.innerHTML=avatar(i,j.nom,j.av)+'<span class="nomj">'+echap(j.nom)+
       '<span class="sousj">'+(j.vif?t('en_vie'):t('mort_lbl'))+'</span></span>';
     const b=document.createElement('button'); b.className='btn sombre mini'; b.textContent=t('cest_moi');
     b.addEventListener('click',()=>reprendrePlace(i));
@@ -1637,6 +1797,67 @@ function parler(txt){
     speechSynthesis.speak(u);
   }catch(e){}
 }
+/* ---------- cinématiques (voile plein écran au changement de phase) ---------- */
+function vibrer(motif){ try{ if(navigator.vibrate) navigator.vibrate(motif); }catch(e){} }
+function cinema(fx,ic,t1,t2){
+  try{
+    const c=document.getElementById('cine');
+    c.className=''; /* redémarre l'animation */
+    void c.offsetWidth;
+    c.querySelector('.cine-ic').textContent=ic;
+    c.querySelector('.cine-t1').textContent=t1;
+    c.querySelector('.cine-t2').textContent=t2||'';
+    c.className='on '+fx;
+    clearTimeout(NET.cineTimer);
+    NET.cineTimer=setTimeout(()=>{ c.className=''; },2700);
+  }catch(e){}
+}
+function cinePhase(){
+  if(!G.etat||NET.statut==='lobby') return;
+  const e=G.etat, cle=e.m+'-'+e.ph+'-'+e.nuit;
+  if(NET.cleCine===cle) return;
+  const premier=(NET.cleCine==null);
+  NET.cleCine=cle;
+  if(premier) return;
+  const narr=narratifPour(e);
+  if(e.ph==='nuit') cinema('nuitfx','🌙',t('ph_nuit',{n:e.nuit}).replace('🌙','').trim(),narr);
+  else if(e.ph==='jour'){
+    const r=e.res||{};
+    if(r.mort>=0){ cinema('mortfx','💀',t('assassine',{p:e.joueurs[r.mort].nom}),narr); vibrer([60,40,120]); }
+    else if(r.sauve) cinema('aubefx','✨',t('sauve_annonce'),narr);
+    else cinema('aubefx','🕊️',t('nuit_calme'),narr);
+  }
+  else if(e.ph==='vote') cinema('votefx','🗳️',t('village_vote'),narr);
+  else if(e.ph==='crep'){
+    const r=e.res||{};
+    if(r.elimine>=0){ cinema('mortfx','⚖️',t('elimine_annonce',{p:e.joueurs[r.elimine].nom}),narr); vibrer(80); }
+    else cinema('votefx','🤝',t('egalite'),narr);
+  }
+  else if(e.ph==='fin'){
+    cinema('finfx',e.gagnant==='village'?'🎉':'🔪',
+      e.gagnant==='village'?t('village_gagne'):t('mafia_gagne'),narr);
+    vibrer([80,60,80,60,160]);
+  }
+}
+/* minuteur de débats : compte à rebours local sur l'horodatage synchronisé */
+function majMinuteur(){
+  try{
+    const el=document.getElementById('minuteur');
+    const e=G.etat;
+    if(!e||e.ph!=='jour'||!e.finDebat){ el.style.display='none'; return; }
+    const reste=Math.ceil((e.finDebat-Date.now())/1000);
+    el.style.display='block';
+    if(reste<=0){
+      el.className='fini';
+      el.textContent=t('debats_finis');
+    }else{
+      el.className='';
+      el.textContent='⏳ '+Math.floor(reste/60)+':'+String(reste%60).padStart(2,'0');
+    }
+  }catch(e){}
+}
+setInterval(majMinuteur,1000);
+
 /* une lecture par CHANGEMENT de phase — jamais en arrivant en cours */
 function narrerPhase(){
   if(!G.etat||NET.statut==='lobby') return;
@@ -1802,6 +2023,12 @@ function brancher(){
     RG.tueurs=Number(b.dataset.v)||1;
     NET.ref.child('regles').set(Object.assign({},RG));
   });
+  document.getElementById('seg-minuteur').addEventListener('click',ev=>{
+    const b=ev.target.closest('button');
+    if(!b||!NET.isHote) return;
+    RG.minuteur=Number(b.dataset.v)||0;
+    NET.ref.child('regles').set(Object.assign({},RG));
+  });
   [['sw-medecin','medecin'],['sw-detective','detective'],['sw-reveler','reveler']].forEach(([id,k])=>{
     document.getElementById(id).addEventListener('click',()=>{
       if(!NET.isHote) return;
@@ -1868,6 +2095,7 @@ function brancher(){
   document.getElementById('btn-conf-quitter').addEventListener('click',quitterLigne);
   document.getElementById('btn-ann-quitter').addEventListener('click',hideModals);
   document.getElementById('btn-fermer-reprise').addEventListener('click',hideModals);
+  document.getElementById('btn-fermer-avatar').addEventListener('click',hideModals);
   bindSecret('carte-role');
   bindSecret('carte-rapport');
   bindSecret('carte-modal');
