@@ -23,7 +23,7 @@ for chemin in sorted(glob.glob(os.path.join(REPO, 'sons', '*.mp3'))):
 
 bloc = 'const SFX={' + ','.join(entrees) + '};/*__SFX__*/'
 h = open(HTML, encoding='utf-8').read()
-h2, n = re.subn(r'const SFX=\{[^;]*\};/\*__SFX__\*/', lambda _m: bloc, h, count=1, flags=re.S)
+h2, n = re.subn(r'const SFX=\{.*?\};/\*__SFX__\*/', lambda _m: bloc, h, count=1, flags=re.S)
 assert n == 1, 'marqueur SFX introuvable'
 open(HTML, 'w', encoding='utf-8').write(h2)
 print('total sons :', total//1024, 'Ko — index.html :', len(h2)//1024, 'Ko')
