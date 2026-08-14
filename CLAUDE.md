@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.4)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.5)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.4, `mafia/index.html`)
+# Mafia — مافيا (v1.5, `mafia/index.html` + PWA)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -178,6 +178,9 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 - L'hôte qui quitte le **lobby** ferme le salon (`ref.remove()`) ; en partie, son téléphone reste l'arbitre (il doit rester connecté, ou un autre téléphone reprend son siège). Résolution de nuit **déterministe** (graine manche/nuit) : deux arbitres concurrents (deux onglets hôte, cas iOS) écriraient le même résultat. Courses résiduelles assumées (fenêtre d'un aller-retour réseau) : une reprise peut être écrasée par un `set` complet d'`etat` de l'hôte → le modal se re-propose tout seul.
 - Les morts ne reçoivent JAMAIS d'info secrète : un détective assassiné la nuit de son enquête n'emporte pas son résultat (`rapportHTML`). Dépouillement : filtrer `res.tally` (coercition tableau RTDB → lignes fantômes sinon). `showEcran` ferme les modals au vrai changement d'écran (un « Quitter ? » du lobby ne survit pas au lancement).
 - Anti-veille iOS : `forcerResync` sur visibilitychange/pageshow/focus, wake lock, badge `#chip-conn` — comme le Parchís. `mf_uid` propre au jeu, prénom partagé via `pt_nom`.
+- **Reconnexion automatique (v1.5, bug vécu : iOS recharge la page → retour à l'accueil = « éjection » ressentie)** : `autoRejoindre()` au chargement — si `mf_code` + `mf_actif==='1'` et partie encore là ET que j'en suis **membre** (lobby : `joueurs/{uid}` ; jeu/fini : `joueurs` OU `etat.joueurs` — un code réutilisé par un autre groupe ne happe jamais le téléphone, revue v1.5), `rejoindreRef` direct. `rejoindreRef` fait `off()` de l'ancien écouteur (course clic/auto : jamais deux parties écoutées, revue v1.5). `mf_actif` passe à 0 UNIQUEMENT au départ volontaire (`quitterLigne`) ou partie disparue. Personne n'est JAMAIS supprimé sur déconnexion (pas de délai de grâce : le joueur est dans la pièce) — l'hôte a « Continuer sans les absents ».
+- **Présence (v1.5)** : `presences/{uid}=1` + `onDisconnect().remove()` (guard `typeof` pour le faux Firebase), UNE écriture par connexion (`NET.presenceFaite`, réarmée par `majConn(false)`) — sans cette garde le faux Firebase des tests part en boucle infinie (vécu). Badge 📴 (`estHorsLigne`/`decorNom`, textContent only) au lobby, listes et « On attend » — SEULEMENT pour un uid déjà vu dans `presences` (`NET.presVus`) : un vieux client qui n'écrit pas sa présence n'est jamais marqué à tort (revue v1.5). Écriture gardée par l'appartenance (garde fantôme), appelée depuis `traiterPartie` après calcul de `myIdx`. Purgée avec la partie (48 h).
+- **PWA (v1.5)** : `mafia/manifest.json` (standalone, portrait), `mafia/sw.js` **réseau-d'abord** (cache de secours hors ligne seulement — jamais de vieille version servie en ligne ; repli page d'accueil réservé aux navigations, `cache.put` sous `e.waitUntil`), icônes 192/512, balises `apple-mobile-web-app-*`. ⚠️ En PWA installée, iOS isole le localStorage de Safari → nouvel uid → passer par « C'est moi ». Livraison = 5 fichiers (index.html, manifest.json, sw.js, icon-192/512.png) — les deux scripts `deployer-mafia*` les gèrent.
 - ⚠️ La base est en lecture publique : les rôles sont lisibles par qui ouvre la console réseau. Assumé (jeu de famille) — ne pas prétendre à du secret cryptographique.
 
 ## Tests Mafia
