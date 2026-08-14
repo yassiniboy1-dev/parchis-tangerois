@@ -182,7 +182,9 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 
 ## Déploiement
 
-`bash outils/deployer-mafia.sh` → `mafia-netlify.zip` à glisser sur le site Netlify (Yassine remplace le Parchís par le Mafia sur le site existant). Mêmes pièges Netlify que le Parchís (méthode digest si API, `sso_login:false`).
+- Sans jeton : `bash outils/deployer-mafia.sh` → `mafia-netlify.zip` à glisser sur app.netlify.com.
+- Avec jeton : `NETLIFY_AUTH_TOKEN=xxx bash outils/deployer-mafia-api.sh` (méthode digest, vérifie le content-type servi — jeton jamais dans le dépôt).
+- **Fait le 14/08/2026** : le Mafia remplace le Parchís sur https://parchis-tangerois.netlify.app (choix de Yassine). L'ancien Parchís reste restaurable via l'historique des déploiements Netlify.
 
 ## Backlog Mafia (à discuter avec Yassine)
 
