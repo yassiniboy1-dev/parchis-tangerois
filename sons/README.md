@@ -10,12 +10,9 @@ Noms valides : `nuit, aube, mort, sauve, vote, egalite, roles, vjoie, vsombre`.
 - `nuit.mp3` — **Suno** (abonnement de Yassine, outil Sounds) : « Soft night wind
   in a narrow medina alley, distant owl » — 10,5 s → 4,5 s, fondu 1,5 s.
   Lien de partage d'origine : https://suno.com/s/0iAy3EMppgAlywsM
-- `mort.mp3` — cloche grave `impactBell_heavy_001` — **Kenney, Impact Sounds** (CC0).
-- `vote.mp3` — glissement de carte `card-slide-2` — **Kenney, Casino Audio** (CC0).
-- `aube.mp3` — carillon montant `confirmation_002` — **Kenney, Interface Sounds** (CC0).
-- `sauve.mp3` — riff de sax montant `jingles_SAX02` — **Kenney, Music Jingles** (CC0).
-- `vjoie.mp3` — sax ascendant `jingles_SAX12` — **Kenney, Music Jingles** (CC0).
-- `vsombre.mp3` — phrase de sax descendante `jingles_SAX07` — **Kenney, Music Jingles** (CC0).
-
-CC0 = domaine public (kenney.nl), aucune attribution requise, usage libre y
-compris commercial. `egalite` et `roles` restent synthétisés (choix assumé).
+- `mort, aube, sauve, vote, vjoie, vsombre, egalite, roles` — **ElevenLabs
+  Sound Effects** (v2.2, compte de Yassine, endpoint `/v1/sound-generation`,
+  prompts cinématiques « cloche funèbre / carillon de médina / glissando de
+  harpe / bulletin dans l'urne / oud triomphal / violoncelle sinistre /
+  deux coups hésitants / carte retournée sur feutre »), normalisés à −3 dB.
+  Les sons Kenney CC0 de la v1.x (jugés médiocres à l'écoute) sont remplacés.
