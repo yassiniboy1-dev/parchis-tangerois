@@ -193,6 +193,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 
 ## Déploiement
 
+- **Miroir GitHub Pages (v1.8)** : https://yassiniboy1-dev.github.io/parchis-tangerois/ — branche `gh-pages` (orpheline, 5 fichiers + `.nojekyll`), rafraîchie par `bash outils/deployer-pages.sh` (worktree temporaire). Pages s'est activé tout seul à la création de la branche. Aucune limite de déploiement, gratuit. Même Firebase que Netlify → les codes de partie marchent sur les deux adresses.
 - Sans jeton : `bash outils/deployer-mafia.sh` → `mafia-netlify.zip` à glisser sur app.netlify.com.
 - Avec jeton : `NETLIFY_AUTH_TOKEN=xxx bash outils/deployer-mafia-api.sh` (méthode digest, vérifie le content-type servi — jeton jamais dans le dépôt).
 - **Fait le 14/08/2026** : le Mafia remplace le Parchís sur https://parchis-tangerois.netlify.app (choix de Yassine). L'ancien Parchís reste restaurable via l'historique des déploiements Netlify.
