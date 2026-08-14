@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.5)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.6)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.5, `mafia/index.html` + PWA)
+# Mafia — مافيا (v1.6, `mafia/index.html` + PWA)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -198,7 +198,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Backlog Mafia (à discuter avec Yassine)
 
 1. ~~Illustrations Nano Banana Pro~~ — fait (v1.4) : fond d'accueil, icône, 4 cartes de rôles (`gemini-3-pro-image`, sources dans `visuels/mafia-*.png`, prompts dans `visuels/README.md`, inlinés en WebP ~80 Ko). La clé Gemini reste hors dépôt.
-2. Sons discrets de rythme de nuit (optionnels, coupables).
+2. ~~Sons discrets~~ — fait (v1.6) : Web Audio synthétisé (`SONS`, `jouerSon`, `sonsPhase` — un son par CHANGEMENT de phase, jamais au rechargement), bascule 🔊/🔇 dans le menu ⋯ (`mf_sons` par téléphone), contexte audio réveillé au premier geste (`reveilAudio`, exigence iOS). AUCUN fichier audio. Remplaçables par des sons Suno de Yassine (pas d'API Suno : il génère sur suno.com et envoie les fichiers dans le chat).
 3. Minuteur de débats optionnel.
 4. Rôles bonus (à valider) : sorcière, maire…
 5. Stats de fin enrichies (intuitions des civils révélées pour rire).

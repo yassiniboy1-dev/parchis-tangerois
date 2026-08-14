@@ -390,6 +390,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <div class="modal" id="modal-menu"><div class="box">
   <h3 data-i18n="menu_t">Menu</h3>
   <button class="btn sombre" id="btn-menu-aide" data-i18n="regles_jeu">📜 Règles du jeu</button>
+  <button class="btn sombre" id="btn-menu-sons">🔊 Sons : activés</button>
   <button class="btn sombre" id="btn-menu-reprendre" style="display:none" data-i18n="reprendre_place">🎭 Reprendre ma place</button>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button class="btn sombre" id="btn-menu-fr" style="flex:1;margin:0">Français</button>
@@ -418,7 +419,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.5
+   MAFIA — مافيا  v1.6
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -525,6 +526,7 @@ fr:{
   reprise_p:"Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :",
   cest_moi:"C'est moi", regarder:"Juste regarder",
   place_reprise:"Place reprise — bon retour dans la médina",
+  sons_on:"🔊 Sons : activés", sons_off:"🔇 Sons : coupés",
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
@@ -606,6 +608,7 @@ ar:{
   reprise_p:"هناك لعبة جارية بهذا الرمز. إذا غيرت هاتفك فاسترجع مكانك:",
   cest_moi:"هذا أنا", regarder:"مشاهدة فقط",
   place_reprise:"استرجعت مكانك — مرحبا بعودتك إلى المدينة",
+  sons_on:"🔊 الأصوات: مفعلة", sons_off:"🔇 الأصوات: مقطوعة",
 },
 };
 let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
@@ -850,6 +853,7 @@ function traiterPartie(snap){
       /* l'arbitrage passe AVANT le rendu : un pépin d'affichage ne doit
          jamais empêcher la partie d'avancer */
       if(NET.isHote){ try{ veillerHote(); }catch(err){} planVeille(); }
+      try{ sonsPhase(); }catch(err){}
       render();
       if(p.statut==='jeu'&&G.myIdx==null&&!NET.reprisePropose){
         NET.reprisePropose=true; ouvrirReprise();
@@ -985,7 +989,7 @@ function rejoindrePartie(){
 function rejoindreRef(code){
   if(NET.ref) NET.ref.off(); /* jamais deux écouteurs (course autoRejoindre / clic) */
   NET.on=true; NET.code=code; NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
-  NET.presenceFaite=false; NET.presVus={};
+  NET.presenceFaite=false; NET.presVus={}; NET.cleSon=null;
   G.etat=null; G.myIdx=null; G.sel=null; G.selKey='';
   lsSet('mf_code',code); lsSet('mf_actif','1');
   NET.ref=NET.db.ref('parties/'+code);
@@ -1457,6 +1461,76 @@ function ouvrirReprise(){
   showModal('modal-reprise');
 }
 
+/* ---------- sons discrets (Web Audio synthétisé — aucun fichier) ---------- */
+const SONS={ctx:null,actif:lsGet('mf_sons')!=='0'};
+function reveilAudio(){ /* iOS : le contexte audio ne démarre que sur un geste */
+  try{
+    const AC=(typeof window!=='undefined')&&(window.AudioContext||window.webkitAudioContext);
+    if(!AC) return;
+    if(!SONS.ctx) SONS.ctx=new AC();
+    if(SONS.ctx.state==='suspended') SONS.ctx.resume();
+  }catch(e){}
+}
+document.addEventListener('pointerdown',reveilAudio,{passive:true});
+function noteSon(freq,t0,dur,type,gain){
+  const c=SONS.ctx,o=c.createOscillator(),g=c.createGain();
+  o.type=type||'triangle';
+  o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(gain||0.1,t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t0); o.stop(t0+dur+0.05);
+}
+function jouerSon(nom){
+  if(!SONS.actif||!SONS.ctx) return;
+  try{
+    const c=SONS.ctx;
+    if(c.state==='suspended') c.resume();
+    const t=c.currentTime+0.01;
+    if(nom==='nuit'){ /* descente grave feutrée : la médina s'endort */
+      const o=c.createOscillator(),g=c.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(196,t);
+      o.frequency.exponentialRampToValueAtTime(65,t+1.4);
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(0.12,t+0.15);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+1.7);
+    }else if(nom==='aube'){ noteSon(659,t,0.5,'triangle',0.09); noteSon(880,t+0.18,0.7,'triangle',0.07); }
+    else if(nom==='mort'){ /* coup sourd */
+      const o=c.createOscillator(),g=c.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(110,t);
+      o.frequency.exponentialRampToValueAtTime(45,t+0.5);
+      g.gain.setValueAtTime(0.22,t);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.7);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.8);
+    }
+    else if(nom==='sauve'){ noteSon(523,t,0.3,'triangle',0.08); noteSon(659,t+0.12,0.3,'triangle',0.08); noteSon(784,t+0.24,0.5,'triangle',0.08); }
+    else if(nom==='vote'){ noteSon(1200,t,0.06,'square',0.04); noteSon(900,t+0.09,0.06,'square',0.04); }
+    else if(nom==='egalite'){ noteSon(440,t,0.2,'triangle',0.07); noteSon(440,t+0.25,0.3,'triangle',0.05); }
+    else if(nom==='roles'){ noteSon(587,t,0.12,'triangle',0.06); }
+    else if(nom==='vjoie'){ [523,659,784,1047].forEach((f,i)=>noteSon(f,t+i*0.13,0.35,'triangle',0.08)); }
+    else if(nom==='vsombre'){ [440,349,262,196].forEach((f,i)=>noteSon(f,t+i*0.16,0.45,'sine',0.10)); }
+  }catch(e){}
+}
+/* un son par CHANGEMENT de phase — jamais en arrivant/rechargeant en cours */
+function sonsPhase(){
+  if(!G.etat||NET.statut==='lobby') return;
+  const e=G.etat, cle=e.m+'-'+e.ph+'-'+e.nuit;
+  if(NET.cleSon===cle) return;
+  const premier=(NET.cleSon==null);
+  NET.cleSon=cle;
+  if(premier) return;
+  if(e.ph==='roles') jouerSon('roles');
+  else if(e.ph==='nuit') jouerSon('nuit');
+  else if(e.ph==='jour'){ const r=e.res||{}; jouerSon(r.mort>=0?'mort':(r.sauve?'sauve':'aube')); }
+  else if(e.ph==='vote') jouerSon('vote');
+  else if(e.ph==='crep'){ const r=e.res||{}; jouerSon(r.elimine>=0?'mort':'egalite'); }
+  else if(e.ph==='fin') jouerSon(e.gagnant==='village'?'vjoie':'vsombre');
+}
+
 /* ---------- anti-veille / resync iOS ---------- */
 function forcerResync(){
   if(!NET.on||!NET.ref||!NET.db) return;
@@ -1550,7 +1624,15 @@ function brancher(){
   document.getElementById('chip-menu').addEventListener('click',()=>{
     document.getElementById('btn-menu-reprendre').style.display=
       (G.myIdx==null&&NET.statut==='jeu')?'block':'none';
+    document.getElementById('btn-menu-sons').textContent=t(SONS.actif?'sons_on':'sons_off');
     showModal('modal-menu');
+  });
+  document.getElementById('btn-menu-sons').addEventListener('click',()=>{
+    SONS.actif=!SONS.actif;
+    lsSet('mf_sons',SONS.actif?'1':'0');
+    document.getElementById('btn-menu-sons').textContent=t(SONS.actif?'sons_on':'sons_off');
+    reveilAudio();
+    if(SONS.actif) jouerSon('aube');
   });
   document.getElementById('btn-menu-aide').addEventListener('click',()=>showModal('modal-aide'));
   document.getElementById('btn-menu-reprendre').addEventListener('click',ouvrirReprise);
