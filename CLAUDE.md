@@ -198,7 +198,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Backlog Mafia (à discuter avec Yassine)
 
 1. ~~Illustrations Nano Banana Pro~~ — fait (v1.4) : fond d'accueil, icône, 4 cartes de rôles (`gemini-3-pro-image`, sources dans `visuels/mafia-*.png`, prompts dans `visuels/README.md`, inlinés en WebP ~80 Ko). La clé Gemini reste hors dépôt.
-2. ~~Sons discrets~~ — fait (v1.6) : Web Audio synthétisé (`SONS`, `jouerSon`, `sonsPhase` — un son par CHANGEMENT de phase, jamais au rechargement), bascule 🔊/🔇 dans le menu ⋯ (`mf_sons` par téléphone), contexte audio réveillé au premier geste (`reveilAudio`, exigence iOS). AUCUN fichier audio. Remplaçables par des sons Suno de Yassine (pas d'API Suno : il génère sur suno.com et envoie les fichiers dans le chat).
+2. ~~Sons discrets~~ — fait (v1.6) : Web Audio synthétisé (`SONS`, `jouerSon`, `sonsPhase` — un son par CHANGEMENT de phase, jamais au rechargement), bascule 🔊/🔇 dans le menu ⋯ (`mf_sons` par téléphone), contexte audio réveillé au premier geste (`reveilAudio`, exigence iOS). Repli synthétisé seulement quand le son n'existe pas dans `SFX` : les **sons Suno** de Yassine (liens de partage `suno.com/s/...` collés dans le chat → mp3 téléchargeable depuis la page ; pas d'API Suno) sont découpés (ffmpeg, mono 48 kb/s) dans `sons/*.mp3` puis inlinés par `python3 outils/inliner-sons.py` (bloc `/*__SFX__*/`, pré-décodés au premier geste). Fait : `nuit`. Manquent : aube, mort, sauve, vote, egalite, roles, vjoie, vsombre.
 3. Minuteur de débats optionnel.
 4. Rôles bonus (à valider) : sorcière, maire…
 5. Stats de fin enrichies (intuitions des civils révélées pour rire).
