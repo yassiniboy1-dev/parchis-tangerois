@@ -144,6 +144,14 @@ console.log('— victoire par élimination nocturne —');
   T('1 tueur, 1 survivant : les tueurs gagnent',X.verifierVictoire(j)==='tueurs');
 }
 
+console.log('— code de partie choisi par l\'hôte —');
+T('FAMILLE accepté',X.codeValide('FAMILLE'));
+T('TGR2026 accepté (chiffres permis)',X.codeValide('TGR2026'));
+T('AB refusé (trop court)',!X.codeValide('AB'));
+T('NEUFLETTRES refusé (trop long)',!X.codeValide('NEUFLETTRES'));
+T('accents et espaces refusés',!X.codeValide('CAFÉ')&&!X.codeValide('AB CD'));
+T('le code aléatoire reste valide',X.codeValide(X.codeAleatoire()));
+
 console.log('— langues (français / arabe) —');
 {
   const fr=Object.keys(X.I18N.fr).sort(), ar=Object.keys(X.I18N.ar).sort();

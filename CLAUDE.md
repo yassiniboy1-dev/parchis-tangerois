@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.2)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.3)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -10,7 +10,7 @@ Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS +
 ```bash
 node tests/moteur.test.js        # 42 tests des règles Parchís, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie Parchís simulée entre 2 clients + 2 IA (lancer 3×)
-node tests/mafia.test.js         # 48 tests des règles Mafia, exécutés contre mafia/index.html
+node tests/mafia.test.js         # 54 tests des règles Mafia, exécutés contre mafia/index.html
 node tests/sim-mafia.js          # partie Mafia complète, 5 clients VM + reprise de téléphone (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 bash outils/deployer-mafia.sh    # fabrique mafia-netlify.zip à glisser sur Netlify
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.2, `mafia/index.html`)
+# Mafia — مافيا (v1.3, `mafia/index.html`)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -157,6 +157,7 @@ Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la mêm
 ## Discrétion (conventions impératives du jeu)
 
 - Thème **très sombre** (« noir tangérois »), textes tamisés — jamais de gros rôle en clair à l'écran.
+- **Code de partie choisi par l'hôte (v1.3)** : champ optionnel à la création (`in-code-perso`, `codeValide` = 3–8 lettres/chiffres A-Z0-9). Code pris et actif → erreur ; partie périmée (>48 h) au même code → écrasée ; champ vide → `codeAleatoire()`. Rejoindre accepte 3–8 caractères.
 - **Bilingue français/arabe (v1.2)** : choix PAR TÉLÉPHONE (`mf_lang`, jamais synchronisé), bascule à l'accueil et dans le menu ⋯. Dictionnaire `I18N` + `t(clé,{vars})` ; statique via `data-i18n`/`data-i18n-html`/`data-i18n-ph` (appliquerLangue), dynamique via `t()`. Arabe = `dir=rtl` sur `<html>` (les champs code restent `ltr`). Le test de parité des clés FR/AR casse si une traduction manque.
 - Toute info secrète passe par `.secret` + `bindSecret` : visible **seulement en maintenant le doigt**, se recache au relâchement.
 - Écrans identiques pour tous pendant nuit / vote / rapport (seule la petite consigne change).
@@ -181,7 +182,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Tests Mafia
 
 - `tests/charge-mafia.js` : extraction du script de `mafia/index.html` en VM (réutilise le DOM factice de `charge.js`).
-- `tests/mafia.test.js` : 48 assertions (langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
+- `tests/mafia.test.js` : 54 assertions (code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
 - `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme) **et nuit 1 forcée sans le geste d'un retardataire** (bouton hôte) **et reprise du téléphone de l'hôte avec transfert d'arbitrage**, convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
 
 ## Déploiement

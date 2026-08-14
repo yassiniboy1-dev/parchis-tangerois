@@ -246,9 +246,12 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <div style="height:4dvh"></div>
   <div class="panneau">
     <input class="champ" id="in-nom" placeholder="Ton prénom" data-i18n-ph="ph_prenom" maxlength="14" autocomplete="off">
-    <button class="btn marge" id="btn-creer" data-i18n="creer">🎩 Créer une partie</button>
     <div class="ligne-champ marge">
-      <input class="champ code" id="in-code" placeholder="CODE" data-i18n-ph="ph_code" maxlength="5" autocomplete="off" autocapitalize="characters">
+      <input class="champ code" id="in-code-perso" placeholder="Code au choix (optionnel)" data-i18n-ph="ph_code_perso" maxlength="8" autocomplete="off" autocapitalize="characters">
+      <button class="btn" id="btn-creer" data-i18n="creer">🎩 Créer</button>
+    </div>
+    <div class="ligne-champ marge">
+      <input class="champ code" id="in-code" placeholder="CODE" data-i18n-ph="ph_code" maxlength="8" autocomplete="off" autocapitalize="characters">
       <button class="btn sombre" id="btn-rejoindre" data-i18n="rejoindre">Rejoindre</button>
     </div>
     <div class="err" id="ligne-err"></div>
@@ -423,7 +426,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.2
+   MAFIA — مافيا  v1.3
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -450,8 +453,10 @@ const ROLES={ tueur:{ic:'🔪'}, medecin:{ic:'💉'}, detective:{ic:'🔍'}, civ
 const I18N={
 fr:{
   slogan:"Un tueur rôde dans la médina… jeu de salon pour 4 à 12 téléphones",
-  ph_prenom:"Ton prénom", ph_code:"CODE",
-  creer:"🎩 Créer une partie", rejoindre:"Rejoindre", aide_btn:"📜 Comment jouer ?",
+  ph_prenom:"Ton prénom", ph_code:"CODE", ph_code_perso:"Code au choix (optionnel)",
+  err_codefmt:"Code : 3 à 8 lettres ou chiffres.",
+  err_pris:"Ce code est déjà pris — choisis-en un autre.",
+  creer:"🎩 Créer", rejoindre:"Rejoindre", aide_btn:"📜 Comment jouer ?",
   note_accueil:"Tout le monde dans la même pièce, chacun son téléphone. Les débats se font à voix haute — l'écran, lui, reste muet.",
   lobby_titre:"Salle d'attente", lobby_sous:"Partage ce code — dès 4 joueurs, l'hôte lance la partie",
   copier:"📋 Copier", whatsapp:"💬 WhatsApp", copie_ok:"Code copié",
@@ -465,7 +470,7 @@ fr:{
   err_min4:"Il faut au moins 4 joueurs.", err_max12:"12 joueurs maximum.",
   err_2t6:"2 tueurs demandent au moins 6 joueurs.",
   err_reseau:"Réseau indisponible ici — ouvre le site déployé sur Netlify.",
-  err_code5:"Code à 5 lettres.", err_conn:"Connexion impossible. Vérifie ta 4G/WiFi.",
+  err_conn:"Connexion impossible. Vérifie ta 4G/WiFi.",
   err_aucune:"Aucune partie avec ce code.", err_parchis:"Ce code est une partie de Parchís, pas de Mafia.",
   err_pleine:"Partie complète (12 joueurs).", partie_fermee:"La partie a été fermée",
   ma_carte:"🎭 Ma carte", reconnexion:"⚠︎ reconnexion…",
@@ -529,7 +534,9 @@ fr:{
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
-  ph_prenom:"اسمك", ph_code:"الرمز",
+  ph_prenom:"اسمك", ph_code:"الرمز", ph_code_perso:"رمز من اختيارك (اختياري)",
+  err_codefmt:"الرمز: من 3 إلى 8 أحرف أو أرقام.",
+  err_pris:"هذا الرمز مستعمل — اختر رمزا آخر.",
   creer:"🎩 أنشئ لعبة", rejoindre:"انضم", aide_btn:"📜 كيف نلعب؟",
   note_accueil:"الجميع في نفس الغرفة، ولكل واحد هاتفه. النقاش يكون بصوت عال — أما الشاشة فتبقى صامتة.",
   lobby_titre:"قاعة الانتظار", lobby_sous:"شارك هذا الرمز — ابتداء من 4 لاعبين يطلق المضيف اللعبة",
@@ -544,7 +551,7 @@ ar:{
   err_min4:"يلزم 4 لاعبين على الأقل.", err_max12:"12 لاعبا كحد أقصى.",
   err_2t6:"قاتلان يتطلبان 6 لاعبين على الأقل.",
   err_reseau:"الشبكة غير متوفرة هنا — افتح الموقع المنشور.",
-  err_code5:"الرمز من 5 أحرف.", err_conn:"تعذر الاتصال. تحقق من الإنترنت.",
+  err_conn:"تعذر الاتصال. تحقق من الإنترنت.",
   err_aucune:"لا توجد لعبة بهذا الرمز.", err_parchis:"هذا الرمز للعبة بارشيس وليس مافيا.",
   err_pleine:"اللعبة مكتملة (12 لاعبا).", partie_fermee:"أغلقت اللعبة",
   ma_carte:"🎭 بطاقتي", reconnexion:"⚠︎ إعادة الاتصال…",
@@ -767,6 +774,8 @@ function codeAleatoire(){
   for(let i=0;i<5;i++) s+=L[Math.floor(Math.random()*L.length)];
   return s;
 }
+/* code choisi par l'hôte : 3 à 8 lettres/chiffres (sans accents ni espaces) */
+function codeValide(c){ return /^[A-Z0-9]{3,8}$/.test(c); }
 function nettoyage(){ /* purge des parties de plus de 48 h (partagée avec le Parchís) */
   try{
     NET.db.ref('parties').orderByChild('creele').endAt(Date.now()-48*3600*1000).limitToFirst(15).once('value',s=>{
@@ -932,10 +941,18 @@ function creerPartie(){
   ligneErr('');
   if(!initFirebase()){ ligneErr(t('err_reseau')); return; }
   const nom=lireNom();
-  const code=codeAleatoire();
+  const perso=(document.getElementById('in-code-perso').value||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(perso&&!codeValide(perso)){ ligneErr(t('err_codefmt')); return; }
+  const code=perso||codeAleatoire();
   const ref=NET.db.ref('parties/'+code);
   ref.once('value',s=>{
-    if(s.exists()){ creerPartie(); return; }
+    if(s.exists()){
+      const p=s.val()||{};
+      const perime=!p.creele||p.creele<Date.now()-48*3600*1000;
+      if(!perso){ creerPartie(); return; }           /* code aléatoire : on retire */
+      if(!perime){ ligneErr(t('err_pris')); return; } /* code choisi déjà actif */
+      /* partie périmée : on l'écrase */
+    }
     const j={}; j[NET.uid]={nom:nom,ts:Date.now()};
     ref.set({
       v:1, jeu:'mafia', creele:Date.now(), hote:NET.uid, statut:'lobby',
@@ -950,8 +967,8 @@ function creerPartie(){
 function rejoindrePartie(){
   ligneErr('');
   if(!initFirebase()){ ligneErr(t('err_reseau')); return; }
-  const code=(document.getElementById('in-code').value||'').trim().toUpperCase();
-  if(code.length!==5){ ligneErr(t('err_code5')); return; }
+  const code=(document.getElementById('in-code').value||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!codeValide(code)){ ligneErr(t('err_codefmt')); return; }
   const nom=lireNom();
   NET.db.ref('parties/'+code).once('value',s=>{
     const p=s.val();

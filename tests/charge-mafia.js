@@ -37,5 +37,5 @@ const EXPOSER='\n;globalThis.__X={G,NET,RG,composerRoles,validerComposition,veri
   'choisirCibleTueurs,resoudreNuit,depouillerVote,compoTexte,'+
   'rejoindreRef,lancerPartie,pretRole,confirmerNuit,confirmerVote,'+
   'passerAuVote,tomberNuit,rejouer,reprendrePlace,quitterLigne,initFirebase,'+
-  'I18N,t,setLangue,getLangue:()=>LANGUE};';
+  'I18N,t,setLangue,getLangue:()=>LANGUE,codeValide,codeAleatoire};';
 module.exports={chargerContexte,extraireScript,EXPOSER};
