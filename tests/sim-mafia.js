@@ -96,7 +96,7 @@ function makeCtx(uid){
   let code=extraireScript();
   code=code.replace('}catch(e){ /* un instantané cassé ne doit jamais figer le client */ }',
     '}catch(e){ console.log("TP-ERR:",e&&e.message); }');
-  const src=code+'\n;globalThis.__X={G,NET,RG,rejoindreRef,lancerPartie,pretRole,confirmerNuit,confirmerVote,passerAuVote,tomberNuit,reprendrePlace,initFirebase};';
+  const src=code+'\n;globalThis.__X={G,NET,RG,rejoindreRef,lancerPartie,pretRole,confirmerNuit,confirmerVote,passerAuVote,tomberNuit,reprendrePlace,forcerSuite,initFirebase};';
   vm.runInContext(src,sandbox);
   sandbox.__X.NET.uid=uid;
   sandbox.__X.initFirebase();
@@ -146,7 +146,7 @@ async function principal(){
   }
   console.log('rôles distribués:',e0.joueurs.map(j=>j.nom+'='+j.role).join(', '));
 
-  let actions=0,repris=false,sauvetages=0,egalites=0,resVu='';
+  let actions=0,repris=false,hoteRepris=false,force=false,sauvetages=0,egalites=0,resVu='';
   for(let step=0;step<600;step++){
     const ok=await settle(clients,9000);
     if(!ok){
@@ -164,12 +164,29 @@ async function principal(){
     }
     if(e.ph==='fin'){
       if(e.gagnant!=='tueurs'&&e.gagnant!=='village'){console.log('ÉCHEC: gagnant invalide',e.gagnant);process.exit(1);}
+      if(!force){console.log('ÉCHEC: le forçage de nuit n\'a pas été testé');process.exit(1);}
+      if(!repris){console.log('ÉCHEC: la reprise de téléphone n\'a pas été testée');process.exit(1);}
+      if(!hoteRepris){console.log('ÉCHEC: la reprise du téléphone de l\'hôte n\'a pas été testée');process.exit(1);}
       const refC=coeur(clients[0]);
       const converge=clients.every(X=>coeur(X)===refC);
       console.log('PARTIE TERMINÉE — gagnant:',e.gagnant,'| nuits:',e.nuit,'| actions:',actions,
-        '| sauvetages:',sauvetages,'| reprise testée:',repris);
+        '| sauvetages:',sauvetages,'| reprise testée:',repris,'| forçage testé:',force);
       console.log(converge?'SIM OK — synchro parfaite de bout en bout':'ÉCHEC final: divergence');
       process.exit(converge?0:1);
+    }
+    /* forçage : à la nuit 1, Badr (uidB) ne fait jamais son geste — quand les
+       4 autres ont agi, l'hôte utilise « Continuer sans les absents » */
+    if(!force&&e.m===1&&e.ph==='nuit'&&e.nuit===1){
+      const ac=clients[0].__X.G.actes['m1n1']||{};
+      const manq=e.joueurs.filter(j=>j.vif&&typeof ac[j.uid]!=='number');
+      if(manq.length===1&&manq[0].uid==='uidB'){
+        A.__X.forcerSuite();
+        force=true;actions++;
+        await dodo(200);
+        if((A.__X.G.etat||{}).ph==='nuit'){console.log('ÉCHEC: forçage sans effet');process.exit(1);}
+        console.log('… nuit 1 forcée sans le geste de Badr (bouton hôte) OK');
+        continue;
+      }
     }
     /* reprise : au premier jour, C « change de téléphone » */
     if(!repris&&e.ph==='jour'){
@@ -184,7 +201,24 @@ async function principal(){
       if(C2.__X.G.myIdx!==idx){console.log('ÉCHEC: reprise ratée, myIdx=',C2.__X.G.myIdx);process.exit(1);}
       if(C.__X.G.myIdx!=null){console.log('ÉCHEC: l\'ancien téléphone garde une place');process.exit(1);}
       console.log('… reprise de téléphone OK au jour',e.nuit,'— C2 remplace C (C devient fantôme)');
-      clients=[A,B,C2,D,E]; /* C reste connecté en spectateur fantôme */
+      clients=[clients[0],B,C2,D,E]; /* C reste connecté en spectateur fantôme */
+      continue;
+    }
+    /* reprise du téléphone de l'HÔTE (bug critique trouvé en revue) : après
+       la reprise de C, A « change de téléphone » — l'arbitrage doit suivre */
+    if(repris&&!hoteRepris&&e.ph==='jour'){
+      hoteRepris=true;
+      const A2=makeCtx('uidA2');
+      A2.__X.rejoindreRef('TEST');
+      await dodo(300);
+      const idxA=A2.__X.G.etat.joueurs.findIndex(j=>j.uid==='uidA');
+      A2.__X.reprendrePlace(idxA);
+      await dodo(300);
+      if(A2.__X.G.myIdx!==idxA){console.log('ÉCHEC: reprise du siège de l\'hôte ratée, myIdx=',A2.__X.G.myIdx);process.exit(1);}
+      if(!A2.__X.NET.isHote){console.log('ÉCHEC: l\'arbitrage n\'a pas suivi le téléphone de l\'hôte');process.exit(1);}
+      if(clients[0].__X.NET.isHote){console.log('ÉCHEC: l\'ancien téléphone de l\'hôte arbitre encore');process.exit(1);}
+      console.log('… reprise du téléphone de l\'HÔTE OK au jour',e.nuit,'— l\'arbitrage passe à A2');
+      clients=[A2].concat(clients.slice(1)); /* A reste connecté en fantôme */
       continue;
     }
     /* jouer */
@@ -197,10 +231,12 @@ async function principal(){
         const pr=(g.prets['m'+ne.m+'roles']||{});
         if(!pr[X.__X.NET.uid]){X.__X.pretRole();agi=true;actions++;break;}
       }else if(ne.ph==='nuit'&&moi.vif){
+        if(!force&&ne.m===1&&ne.nuit===1&&X.__X.NET.uid==='uidB')continue; /* Badr traîne */
         const ac=(g.actes['m'+ne.m+'n'+ne.nuit]||{});
         if(typeof ac[X.__X.NET.uid]!=='number'){
           let cibles=ne.joueurs.map((j,i)=>j.vif?i:-1).filter(i=>i>=0);
           if(moi.role==='medecin')cibles=cibles.filter(i=>i!==ne.prot);
+          else cibles=cibles.filter(i=>i!==g.myIdx); /* soi-même : médecin seulement */
           X.__X.confirmerNuit(hasard(cibles));agi=true;actions++;break;
         }
       }else if(ne.ph==='vote'&&moi.vif){

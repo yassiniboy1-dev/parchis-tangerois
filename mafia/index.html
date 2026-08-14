@@ -298,6 +298,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
     </div>
     <button class="btn marge" id="btn-pret">J'ai compris</button>
     <div class="compteur" id="cpt-roles"></div>
+    <button class="btn sombre marge" id="btn-forcer-roles" style="display:none">⏭️ Continuer sans les absents</button>
   </div>
 
   <!-- nuit -->
@@ -316,6 +317,9 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <div id="pan-attente" style="display:none">
     <div class="attente"><span class="lune" id="attente-ic">🌙</span><span id="attente-txt">La nuit suit son cours…</span></div>
     <div class="compteur" id="cpt-attente"></div>
+    <div class="compteur" id="attente-manque"></div>
+    <button class="btn sombre marge" id="btn-reprendre" style="display:none">🎭 Reprendre ma place</button>
+    <button class="btn marge" id="btn-forcer" style="display:none">⏭️ Continuer sans les absents</button>
   </div>
 
   <!-- jour : annonce de l'aube + débats -->
@@ -382,6 +386,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <div class="modal" id="modal-menu"><div class="box">
   <h3>Menu</h3>
   <button class="btn sombre" id="btn-menu-aide">📜 Règles du jeu</button>
+  <button class="btn sombre" id="btn-menu-reprendre" style="display:none">🎭 Reprendre ma place</button>
   <button class="btn danger" id="btn-menu-quitter">🚪 Quitter la partie</button>
   <button class="btn sombre" id="btn-fermer-menu">Retour</button>
 </div></div>
@@ -405,7 +410,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.0
+   MAFIA — مافيا  v1.1
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -618,6 +623,9 @@ function traiterPartie(snap){
       const i=G.etat.joueurs.findIndex(j=>j.uid===NET.uid);
       if(i>=0) G.myIdx=i;
     }
+    /* tant qu'on a une place, la proposition de reprise reste réarmée :
+       si la place se perd (course rare), le modal se rouvrira tout seul */
+    if(G.myIdx!=null) NET.reprisePropose=false;
     if(p.statut==='lobby'){
       NET.reprisePropose=false;
       showEcran('scr-lobby'); renderLobby();
@@ -625,8 +633,10 @@ function traiterPartie(snap){
       if(!document.getElementById('scr-game').classList.contains('on')){
         showEcran('scr-game'); garderEcran();
       }
+      /* l'arbitrage passe AVANT le rendu : un pépin d'affichage ne doit
+         jamais empêcher la partie d'avancer */
+      if(NET.isHote){ try{ veillerHote(); }catch(err){} planVeille(); }
       render();
-      if(NET.isHote){ veillerHote(); planVeille(); }
       if(p.statut==='jeu'&&G.myIdx==null&&!NET.reprisePropose){
         NET.reprisePropose=true; ouvrirReprise();
       }
@@ -638,48 +648,72 @@ function planVeille(){
   const s=NET.appliedSeq;
   setTimeout(()=>{ try{ if(NET.appliedSeq===s&&NET.on&&NET.isHote) veillerHote(); }catch(e){} },2200);
 }
-/* l'hôte fait avancer la partie quand tout le monde a agi (idempotent) */
+/* résolutions de l'hôte — idempotentes (garde NET.faits), appelées soit par
+   veillerHote quand tout le monde a agi, soit par « Continuer sans les
+   absents » (forcerSuite) avec les gestes reçus */
+function avancerRolesHote(){
+  const k='res:'+keyRoles();
+  if(NET.faits[k]) return;
+  NET.faits[k]=1;
+  ecrireEtat(x=>{ x.ph='nuit'; x.nuit=1; x.res=null; });
+}
+function resoudreNuitHote(){
+  const e=G.etat, k='res:'+keyNuit();
+  if(NET.faits[k]) return;
+  NET.faits[k]=1;
+  const ac=G.actes[keyNuit()]||{};
+  /* tirage DÉTERMINISTE (graine manche/nuit) : deux arbitres concurrents
+     (ex. deux onglets hôte) calculeraient exactement la même résolution */
+  const graine=e.m*97+e.nuit*13;
+  const r=resoudreNuit(e.joueurs,ac,e.prot,()=>{
+    const x=Math.sin(graine)*10000; return x-Math.floor(x);
+  });
+  ecrireEtat(x=>{
+    if(r.mort>=0){ x.joueurs[r.mort].vif=0; x.joueurs[r.mort].mort='nuit'+x.nuit; }
+    x.prot=r.prot;
+    x.res={t:'nuit',mort:r.mort,sauve:r.sauve,
+      role:(r.mort>=0&&RG.reveler)?x.joueurs[r.mort].role:'',
+      inspC:r.insp?r.insp.c:-1,inspR:r.insp?r.insp.r:''};
+    x.gagnant=verifierVictoire(x.joueurs);
+    x.ph=x.gagnant?'fin':'jour';
+  });
+}
+function resoudreVoteHote(){
+  const e=G.etat, k='res:'+keyVote();
+  if(NET.faits[k]) return;
+  NET.faits[k]=1;
+  const vo=G.votes[keyVote()]||{};
+  const r=depouillerVote(e.joueurs,vo);
+  ecrireEtat(x=>{
+    if(r.elimine>=0){ x.joueurs[r.elimine].vif=0; x.joueurs[r.elimine].mort='vote'+x.nuit; }
+    x.res={t:'vote',elimine:r.elimine,tally:r.tally,
+      role:(r.elimine>=0&&RG.reveler)?x.joueurs[r.elimine].role:''};
+    x.gagnant=verifierVictoire(x.joueurs);
+    x.ph=x.gagnant?'fin':'crep';
+  });
+}
 function veillerHote(){
   if(!NET.on||!NET.isHote||!G.etat||NET.statut==='lobby') return;
   const e=G.etat;
   if(e.ph==='roles'){
-    const k='res:'+keyRoles();
-    if(NET.faits[k]) return;
     const pr=G.prets[keyRoles()]||{};
-    if(!e.joueurs.every(j=>pr[j.uid])) return;
-    NET.faits[k]=1;
-    ecrireEtat(x=>{ x.ph='nuit'; x.nuit=1; x.res=null; });
+    if(e.joueurs.every(j=>pr[j.uid])) avancerRolesHote();
   }else if(e.ph==='nuit'){
-    const k='res:'+keyNuit();
-    if(NET.faits[k]) return;
     const ac=G.actes[keyNuit()]||{};
-    if(!vivants(e.joueurs).every(j=>typeof ac[j.uid]==='number')) return;
-    NET.faits[k]=1;
-    const r=resoudreNuit(e.joueurs,ac,e.prot);
-    ecrireEtat(x=>{
-      if(r.mort>=0){ x.joueurs[r.mort].vif=0; x.joueurs[r.mort].mort='nuit'+x.nuit; }
-      x.prot=r.prot;
-      x.res={t:'nuit',mort:r.mort,sauve:r.sauve,
-        role:(r.mort>=0&&RG.reveler)?x.joueurs[r.mort].role:'',
-        inspC:r.insp?r.insp.c:-1,inspR:r.insp?r.insp.r:''};
-      x.gagnant=verifierVictoire(x.joueurs);
-      x.ph=x.gagnant?'fin':'jour';
-    });
+    if(vivants(e.joueurs).every(j=>typeof ac[j.uid]==='number')) resoudreNuitHote();
   }else if(e.ph==='vote'){
-    const k='res:'+keyVote();
-    if(NET.faits[k]) return;
     const vo=G.votes[keyVote()]||{};
-    if(!vivants(e.joueurs).every(j=>typeof vo[j.uid]==='number')) return;
-    NET.faits[k]=1;
-    const r=depouillerVote(e.joueurs,vo);
-    ecrireEtat(x=>{
-      if(r.elimine>=0){ x.joueurs[r.elimine].vif=0; x.joueurs[r.elimine].mort='vote'+x.nuit; }
-      x.res={t:'vote',elimine:r.elimine,tally:r.tally,
-        role:(r.elimine>=0&&RG.reveler)?x.joueurs[r.elimine].role:''};
-      x.gagnant=verifierVictoire(x.joueurs);
-      x.ph=x.gagnant?'fin':'crep';
-    });
+    if(vivants(e.joueurs).every(j=>typeof vo[j.uid]==='number')) resoudreVoteHote();
   }
+}
+/* sortie de secours de l'hôte : un téléphone est perdu / injoignable —
+   on résout la phase avec les gestes réellement reçus */
+function forcerSuite(){
+  if(!NET.on||!NET.isHote||!G.etat||NET.statut==='lobby') return;
+  const e=G.etat;
+  if(e.ph==='roles') avancerRolesHote();
+  else if(e.ph==='nuit') resoudreNuitHote();
+  else if(e.ph==='vote') resoudreVoteHote();
 }
 
 /* ---------- création / rejoindre ---------- */
@@ -746,6 +780,7 @@ function quitterLigne(){
   G.etat=null; G.myIdx=null; G.sel=null;
   hideModals();
   showEcran('scr-accueil');
+  document.getElementById('in-code').value=lsGet('mf_code')||'';
 }
 function lancerPartie(){
   if(!NET.isHote||NET.statut!=='lobby') return;
@@ -791,6 +826,9 @@ function confirmerNuit(cible){
   const c=G.etat.joueurs[cible];
   if(!c||!c.vif) return;
   const m=moi();
+  /* soi-même : seul le médecin (auto-protection) — refus par toast, jamais de
+     case grisée qui différencierait les écrans */
+  if(cible===G.myIdx&&m.role!=='medecin'){ toast('Pas toi-même — choisis quelqu\'un d\'autre','warn'); return; }
   if(m.role==='medecin'&&cible===G.etat.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return; }
   NET.ref.child('actes/'+keyNuit()+'/'+NET.uid).set(cible);
   G.sel=null;
@@ -814,8 +852,12 @@ function tomberNuit(){
 }
 /* reprise de téléphone en pleine partie */
 function reprendrePlace(i){
-  if(!NET.on||!NET.ref||!G.etat) return;
+  if(!NET.on||!NET.ref||!G.etat||!G.etat.joueurs[i]) return;
+  const ancien=G.etat.joueurs[i].uid;
   NET.ref.child('etat/joueurs/'+i+'/uid').set(NET.uid);
+  /* si on reprend le téléphone de l'HÔTE, l'arbitrage suit — sans ce
+     transfert plus personne ne résout les nuits (bug trouvé en revue) */
+  if(ancien&&ancien===NET.hoteUid&&ancien!==NET.uid) NET.ref.child('hote').set(NET.uid);
   hideModals();
   toast('Place reprise — bon retour dans la médina','ok');
 }
@@ -824,6 +866,9 @@ function reprendrePlace(i){
    RENDU — tout se redessine depuis l'instantané (idempotent)
    ========================================================== */
 function showEcran(id){
+  /* vrai changement d'écran → fermer les modals (un « Quitter ? » ouvert au
+     lobby ne doit pas survivre au lancement de la partie) */
+  if(!document.getElementById(id).classList.contains('on')) hideModals();
   ['scr-accueil','scr-lobby','scr-game'].forEach(s=>{
     document.getElementById(s).classList.toggle('on',s===id);
   });
@@ -959,8 +1004,13 @@ function listeEtat(contId,revelerTout){
 function rapportHTML(){
   const e=G.etat,m=moi(),r=e.res;
   if(!m) return '<div class="role-desc">Spectateur — rien à lire.</div>';
-  if(!m.vif&&!(r&&r.t==='nuit'&&r.mort===G.myIdx))
+  /* les morts ne reçoivent JAMAIS d'info secrète — même le détective
+     assassiné la nuit de son enquête n'emporte pas son résultat */
+  if(!m.vif){
+    if(r&&r.t==='nuit'&&r.mort===G.myIdx)
+      return '<div class="role-ic">🕯️</div><div class="role-desc">On t\'a assassiné cette nuit… Les morts ne parlent pas.</div>';
     return '<div class="role-desc">Les morts ne rêvent pas. 💀</div>';
+  }
   if(!r||r.t!=='nuit') return '<div class="role-desc">Rien à signaler.</div>';
   const ac=(G.actes['m'+e.m+'n'+e.nuit]||{})[m.uid];
   const nomDe=i=>(typeof i==='number'&&e.joueurs[i])?e.joueurs[i].nom:'—';
@@ -975,10 +1025,20 @@ function rapportHTML(){
       (r.sauve&&typeof ac==='number'&&ac===e.prot?'Tu as sauvé une vie cette nuit ! ✨':'La nuit est passée.')+'</div>';
   return '<div class="role-ic">🌙</div><div class="role-desc">Ton intuition de la nuit : <b>'+echap(nomDe(ac))+'</b>.<br>Garde-la pour toi…</div>';
 }
+/* écran d'attente : liste des retardataires + boutons de secours */
+function majAttente(manquants){
+  document.getElementById('attente-manque').textContent=
+    manquants.length?('On attend : '+manquants.join(', ')):'';
+  document.getElementById('btn-forcer').style.display=
+    (NET.isHote&&manquants.length)?'block':'none';
+  document.getElementById('btn-reprendre').style.display=
+    (G.myIdx==null&&NET.statut==='jeu')?'block':'none';
+}
 function render(){
   if(!G.etat){ montrer('pan-attente');
     document.getElementById('attente-txt').textContent='Connexion à la partie…';
     document.getElementById('cpt-attente').textContent='';
+    majAttente([]);
     return; }
   const e=G.etat;
   document.getElementById('chip-code').textContent=NET.code||'—';
@@ -989,8 +1049,11 @@ function render(){
     document.getElementById('carte-role-in').innerHTML=carteHTML();
     const pr=G.prets[keyRoles()]||{};
     const n=e.joueurs.filter(j=>pr[j.uid]).length;
-    document.getElementById('cpt-roles').textContent=n+'/'+e.joueurs.length+' ont vu leur rôle';
+    const manq=e.joueurs.filter(j=>!pr[j.uid]).map(j=>j.nom);
+    document.getElementById('cpt-roles').textContent=n+'/'+e.joueurs.length+' ont vu leur rôle'+
+      (manq.length&&manq.length<e.joueurs.length?' — on attend : '+manq.join(', '):'');
     document.getElementById('btn-pret').style.display=(G.myIdx!=null&&!pr[NET.uid])?'block':'none';
+    document.getElementById('btn-forcer-roles').style.display=(NET.isHote&&manq.length&&manq.length<e.joueurs.length)?'block':'none';
   }else if(e.ph==='nuit'){
     const ac=G.actes[keyNuit()]||{};
     const viv=vivants(e.joueurs);
@@ -999,8 +1062,11 @@ function render(){
     if(G.myIdx==null||!suisVif()||typeof ac[NET.uid]==='number'){
       montrer('pan-attente');
       document.getElementById('attente-ic').textContent='🌙';
-      document.getElementById('attente-txt').textContent='La nuit suit son cours…';
+      document.getElementById('attente-txt').textContent=
+        (G.myIdx==null)?'Tu regardes en spectateur…':
+        (suisVif()?'Ton geste est fait — la nuit suit son cours…':'La nuit suit son cours…');
       document.getElementById('cpt-attente').textContent=cpt;
+      majAttente(viv.filter(j=>typeof ac[j.uid]!=='number').map(j=>j.nom));
     }else{
       montrer('pan-nuit');
       document.getElementById('nuit-titre').textContent='Nuit '+e.nuit+' — la médina s\'endort';
@@ -1014,6 +1080,7 @@ function render(){
       document.getElementById('nuit-consigne').textContent=CONS[m.role]||CONS.civil;
       grilleJoueurs('nuit-grille',{cle:'n'+e.m+'-'+e.nuit,
         refus:i=>{
+          if(i===G.myIdx&&m.role!=='medecin'){ toast('Pas toi-même — choisis quelqu\'un d\'autre','warn'); return true; }
           if(m.role==='medecin'&&i===e.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return true; }
           return false;
         }});
@@ -1046,8 +1113,11 @@ function render(){
     if(G.myIdx==null||!suisVif()||typeof vo[NET.uid]==='number'){
       montrer('pan-attente');
       document.getElementById('attente-ic').textContent='🗳️';
-      document.getElementById('attente-txt').textContent='Le village vote…';
+      document.getElementById('attente-txt').textContent=
+        (G.myIdx==null)?'Tu regardes en spectateur…':
+        (suisVif()?'Ton vote est enregistré — le village vote…':'Le village vote…');
       document.getElementById('cpt-attente').textContent=cpt;
+      majAttente(viv.filter(j=>typeof vo[j.uid]!=='number').map(j=>j.nom));
     }else{
       montrer('pan-vote');
       const interdits=new Set([G.myIdx]); /* on ne vote pas pour soi */
@@ -1069,7 +1139,10 @@ function render(){
     }
     const tz=document.getElementById('crep-tally'); tz.innerHTML='';
     const tally=r.tally||{};
-    const paires=Object.keys(tally).map(k=>[Number(k),tally[k]]).sort((a,b)=>b[1]-a[1]);
+    /* RTDB peut renvoyer un tableau troué (clés numériques) : on filtre */
+    const paires=Object.keys(tally).map(k=>[Number(k),tally[k]])
+      .filter(p2=>typeof p2[1]==='number'&&p2[1]>0&&e.joueurs[p2[0]])
+      .sort((a,b)=>b[1]-a[1]);
     const max=paires.length?paires[0][1]:1;
     paires.forEach(([i,n2])=>{
       const d=document.createElement('div'); d.className='rangv';
@@ -1146,6 +1219,7 @@ function bindSecret(id){
 /* ---------- branchements ---------- */
 function brancher(){
   document.getElementById('in-nom').value=lsGet('pt_nom')||'';
+  document.getElementById('in-code').value=lsGet('mf_code')||'';
   document.getElementById('btn-creer').addEventListener('click',creerPartie);
   document.getElementById('btn-rejoindre').addEventListener('click',rejoindrePartie);
   document.getElementById('btn-aide').addEventListener('click',()=>showModal('modal-aide'));
@@ -1180,6 +1254,9 @@ function brancher(){
   });
   /* jeu */
   document.getElementById('btn-pret').addEventListener('click',pretRole);
+  document.getElementById('btn-forcer').addEventListener('click',forcerSuite);
+  document.getElementById('btn-forcer-roles').addEventListener('click',forcerSuite);
+  document.getElementById('btn-reprendre').addEventListener('click',ouvrirReprise);
   document.getElementById('btn-conf-nuit').addEventListener('click',()=>confirmerNuit());
   document.getElementById('btn-conf-vote').addEventListener('click',()=>confirmerVote());
   document.getElementById('btn-vers-vote').addEventListener('click',passerAuVote);
@@ -1194,8 +1271,13 @@ function brancher(){
     showModal('modal-carte');
   });
   document.getElementById('btn-fermer-carte').addEventListener('click',hideModals);
-  document.getElementById('chip-menu').addEventListener('click',()=>showModal('modal-menu'));
+  document.getElementById('chip-menu').addEventListener('click',()=>{
+    document.getElementById('btn-menu-reprendre').style.display=
+      (G.myIdx==null&&NET.statut==='jeu')?'block':'none';
+    showModal('modal-menu');
+  });
   document.getElementById('btn-menu-aide').addEventListener('click',()=>showModal('modal-aide'));
+  document.getElementById('btn-menu-reprendre').addEventListener('click',ouvrirReprise);
   document.getElementById('btn-menu-quitter').addEventListener('click',()=>{
     document.getElementById('quitter-txt').textContent='Tu vas quitter la partie en cours. Tu pourras revenir avec le code '+(NET.code||'')+'.';
     showModal('modal-quitter');

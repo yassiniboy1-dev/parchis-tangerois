@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.0)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.1)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -10,7 +10,7 @@ Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS +
 ```bash
 node tests/moteur.test.js        # 42 tests des règles Parchís, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie Parchís simulée entre 2 clients + 2 IA (lancer 3×)
-node tests/mafia.test.js         # 39 tests des règles Mafia, exécutés contre mafia/index.html
+node tests/mafia.test.js         # 41 tests des règles Mafia, exécutés contre mafia/index.html
 node tests/sim-mafia.js          # partie Mafia complète, 5 clients VM + reprise de téléphone (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 bash outils/deployer-mafia.sh    # fabrique mafia-netlify.zip à glisser sur Netlify
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.0, `mafia/index.html`)
+# Mafia — مافيا (v1.1, `mafia/index.html`)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -148,6 +148,7 @@ Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la mêm
 - Deux tueurs se connaissent (carte de rôle) ; en désaccord sur la cible, l'hôte tranche au hasard entre leurs deux choix (`choisirCibleTueurs`).
 - Médecin : peut se protéger lui-même, mais **jamais la même personne deux nuits de suite** (répétition = protection sans effet, `resoudreNuit(lastProt)` ; le client refuse le geste avec un toast, pas de case grisée qui trahirait l'écran).
 - Détective : réponse « TUEUR / INNOCENT » uniquement, livrée dans le **rapport de la nuit** (carte à maintien du doigt, présente chez tout le monde avec un texte selon le rôle → écrans identiques au jour aussi).
+- La nuit, impossible de se désigner soi-même (refus par toast, pas de case grisée) — **sauf le médecin** (auto-protection). Évite le « suicide » du tueur découvert par la sim.
 - Jour : annonce de l'aube (mort / « le médecin a sauvé une vie » / rien), débats oraux, puis **vote secret** sur téléphone (pas pour soi). Égalité → personne n'est éliminé. Dépouillement public (compte par cible, pas qui a voté quoi).
 - Révélation du rôle des morts : interrupteur hôte (défaut : révéler).
 - Victoire : village si plus aucun tueur ; tueurs si `tueurs ≥ autres vivants`.
@@ -169,16 +170,18 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 - **Seul l'hôte écrit `etat`** = `{seq, w, m (manche), ph:roles|nuit|jour|vote|crep|fin, nuit, joueurs:[{uid,nom,role,vif,mort}], prot, res, gagnant}`. `seq = max(appliedSeq+1, Date.now())`, échos ignorés (`seq>=appliedSeq` accepté car rendu idempotent — nécessaire à la reprise de téléphone qui écrit `etat/joueurs/i/uid` sans toucher `seq`).
 - **Les joueurs n'écrivent que des feuilles à leur uid** : `actes/m{M}n{N}/{uid}=cibleIdx`, `votes/m{M}j{N}/{uid}`, `prets/m{M}roles/{uid}` — clés par manche+nuit, aucune collision d'écriture possible.
 - `veillerHote()` (idempotent, garde `NET.faits`) fait avancer la partie quand tous les vivants ont agi ; filet `planVeille` (2,2 s) si un instantané se perd. `normaliserEtat` parse AVANT d'engager `appliedSeq`.
-- Garde fantôme : sans place (`G.myIdx==null`), un téléphone n'écrit jamais. Reprise de téléphone en pleine partie : modal « C'est moi » → `etat/joueurs/i/uid=NET.uid` (l'ancien téléphone devient spectateur).
-- L'hôte qui quitte le **lobby** ferme le salon (`ref.remove()`) ; en partie, son téléphone reste l'arbitre (il doit rester connecté).
+- Garde fantôme : sans place (`G.myIdx==null`), un téléphone n'écrit jamais. Reprise de téléphone en pleine partie : modal « C'est moi » → `etat/joueurs/i/uid=NET.uid` (l'ancien téléphone devient spectateur), ré-ouvrable à tout moment (menu ⋯ / écran d'attente), re-proposée automatiquement si la place se perd (`NET.reprisePropose` réarmé tant qu'on a une place). **Reprendre le siège de l'HÔTE transfère aussi l'arbitrage** (`hote=NET.uid` — bug critique trouvé en revue : sans ça, plus personne ne résout).
+- **Anti-blocage (v1.1, bug vécu : nuit figée à 3/4)** : l'écran d'attente liste les retardataires (« On attend : X »), l'hôte a un bouton **« Continuer sans les absents »** (`forcerSuite` → résolution avec les gestes réellement reçus, garde `NET.faits`), `veillerHote()` passe AVANT `render()` (un pépin d'affichage ne bloque jamais l'arbitrage), et le code de partie est pré-rempli à l'accueil (`mf_code`).
+- L'hôte qui quitte le **lobby** ferme le salon (`ref.remove()`) ; en partie, son téléphone reste l'arbitre (il doit rester connecté, ou un autre téléphone reprend son siège). Résolution de nuit **déterministe** (graine manche/nuit) : deux arbitres concurrents (deux onglets hôte, cas iOS) écriraient le même résultat. Courses résiduelles assumées (fenêtre d'un aller-retour réseau) : une reprise peut être écrasée par un `set` complet d'`etat` de l'hôte → le modal se re-propose tout seul.
+- Les morts ne reçoivent JAMAIS d'info secrète : un détective assassiné la nuit de son enquête n'emporte pas son résultat (`rapportHTML`). Dépouillement : filtrer `res.tally` (coercition tableau RTDB → lignes fantômes sinon). `showEcran` ferme les modals au vrai changement d'écran (un « Quitter ? » du lobby ne survit pas au lancement).
 - Anti-veille iOS : `forcerResync` sur visibilitychange/pageshow/focus, wake lock, badge `#chip-conn` — comme le Parchís. `mf_uid` propre au jeu, prénom partagé via `pt_nom`.
 - ⚠️ La base est en lecture publique : les rôles sont lisibles par qui ouvre la console réseau. Assumé (jeu de famille) — ne pas prétendre à du secret cryptographique.
 
 ## Tests Mafia
 
 - `tests/charge-mafia.js` : extraction du script de `mafia/index.html` en VM (réutilise le DOM factice de `charge.js`).
-- `tests/mafia.test.js` : 39 assertions (composition/validation des rôles, victoires, cible des tueurs, résolution de nuit, protection non répétable, dépouillement/égalités, votes de morts ignorés).
-- `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme), convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
+- `tests/mafia.test.js` : 41 assertions (composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
+- `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme) **et nuit 1 forcée sans le geste d'un retardataire** (bouton hôte) **et reprise du téléphone de l'hôte avec transfert d'arbitrage**, convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
 
 ## Déploiement
 

@@ -101,6 +101,12 @@ console.log('— résolution de la nuit —');
   const r=X.resoudreNuit(j,{u0:1},-1);
   T('sans détective : pas d\'inspection',r.insp===null);
 }
+{
+  const j=js(['tueur','medecin','detective','civil','civil']);
+  const r=X.resoudreNuit(j,{},-1);
+  T('nuit sans aucun geste (absents forcés) : personne ne meurt',
+    r.mort===-1&&r.sauve===0&&r.prot===-1&&r.insp===null);
+}
 
 console.log('— dépouillement du vote —');
 {
@@ -123,6 +129,11 @@ console.log('— dépouillement du vote —');
   const j=js(['tueur','civil','civil','civil'],[1]);
   const r=X.depouillerVote(j,{u0:1,u2:0,u3:0});
   T('un vote visant un mort est ignoré',r.elimine===0&&!r.tally[1]);
+}
+{
+  const j=js(['tueur','civil','civil','civil','civil']);
+  const r=X.depouillerVote(j,{u1:0,u2:0});
+  T('vote partiel (absents forcés) : majorité des votes reçus',r.elimine===0&&r.tally[0]===2);
 }
 
 console.log('— victoire par élimination nocturne —');
