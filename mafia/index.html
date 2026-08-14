@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a090d">
+<title>Mafia — مافيا</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a090d'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle'%3E🎩%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a090d'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle'%3E🎩%3C/text%3E%3C/svg%3E">
+<script>
+/* Bandeau de diagnostic — affiche les erreurs JS sans bloquer les touches */
+(function(){
+  window.addEventListener('error',function(e){
+    try{
+      var d=document.getElementById('diag'); if(!d) return;
+      d.style.display='block';
+      d.textContent='⚠ '+(e.message||'erreur')+(e.lineno?(' (l.'+e.lineno+')'):'');
+      var x=document.createElement('span'); x.textContent=' ✕'; x.style.cursor='pointer';
+      x.onclick=function(){ d.style.display='none'; };
+      d.appendChild(x);
+    }catch(_){}
+  });
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Manrope:wght@500;700;800&display=swap">
+<style>
+/* ============================================================
+   MAFIA — thème « noir tangérois » v1.0
+   Discrétion avant tout : fond quasi noir, textes tamisés,
+   informations secrètes visibles seulement en maintenant le doigt.
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;
+  background:#0a090d;color:#b9b0a2;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow-x:hidden;
+}
+/* voile nocturne : vignette + étoile de Tanger en filigrane très discret */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(120% 90% at 50% 0%,rgba(64,45,84,.22),transparent 60%),
+    radial-gradient(140% 120% at 50% 110%,rgba(0,0,0,.75),transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.025'%3E%3Cpath d='M48 8l10 30h30L64 56l10 30-26-19-26 19 10-30L8 38h30z'/%3E%3C/g%3E%3C/svg%3E");
+}
+#diag{display:none;position:fixed;top:0;left:0;right:0;z-index:99;background:#3d1414;color:#f0c9c9;
+  font-size:12px;padding:6px 10px;pointer-events:none}
+#diag span{pointer-events:auto}
+
+/* ---------- écrans ---------- */
+.ecran{display:none;position:relative;z-index:1;min-height:100dvh;flex-direction:column;
+  padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+.ecran.on{display:flex;animation:ecrIn .28s ease}
+@keyframes ecrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ecran.on,.modal.on .box,.toast{animation:none !important}}
+
+/* ---------- typographie ---------- */
+.serif{font-family:'Marcellus',Georgia,serif}
+.logo{
+  font-family:'Marcellus',Georgia,serif;font-size:56px;letter-spacing:.14em;text-align:center;
+  background:linear-gradient(180deg,#e8d9ae 0%,#c9a75c 55%,#8a6a2e 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 2px 18px rgba(201,167,92,.12);
+}
+.logo-ar{text-align:center;font-size:20px;color:#7d7264;letter-spacing:.3em;margin-top:-4px}
+.slogan{text-align:center;color:#6e6558;font-size:13px;margin:10px 0 4px}
+h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text-align:center;letter-spacing:.06em}
+.sous{color:#6e6558;font-size:13px;text-align:center}
+
+/* ---------- boutons ---------- */
+.btn{
+  display:block;width:100%;border:0;border-radius:14px;cursor:pointer;
+  font-family:'Manrope',sans-serif;font-weight:800;font-size:16px;
+  padding:14px 18px;min-height:48px;color:#241a08;
+  background:linear-gradient(180deg,#d9a93c,#b9882a);
+  box-shadow:0 3px 0 #6e4e12,0 8px 20px rgba(0,0,0,.5);
+  transition:transform .06s ease;
+}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #6e4e12}
+.btn:disabled{opacity:.35;pointer-events:none}
+.btn.sombre{background:#1d1a24;color:#b9b0a2;box-shadow:0 3px 0 #0d0b11,0 6px 14px rgba(0,0,0,.4);
+  border:1px solid #2c2836}
+.btn.danger{background:linear-gradient(180deg,#8e3128,#6e241d);color:#f0d4cf;box-shadow:0 3px 0 #3d100c}
+.btn.mini{display:inline-block;width:auto;font-size:13px;padding:9px 14px;min-height:36px;border-radius:10px}
+.btn+.btn{margin-top:10px}
+
+/* ---------- champs ---------- */
+.champ{width:100%;border:1px solid #2c2836;border-radius:12px;background:#141119;color:#d6cbb8;
+  font-family:'Manrope',sans-serif;font-weight:700;font-size:17px;padding:13px 14px;min-height:48px;outline:none;
+  -webkit-user-select:text;user-select:text}
+.champ::placeholder{color:#544c40}
+.champ.code{text-transform:uppercase;letter-spacing:.35em;text-align:center;font-size:20px}
+.ligne-champ{display:flex;gap:8px}
+.ligne-champ .champ{flex:1;min-width:0}
+.ligne-champ .btn{width:auto;flex:0 0 auto;margin:0}
+.err{color:#c96b60;font-size:13px;text-align:center;min-height:18px;margin-top:8px}
+
+/* ---------- cartes / panneaux ---------- */
+.panneau{background:#131017;border:1px solid #241f2c;border-radius:16px;padding:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.panneau+.panneau{margin-top:12px}
+
+/* ---------- chips d'entête ---------- */
+.entete{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.chip{background:#16131c;border:1px solid #2c2836;border-radius:999px;color:#8d8375;
+  font-size:12px;font-weight:700;padding:8px 12px;min-height:36px;display:inline-flex;align-items:center;gap:6px}
+.chip.btnc{cursor:pointer}
+.chip.alerte{background:#3d1414;border-color:#5e2020;color:#e0a9a2;display:none}
+#chip-phase{color:#c9b98c}
+.pousse{flex:1}
+
+/* ---------- carte secrète (maintenir pour révéler) ---------- */
+.secret{
+  position:relative;border-radius:16px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(160deg,#191524,#100d16);
+  border:1px solid #2c2640;min-height:150px;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+}
+.secret .voile{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;
+  color:#6b6178;font-size:13px;font-weight:700;transition:opacity .12s ease;padding:12px}
+.secret .voile .oeil{font-size:30px;opacity:.8}
+.secret .dedans{opacity:0;transition:opacity .12s ease;padding:16px}
+.secret.vu .voile{opacity:0}
+.secret.vu .dedans{opacity:1}
+.secret .role-ic{font-size:42px;line-height:1}
+.secret .role-nom{font-family:'Marcellus',serif;font-size:24px;letter-spacing:.1em;color:#d9cba6;margin-top:4px}
+.secret .role-desc{font-size:12.5px;color:#8d8375;margin-top:8px;line-height:1.45}
+.secret .role-extra{font-size:12.5px;color:#b08f8a;margin-top:8px}
+
+/* ---------- grille de joueurs ---------- */
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:12px}
+.cel{
+  border:1px solid #241f2c;border-radius:14px;background:#15121b;cursor:pointer;
+  padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;min-height:86px;
+  color:#a89f90;font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;
+}
+.cel .av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;color:#1a1510;background:linear-gradient(160deg,#8d8375,#5e574c)}
+.cel .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* sélection = blanc lumineux (convention maison — jamais doré) */
+.cel.sel{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 18px rgba(255,255,255,.35);color:#f2ede2}
+.cel.off{opacity:.32;pointer-events:none}
+.cel.mort{opacity:.38}
+.cel.mort .av{filter:grayscale(1);opacity:.6}
+
+/* ---------- listes lobby / joueurs ---------- */
+.rangj{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #1c1823}
+.rangj:last-child{border-bottom:0}
+.rangj .av{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;color:#1a1510;background:linear-gradient(160deg,#8d8375,#5e574c)}
+.rangj .nomj{flex:1;font-weight:700;color:#c4bbaa;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rangj .sousj{display:block;font-size:11.5px;color:#675f53;font-weight:700}
+.rangj.mort .nomj{color:#5e574c;text-decoration:line-through}
+
+/* ---------- interrupteurs / réglages ---------- */
+.regle{display:flex;align-items:center;gap:10px;padding:10px 2px}
+.regle .lib{flex:1;font-size:14px;font-weight:700;color:#b9b0a2}
+.regle .lib small{display:block;font-weight:700;font-size:11.5px;color:#675f53}
+.switch{width:46px;height:26px;border-radius:999px;background:#241f2c;position:relative;cursor:pointer;flex:0 0 auto}
+.switch::before{content:'';position:absolute;inset:-6px}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#5e574c;transition:transform .15s ease,background .15s ease}
+.switch.on{background:#4b3a14}
+.switch.on::after{transform:translateX(20px);background:#d9a93c}
+.seg{display:flex;background:#141119;border:1px solid #2c2836;border-radius:12px;overflow:hidden}
+.seg button{flex:1;border:0;background:transparent;color:#8d8375;font-family:'Manrope',sans-serif;
+  font-weight:800;font-size:14px;padding:10px 8px;min-height:40px;cursor:pointer}
+.seg button.on{background:#3a2d10;color:#e3c877}
+.seg button:disabled{opacity:.4}
+
+/* ---------- annonces ---------- */
+.annonce{text-align:center;padding:18px 12px}
+.annonce .gros{font-family:'Marcellus',serif;font-size:21px;color:#d9cba6;line-height:1.35}
+.annonce .ic{font-size:40px;display:block;margin-bottom:8px}
+.annonce .det{font-size:13px;color:#8d8375;margin-top:8px}
+.annonce.rouge .gros{color:#cf8d84}
+.attente{text-align:center;padding:26px 10px;color:#675f53;font-size:14px;font-weight:700}
+.attente .lune{font-size:44px;display:block;margin-bottom:10px;animation:flotte 3.4s ease-in-out infinite}
+@keyframes flotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.compteur{text-align:center;color:#544c40;font-size:12.5px;font-weight:700;margin-top:10px}
+.consigne{font-size:13px;color:#8d8375;text-align:center;font-weight:700}
+.notei{font-size:11.5px;color:#544c40;text-align:center;margin-top:10px;line-height:1.5}
+
+/* ---------- dépouillement ---------- */
+.tally{margin-top:10px}
+.tally .rangv{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13.5px;font-weight:700;color:#a89f90}
+.tally .barre{height:8px;border-radius:999px;background:#3a2d10;min-width:8px}
+.tally .nb{color:#c9b98c;width:20px;text-align:right}
+
+/* ---------- modals ---------- */
+.modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(4,3,6,.78);
+  align-items:flex-end;justify-content:center;padding:14px}
+.modal.on{display:flex}
+.modal .box{width:100%;max-width:480px;background:#151119;border:1px solid #2c2640;border-radius:20px;
+  padding:18px 16px calc(16px + env(safe-area-inset-bottom));max-height:86dvh;overflow-y:auto;
+  animation:boxIn .22s ease}
+@keyframes boxIn{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.modal h3{font-family:'Marcellus',serif;color:#d9cba6;font-size:19px;text-align:center;letter-spacing:.05em;margin-bottom:10px}
+.modal p{font-size:13.5px;color:#8d8375;line-height:1.55;margin:8px 0}
+.modal .btn{margin-top:12px}
+
+/* ---------- toasts ---------- */
+#toasts{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;
+  display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{background:#1d1a24;border:1px solid #2c2836;color:#c4bbaa;font-size:13px;font-weight:700;
+  border-radius:999px;padding:10px 16px;max-width:88vw;animation:boxIn .2s ease;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.toast.warn{background:#332410;border-color:#54390f;color:#e3c28a}
+.toast.rouge{background:#3d1414;border-color:#5e2020;color:#e0a9a2}
+
+/* divers */
+.espace{flex:1}
+.marge{margin-top:12px}
+.centre{text-align:center}
+.lien-partage{display:flex;gap:8px;margin-top:10px}
+.lien-partage .btn{flex:1;margin:0}
+#code-affiche{font-family:'Marcellus',serif;font-size:34px;letter-spacing:.4em;text-align:center;color:#e3c877;
+  padding-left:.4em}
+</style>
+</head>
+<body>
+<div id="diag"></div>
+
+<!-- ======================= ACCUEIL ======================= -->
+<section class="ecran on" id="scr-accueil">
+  <div style="height:7dvh"></div>
+  <div class="logo">MAFIA</div>
+  <div class="logo-ar">مافيا</div>
+  <div class="slogan">Un tueur rôde dans la médina… jeu de salon pour 4 à 12 téléphones</div>
+  <div style="height:4dvh"></div>
+  <div class="panneau">
+    <input class="champ" id="in-nom" placeholder="Ton prénom" maxlength="14" autocomplete="off">
+    <button class="btn marge" id="btn-creer">🎩 Créer une partie</button>
+    <div class="ligne-champ marge">
+      <input class="champ code" id="in-code" placeholder="CODE" maxlength="5" autocomplete="off" autocapitalize="characters">
+      <button class="btn sombre" id="btn-rejoindre">Rejoindre</button>
+    </div>
+    <div class="err" id="ligne-err"></div>
+  </div>
+  <button class="btn sombre marge" id="btn-aide">📜 Comment jouer ?</button>
+  <div class="espace"></div>
+  <div class="notei">Tout le monde dans la même pièce, chacun son téléphone.<br>Les débats se font à voix haute — l'écran, lui, reste muet.</div>
+</section>
+
+<!-- ======================= LOBBY ======================= -->
+<section class="ecran" id="scr-lobby">
+  <h2 class="titre">Salle d'attente</h2>
+  <p class="sous">Partage ce code — dès 4 joueurs, l'hôte lance la partie</p>
+  <div class="panneau marge">
+    <div id="code-affiche">—</div>
+    <div class="lien-partage">
+      <button class="btn sombre mini" id="btn-copier">📋 Copier</button>
+      <button class="btn mini" id="btn-whatsapp">💬 WhatsApp</button>
+    </div>
+  </div>
+  <div class="panneau" id="lobby-joueurs"></div>
+  <div class="panneau" id="lobby-regles">
+    <div class="regle"><div class="lib">Nombre de tueurs <small>2 tueurs à partir de 6 joueurs</small></div>
+      <div class="seg" id="seg-tueurs" style="width:110px">
+        <button data-v="1">1</button><button data-v="2">2</button>
+      </div>
+    </div>
+    <div class="regle"><div class="lib">Médecin 💉 <small>protège une personne chaque nuit</small></div><div class="switch" id="sw-medecin"></div></div>
+    <div class="regle"><div class="lib">Détective 🔍 <small>inspecte une personne chaque nuit</small></div><div class="switch" id="sw-detective"></div></div>
+    <div class="regle"><div class="lib">Révéler le rôle des morts <small>sinon, mystère jusqu'à la fin</small></div><div class="switch" id="sw-reveler"></div></div>
+    <div class="consigne marge" id="lobby-compo"></div>
+  </div>
+  <div class="err" id="lobby-notice"></div>
+  <button class="btn" id="btn-lancer">🌙 Lancer la partie</button>
+  <button class="btn sombre" id="btn-quitter-lobby">Quitter</button>
+</section>
+
+<!-- ======================= JEU ======================= -->
+<section class="ecran" id="scr-game">
+  <div class="entete">
+    <span class="chip" id="chip-code">—</span>
+    <span class="chip" id="chip-phase">—</span>
+    <span class="chip alerte" id="chip-conn">⚠︎ reconnexion…</span>
+    <span class="pousse"></span>
+    <span class="chip btnc" id="chip-carte">🎭 Ma carte</span>
+    <span class="chip btnc" id="chip-menu">⋯</span>
+  </div>
+
+  <!-- distribution des rôles -->
+  <div id="pan-roles" style="display:none">
+    <h2 class="titre">Ton rôle</h2>
+    <p class="sous">Maintiens le doigt sur la carte pour la lire — à l'abri des regards</p>
+    <div class="secret marge" id="carte-role">
+      <div class="voile"><span class="oeil">👁</span>Maintenir pour révéler</div>
+      <div class="dedans" id="carte-role-in"></div>
+    </div>
+    <button class="btn marge" id="btn-pret">J'ai compris</button>
+    <div class="compteur" id="cpt-roles"></div>
+  </div>
+
+  <!-- nuit -->
+  <div id="pan-nuit" style="display:none">
+    <div class="annonce"><span class="ic">🌙</span><div class="gros" id="nuit-titre">La médina s'endort…</div></div>
+    <div class="panneau">
+      <div class="consigne" id="nuit-consigne"></div>
+      <div class="grille" id="nuit-grille"></div>
+      <button class="btn marge" id="btn-conf-nuit" disabled>Confirmer</button>
+    </div>
+    <div class="compteur" id="cpt-nuit"></div>
+    <div class="notei">Tous les écrans se ressemblent cette nuit — impossible de deviner qui fait quoi.</div>
+  </div>
+
+  <!-- attente générique (nuit/vote faits) -->
+  <div id="pan-attente" style="display:none">
+    <div class="attente"><span class="lune" id="attente-ic">🌙</span><span id="attente-txt">La nuit suit son cours…</span></div>
+    <div class="compteur" id="cpt-attente"></div>
+  </div>
+
+  <!-- jour : annonce de l'aube + débats -->
+  <div id="pan-jour" style="display:none">
+    <div class="annonce" id="jour-annonce"></div>
+    <div class="secret" id="carte-rapport">
+      <div class="voile"><span class="oeil">🗞</span>Rapport de la nuit — maintenir pour lire</div>
+      <div class="dedans" id="carte-rapport-in"></div>
+    </div>
+    <div class="panneau marge" id="jour-liste"></div>
+    <p class="consigne marge">Débattez à voix haute : qui est suspect ?</p>
+    <button class="btn marge" id="btn-vers-vote" style="display:none">🗳️ Passer au vote</button>
+  </div>
+
+  <!-- vote -->
+  <div id="pan-vote" style="display:none">
+    <div class="annonce"><span class="ic">🗳️</span><div class="gros">Le village vote</div>
+      <div class="det">Vote secret — désigne qui doit être éliminé</div></div>
+    <div class="panneau">
+      <div class="grille" id="vote-grille"></div>
+      <button class="btn marge" id="btn-conf-vote" disabled>Voter</button>
+    </div>
+    <div class="compteur" id="cpt-vote"></div>
+  </div>
+
+  <!-- crépuscule : résultat du vote -->
+  <div id="pan-crep" style="display:none">
+    <div class="annonce" id="crep-annonce"></div>
+    <div class="panneau"><div class="consigne">Dépouillement</div><div class="tally" id="crep-tally"></div></div>
+    <button class="btn marge" id="btn-vers-nuit" style="display:none">🌙 La nuit tombe</button>
+  </div>
+
+  <!-- fin -->
+  <div id="pan-fin" style="display:none">
+    <div class="annonce" id="fin-annonce"></div>
+    <div class="panneau" id="fin-liste"></div>
+    <button class="btn marge" id="btn-rejouer" style="display:none">🔁 Rejouer (mêmes joueurs)</button>
+    <button class="btn sombre" id="btn-quitter-fin">Quitter</button>
+  </div>
+
+  <div class="notei" id="note-mort" style="display:none">💀 Tu es mort. Reste discret : les morts ne parlent pas, mais ils voient la suite.</div>
+</section>
+
+<!-- ======================= MODALS ======================= -->
+<div class="modal" id="modal-aide"><div class="box">
+  <h3>📜 Comment jouer</h3>
+  <p><b>Mafia</b> se joue de 4 à 12 joueurs, tous dans la même pièce, chacun avec son téléphone. Les rôles sont distribués en secret : <b>tueur(s) 🔪</b>, <b>médecin 💉</b>, <b>détective 🔍</b> et <b>civils 🌿</b>.</p>
+  <p><b>La nuit</b> : tout le monde touche son écran en silence. Le tueur choisit sa victime, le médecin protège quelqu'un (jamais la même personne deux nuits de suite), le détective inspecte, les civils font un geste factice — tous les écrans se ressemblent.</p>
+  <p><b>Le jour</b> : on découvre ce qui s'est passé, on débat à voix haute, puis chacun vote en secret sur son téléphone. Le plus voté est éliminé ; en cas d'égalité, personne ne meurt.</p>
+  <p><b>Victoire</b> : le village gagne quand tous les tueurs sont éliminés. Les tueurs gagnent quand ils sont aussi nombreux que les survivants.</p>
+  <p>Astuce : baisse la luminosité de ton téléphone et garde ta carte pour toi 🤫</p>
+  <button class="btn sombre" id="btn-fermer-aide">Fermer</button>
+</div></div>
+
+<div class="modal" id="modal-carte"><div class="box">
+  <h3>🎭 Ma carte</h3>
+  <div class="secret" id="carte-modal">
+    <div class="voile"><span class="oeil">👁</span>Maintenir pour révéler</div>
+    <div class="dedans" id="carte-modal-in"></div>
+  </div>
+  <button class="btn sombre" id="btn-fermer-carte">Fermer</button>
+</div></div>
+
+<div class="modal" id="modal-menu"><div class="box">
+  <h3>Menu</h3>
+  <button class="btn sombre" id="btn-menu-aide">📜 Règles du jeu</button>
+  <button class="btn danger" id="btn-menu-quitter">🚪 Quitter la partie</button>
+  <button class="btn sombre" id="btn-fermer-menu">Retour</button>
+</div></div>
+
+<div class="modal" id="modal-quitter"><div class="box">
+  <h3>Quitter ?</h3>
+  <p id="quitter-txt">Tu vas quitter la partie en cours.</p>
+  <button class="btn danger" id="btn-conf-quitter">Oui, quitter</button>
+  <button class="btn sombre" id="btn-ann-quitter">Rester</button>
+</div></div>
+
+<div class="modal" id="modal-reprise"><div class="box">
+  <h3>Reprendre ta place</h3>
+  <p>Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :</p>
+  <div id="reprise-rows"></div>
+  <button class="btn sombre" id="btn-fermer-reprise">Juste regarder</button>
+</div></div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* ==========================================================
+   MAFIA — مافيا  v1.0
+   Jeu de salon multi-téléphones (Firebase RTDB), même base
+   de données que le Parchís Tangérois (nœud parties/, champ
+   jeu:'mafia' pour distinguer les deux jeux).
+   ========================================================== */
+
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyAl9LGAWrnaUV81V6qF62FR1Ik4LbOLnoY",
+  authDomain:"parchissi-35156.firebaseapp.com",
+  databaseURL:"https://parchissi-35156-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"parchissi-35156",
+  storageBucket:"parchissi-35156.firebasestorage.app",
+  messagingSenderId:"154638337560",
+  appId:"1:154638337560:web:7059aee7b6d03bb9e4e56d"
+};
+
+/* ---------- règles (l'hôte les règle au lobby) ---------- */
+const RG={ tueurs:1, medecin:true, detective:true, reveler:true };
+
+const ROLES={
+  tueur:{ic:'🔪',nom:'Tueur',desc:'Chaque nuit, choisis une victime. Le jour, fonds-toi dans la foule et détourne les soupçons.'},
+  medecin:{ic:'💉',nom:'Médecin',desc:'Chaque nuit, protège une personne (toi compris) — mais jamais la même deux nuits de suite.'},
+  detective:{ic:'🔍',nom:'Détective',desc:'Chaque nuit, inspecte une personne : tu sauras si c\'est un tueur ou un innocent. N\'en dis pas trop…'},
+  civil:{ic:'🌿',nom:'Civil',desc:'Observe, débats, vote. Ton intuition de la nuit reste secrète — elle brouille les pistes.'},
+};
+
+/* ---------- état local ---------- */
+const G={
+  etat:null,        /* dernier instantané etat appliqué (voir schéma plus bas) */
+  actes:{}, votes:{}, prets:{},
+  joueursLobby:{},  /* lobby : {uid:{nom,ts}} */
+  myIdx:null,       /* mon index dans etat.joueurs, sinon null */
+  sel:null, selKey:'',
+};
+const NET={
+  on:false, dbOk:false, db:null, code:null, ref:null,
+  uid:null, nom:'', isHote:false, statut:null,
+  appliedSeq:0, faits:{}, reprisePropose:false, connWatch:false,
+};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+NET.uid=lsGet('mf_uid')||('u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36));
+lsSet('mf_uid',NET.uid);
+
+/* ==========================================================
+   MOTEUR — fonctions pures, testables hors DOM
+   etat = { seq, w, m, ph, nuit, joueurs:[{uid,nom,role,vif,mort}],
+            prot, res, gagnant }
+   ph : roles → nuit → jour → vote → crep → (nuit…) → fin
+   ========================================================== */
+function composerRoles(n,rg,rnd){
+  rnd=rnd||Math.random;
+  const roles=[];
+  for(let i=0;i<(rg.tueurs||1);i++) roles.push('tueur');
+  if(rg.medecin) roles.push('medecin');
+  if(rg.detective) roles.push('detective');
+  while(roles.length<n) roles.push('civil');
+  roles.length=n; /* garde-fou si config impossible */
+  for(let i=roles.length-1;i>0;i--){
+    const j=Math.floor(rnd()*(i+1));
+    const t=roles[i]; roles[i]=roles[j]; roles[j]=t;
+  }
+  return roles;
+}
+function validerComposition(n,rg){
+  if(n<4) return 'Il faut au moins 4 joueurs.';
+  if(n>12) return '12 joueurs maximum.';
+  if((rg.tueurs||1)>=2&&n<6) return '2 tueurs demandent au moins 6 joueurs.';
+  return null;
+}
+function vivants(joueurs){ return joueurs.filter(j=>j.vif); }
+function verifierVictoire(joueurs){
+  const v=vivants(joueurs);
+  const t=v.filter(j=>j.role==='tueur').length;
+  if(t===0) return 'village';
+  if(t>=v.length-t) return 'tueurs';
+  return null;
+}
+/* actes = {uid:cibleIdx}. Deux tueurs en désaccord : choix au hasard entre leurs cibles. */
+function choisirCibleTueurs(joueurs,actes,rnd){
+  rnd=rnd||Math.random;
+  const picks=[];
+  joueurs.forEach(j=>{
+    if(j.vif&&j.role==='tueur'&&typeof actes[j.uid]==='number') picks.push(actes[j.uid]);
+  });
+  if(!picks.length) return -1;
+  if(picks.every(p=>p===picks[0])) return picks[0];
+  return picks[Math.floor(rnd()*picks.length)];
+}
+/* Résout une nuit. lastProt : protégé de la nuit précédente (règle « pas deux
+   nuits de suite ») — une protection répétée est sans effet. */
+function resoudreNuit(joueurs,actes,lastProt,rnd){
+  const cible=choisirCibleTueurs(joueurs,actes,rnd);
+  let prot=-1;
+  const med=joueurs.find(j=>j.vif&&j.role==='medecin');
+  if(med&&typeof actes[med.uid]==='number'&&actes[med.uid]!==lastProt) prot=actes[med.uid];
+  let insp=null;
+  const det=joueurs.find(j=>j.vif&&j.role==='detective');
+  if(det&&typeof actes[det.uid]==='number'){
+    const c=actes[det.uid];
+    if(joueurs[c]) insp={c:c,r:(joueurs[c].role==='tueur')?'tueur':'innocent'};
+  }
+  const sauve=(cible>=0&&cible===prot);
+  const mort=(cible>=0&&!sauve&&joueurs[cible]&&joueurs[cible].vif)?cible:-1;
+  return {mort,sauve:sauve?1:0,prot,insp};
+}
+/* votes = {uid:cibleIdx} des vivants. Égalité → personne (-1). */
+function depouillerVote(joueurs,votes){
+  const tally={};
+  joueurs.forEach(j=>{
+    if(!j.vif) return;
+    const v=votes[j.uid];
+    if(typeof v==='number'&&joueurs[v]&&joueurs[v].vif) tally[v]=(tally[v]||0)+1;
+  });
+  let max=0,elimine=-1,exaequo=false;
+  for(const k of Object.keys(tally)){
+    if(tally[k]>max){ max=tally[k]; elimine=Number(k); exaequo=false; }
+    else if(tally[k]===max) exaequo=true;
+  }
+  if(exaequo) elimine=-1;
+  return {elimine,tally};
+}
+
+/* ==========================================================
+   RÉSEAU — mêmes principes éprouvés que le Parchís :
+   - seul l'hôte écrit `etat` (seq monotone, w=uid, échos ignorés)
+   - les joueurs écrivent leurs gestes sur des feuilles séparées
+     (actes/<clé>/<uid>, votes/<clé>/<uid>, prets/<clé>/<uid>)
+   - garde fantôme : sans place dans la partie, on n'écrit jamais
+   ========================================================== */
+function initFirebase(){
+  try{
+    if(typeof firebase==='undefined') return false;
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    NET.db=firebase.database();
+    if(!NET.connWatch){
+      NET.connWatch=true;
+      NET.db.ref('.info/connected').on('value',s=>majConn(s.val()===true));
+    }
+    NET.dbOk=true;
+    return true;
+  }catch(e){ return false; }
+}
+function majConn(ok){
+  const c=document.getElementById('chip-conn');
+  c.style.display=(NET.on&&!ok)?'inline-flex':'none';
+}
+function codeAleatoire(){
+  const L='ABCDEFGHJKMNPQRSTUVWXYZ'; let s='';
+  for(let i=0;i<5;i++) s+=L[Math.floor(Math.random()*L.length)];
+  return s;
+}
+function nettoyage(){ /* purge des parties de plus de 48 h (partagée avec le Parchís) */
+  try{
+    NET.db.ref('parties').orderByChild('creele').endAt(Date.now()-48*3600*1000).limitToFirst(15).once('value',s=>{
+      s.forEach(ch=>{ ch.ref.remove(); });
+    });
+  }catch(e){}
+}
+function keyRoles(){ return 'm'+G.etat.m+'roles'; }
+function keyNuit(){ return 'm'+G.etat.m+'n'+G.etat.nuit; }
+function keyVote(){ return 'm'+G.etat.m+'j'+G.etat.nuit; }
+function moi(){ return (G.etat&&G.myIdx!=null)?G.etat.joueurs[G.myIdx]:null; }
+function suisVif(){ const m=moi(); return !!(m&&m.vif); }
+
+/* écriture d'etat — hôte uniquement */
+function ecrireEtat(mut){
+  if(!NET.on||!NET.ref||!NET.isHote) return;
+  const e=JSON.parse(JSON.stringify(G.etat));
+  mut(e);
+  e.seq=Math.max(NET.appliedSeq+1,Date.now());
+  e.w=NET.uid;
+  NET.appliedSeq=e.seq;
+  G.etat=e;
+  NET.ref.child('etat').set(e);
+  if(e.ph==='fin') NET.ref.child('statut').set('fini');
+  render();
+}
+function normaliserEtat(v){
+  /* parser AVANT d'engager appliedSeq : un instantané cassé doit jeter ici */
+  if(!v||typeof v.seq!=='number'||typeof v.ph!=='string') throw new Error('etat invalide');
+  const js=Array.isArray(v.joueurs)?v.joueurs:Object.values(v.joueurs||{});
+  if(!js.length) throw new Error('joueurs vides');
+  const joueurs=js.map(j=>{
+    if(!j||typeof j.uid!=='string'||typeof j.role!=='string') throw new Error('joueur invalide');
+    return {uid:j.uid,nom:j.nom||'Joueur',role:j.role,vif:j.vif?1:0,mort:j.mort||''};
+  });
+  return {
+    seq:v.seq,w:v.w||'',m:v.m||1,ph:v.ph,nuit:v.nuit||0,
+    joueurs,prot:(typeof v.prot==='number')?v.prot:-1,
+    res:v.res||null,gagnant:v.gagnant||null,
+  };
+}
+function traiterPartie(snap){
+  try{
+    const p=snap.val();
+    if(!p){ quitterLigne(); toast('La partie a été fermée','warn'); return; }
+    if(p.jeu!=='mafia'){ quitterLigne(); toast('Ce code est une partie de Parchís, pas de Mafia','warn'); return; }
+    NET.isHote=(p.hote===NET.uid);
+    NET.hoteUid=p.hote;
+    NET.statut=p.statut;
+    G.joueursLobby=p.joueurs||{};
+    if(p.regles) Object.assign(RG,p.regles);
+    G.actes=p.actes||{}; G.votes=p.votes||{}; G.prets=p.prets||{};
+    if(p.etat){
+      const ne=normaliserEtat(p.etat);
+      if(ne.seq>=NET.appliedSeq){ NET.appliedSeq=ne.seq; G.etat=ne; }
+    }
+    G.myIdx=null;
+    if(G.etat){
+      const i=G.etat.joueurs.findIndex(j=>j.uid===NET.uid);
+      if(i>=0) G.myIdx=i;
+    }
+    if(p.statut==='lobby'){
+      NET.reprisePropose=false;
+      showEcran('scr-lobby'); renderLobby();
+    }else{
+      if(!document.getElementById('scr-game').classList.contains('on')){
+        showEcran('scr-game'); garderEcran();
+      }
+      render();
+      if(NET.isHote){ veillerHote(); planVeille(); }
+      if(p.statut==='jeu'&&G.myIdx==null&&!NET.reprisePropose){
+        NET.reprisePropose=true; ouvrirReprise();
+      }
+    }
+  }catch(e){ /* un instantané cassé ne doit jamais figer le client */ }
+}
+/* filet de sécurité : l'hôte revérifie 2,2 s plus tard si rien n'a bougé */
+function planVeille(){
+  const s=NET.appliedSeq;
+  setTimeout(()=>{ try{ if(NET.appliedSeq===s&&NET.on&&NET.isHote) veillerHote(); }catch(e){} },2200);
+}
+/* l'hôte fait avancer la partie quand tout le monde a agi (idempotent) */
+function veillerHote(){
+  if(!NET.on||!NET.isHote||!G.etat||NET.statut==='lobby') return;
+  const e=G.etat;
+  if(e.ph==='roles'){
+    const k='res:'+keyRoles();
+    if(NET.faits[k]) return;
+    const pr=G.prets[keyRoles()]||{};
+    if(!e.joueurs.every(j=>pr[j.uid])) return;
+    NET.faits[k]=1;
+    ecrireEtat(x=>{ x.ph='nuit'; x.nuit=1; x.res=null; });
+  }else if(e.ph==='nuit'){
+    const k='res:'+keyNuit();
+    if(NET.faits[k]) return;
+    const ac=G.actes[keyNuit()]||{};
+    if(!vivants(e.joueurs).every(j=>typeof ac[j.uid]==='number')) return;
+    NET.faits[k]=1;
+    const r=resoudreNuit(e.joueurs,ac,e.prot);
+    ecrireEtat(x=>{
+      if(r.mort>=0){ x.joueurs[r.mort].vif=0; x.joueurs[r.mort].mort='nuit'+x.nuit; }
+      x.prot=r.prot;
+      x.res={t:'nuit',mort:r.mort,sauve:r.sauve,
+        role:(r.mort>=0&&RG.reveler)?x.joueurs[r.mort].role:'',
+        inspC:r.insp?r.insp.c:-1,inspR:r.insp?r.insp.r:''};
+      x.gagnant=verifierVictoire(x.joueurs);
+      x.ph=x.gagnant?'fin':'jour';
+    });
+  }else if(e.ph==='vote'){
+    const k='res:'+keyVote();
+    if(NET.faits[k]) return;
+    const vo=G.votes[keyVote()]||{};
+    if(!vivants(e.joueurs).every(j=>typeof vo[j.uid]==='number')) return;
+    NET.faits[k]=1;
+    const r=depouillerVote(e.joueurs,vo);
+    ecrireEtat(x=>{
+      if(r.elimine>=0){ x.joueurs[r.elimine].vif=0; x.joueurs[r.elimine].mort='vote'+x.nuit; }
+      x.res={t:'vote',elimine:r.elimine,tally:r.tally,
+        role:(r.elimine>=0&&RG.reveler)?x.joueurs[r.elimine].role:''};
+      x.gagnant=verifierVictoire(x.joueurs);
+      x.ph=x.gagnant?'fin':'crep';
+    });
+  }
+}
+
+/* ---------- création / rejoindre ---------- */
+function ligneErr(t){ document.getElementById('ligne-err').textContent=t||''; }
+function lireNom(){
+  const nom=(document.getElementById('in-nom').value||'').trim()||'Joueur';
+  NET.nom=nom; lsSet('pt_nom',nom);
+  return nom;
+}
+function creerPartie(){
+  ligneErr('');
+  if(!initFirebase()){ ligneErr('Réseau indisponible ici — ouvre le site déployé sur Netlify.'); return; }
+  const nom=lireNom();
+  const code=codeAleatoire();
+  const ref=NET.db.ref('parties/'+code);
+  ref.once('value',s=>{
+    if(s.exists()){ creerPartie(); return; }
+    const j={}; j[NET.uid]={nom:nom,ts:Date.now()};
+    ref.set({
+      v:1, jeu:'mafia', creele:Date.now(), hote:NET.uid, statut:'lobby',
+      joueurs:j, regles:Object.assign({},RG),
+    },err=>{
+      if(err){ ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'); return; }
+      nettoyage();
+      rejoindreRef(code);
+    });
+  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+}
+function rejoindrePartie(){
+  ligneErr('');
+  if(!initFirebase()){ ligneErr('Réseau indisponible ici — ouvre le site déployé sur Netlify.'); return; }
+  const code=(document.getElementById('in-code').value||'').trim().toUpperCase();
+  if(code.length!==5){ ligneErr('Code à 5 lettres.'); return; }
+  const nom=lireNom();
+  NET.db.ref('parties/'+code).once('value',s=>{
+    const p=s.val();
+    if(!p){ ligneErr('Aucune partie avec ce code.'); return; }
+    if(p.jeu!=='mafia'){ ligneErr('Ce code est une partie de Parchís, pas de Mafia.'); return; }
+    if(p.statut==='lobby'){
+      const nb=Object.keys(p.joueurs||{}).length;
+      if(nb>=12&&!(p.joueurs||{})[NET.uid]){ ligneErr('Partie complète (12 joueurs).'); return; }
+      NET.db.ref('parties/'+code+'/joueurs/'+NET.uid).set({nom:nom,ts:Date.now()});
+    }
+    rejoindreRef(code);
+  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+}
+function rejoindreRef(code){
+  NET.on=true; NET.code=code; NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
+  G.etat=null; G.myIdx=null; G.sel=null; G.selKey='';
+  lsSet('mf_code',code);
+  NET.ref=NET.db.ref('parties/'+code);
+  NET.ref.on('value',traiterPartie);
+}
+function quitterLigne(){
+  if(NET.ref){
+    if(NET.statut==='lobby'){
+      if(NET.isHote) NET.ref.remove(); /* l'hôte ferme le salon pour tous */
+      else NET.ref.child('joueurs/'+NET.uid).remove();
+    }
+    NET.ref.off();
+  }
+  NET.on=false; NET.ref=null; NET.code=null; NET.statut=null;
+  NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
+  G.etat=null; G.myIdx=null; G.sel=null;
+  hideModals();
+  showEcran('scr-accueil');
+}
+function lancerPartie(){
+  if(!NET.isHote||NET.statut!=='lobby') return;
+  const liste=Object.entries(G.joueursLobby)
+    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0}))
+    .sort((a,b)=>a.ts-b.ts);
+  const err=validerComposition(liste.length,RG);
+  if(err){ toast(err,'warn'); return; }
+  const roles=composerRoles(liste.length,RG);
+  const joueurs=liste.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:''}));
+  const seq=Date.now();
+  NET.appliedSeq=seq;
+  G.etat={seq,w:NET.uid,m:1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
+  NET.ref.update({
+    statut:'jeu',
+    regles:Object.assign({},RG),
+    actes:null,votes:null,prets:null,
+    etat:G.etat,
+  });
+  render();
+}
+function rejouer(){
+  if(!NET.isHote||!G.etat) return;
+  NET.faits={};
+  const roles=composerRoles(G.etat.joueurs.length,RG);
+  const joueurs=G.etat.joueurs.map((j,i)=>({uid:j.uid,nom:j.nom,role:roles[i],vif:1,mort:''}));
+  const seq=Math.max(NET.appliedSeq+1,Date.now());
+  NET.appliedSeq=seq;
+  G.etat={seq,w:NET.uid,m:G.etat.m+1,ph:'roles',nuit:0,joueurs,prot:-1,res:null,gagnant:null};
+  NET.ref.update({statut:'jeu',actes:null,votes:null,prets:null,etat:G.etat});
+  render();
+}
+
+/* ---------- gestes des joueurs ---------- */
+function pretRole(){
+  if(!NET.on||!NET.ref||G.myIdx==null||!G.etat||G.etat.ph!=='roles') return;
+  NET.ref.child('prets/'+keyRoles()+'/'+NET.uid).set(1);
+}
+function confirmerNuit(cible){
+  if(!NET.on||!NET.ref||G.myIdx==null||!G.etat||G.etat.ph!=='nuit'||!suisVif()) return;
+  if(cible==null) cible=G.sel;
+  if(typeof cible!=='number') return;
+  const c=G.etat.joueurs[cible];
+  if(!c||!c.vif) return;
+  const m=moi();
+  if(m.role==='medecin'&&cible===G.etat.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return; }
+  NET.ref.child('actes/'+keyNuit()+'/'+NET.uid).set(cible);
+  G.sel=null;
+}
+function confirmerVote(cible){
+  if(!NET.on||!NET.ref||G.myIdx==null||!G.etat||G.etat.ph!=='vote'||!suisVif()) return;
+  if(cible==null) cible=G.sel;
+  if(typeof cible!=='number'||cible===G.myIdx) return;
+  const c=G.etat.joueurs[cible];
+  if(!c||!c.vif) return;
+  NET.ref.child('votes/'+keyVote()+'/'+NET.uid).set(cible);
+  G.sel=null;
+}
+function passerAuVote(){
+  if(!NET.isHote||!G.etat||G.etat.ph!=='jour') return;
+  ecrireEtat(x=>{ x.ph='vote'; });
+}
+function tomberNuit(){
+  if(!NET.isHote||!G.etat||G.etat.ph!=='crep') return;
+  ecrireEtat(x=>{ x.ph='nuit'; x.nuit=x.nuit+1; x.res=null; });
+}
+/* reprise de téléphone en pleine partie */
+function reprendrePlace(i){
+  if(!NET.on||!NET.ref||!G.etat) return;
+  NET.ref.child('etat/joueurs/'+i+'/uid').set(NET.uid);
+  hideModals();
+  toast('Place reprise — bon retour dans la médina','ok');
+}
+
+/* ==========================================================
+   RENDU — tout se redessine depuis l'instantané (idempotent)
+   ========================================================== */
+function showEcran(id){
+  ['scr-accueil','scr-lobby','scr-game'].forEach(s=>{
+    document.getElementById(s).classList.toggle('on',s===id);
+  });
+}
+function showModal(id){ hideModals(); document.getElementById(id).classList.add('on'); }
+function hideModals(){
+  ['modal-aide','modal-carte','modal-menu','modal-quitter','modal-reprise'].forEach(m=>{
+    document.getElementById(m).classList.remove('on');
+  });
+}
+function toast(txt,cls){
+  const z=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast'+(cls==='warn'?' warn':cls==='rouge'?' rouge':'');
+  t.textContent=txt;
+  z.appendChild(t);
+  setTimeout(()=>{ try{ z.removeChild(t); }catch(e){} },2600);
+}
+const TEINTES=['#c98f5f','#8fa5c9','#9fc98f','#c9be8f','#b98fc9','#c98f9b','#8fc9c0','#a9a9a9','#d0a878','#7fa88f','#a87f9f','#95a3b8'];
+function avatar(i,nom){
+  return '<span class="av" style="background:linear-gradient(160deg,'+TEINTES[i%TEINTES.length]+',#3a352d)">'+
+    (nom||'?').trim().charAt(0).toUpperCase()+'</span>';
+}
+function compoTexte(n,rg){
+  const t=rg.tueurs||1;
+  const civils=n-t-(rg.medecin?1:0)-(rg.detective?1:0);
+  const bouts=[t+(t>1?' tueurs':' tueur')];
+  if(rg.medecin) bouts.push('1 médecin');
+  if(rg.detective) bouts.push('1 détective');
+  bouts.push(Math.max(0,civils)+(civils>1?' civils':' civil'));
+  return n+' joueur'+(n>1?'s':'')+' : '+bouts.join(', ');
+}
+
+/* ----- lobby ----- */
+function renderLobby(){
+  document.getElementById('code-affiche').textContent=NET.code||'—';
+  const liste=Object.entries(G.joueursLobby)
+    .map(([uid,o])=>({uid,nom:(o&&o.nom)||'Joueur',ts:(o&&o.ts)||0}))
+    .sort((a,b)=>a.ts-b.ts);
+  const zone=document.getElementById('lobby-joueurs'); zone.innerHTML='';
+  liste.forEach((j,i)=>{
+    const row=document.createElement('div'); row.className='rangj';
+    const marques=[];
+    if(j.uid===NET.hoteUid) marques.push('hôte');
+    if(j.uid===NET.uid) marques.push('toi');
+    row.innerHTML=avatar(i,j.nom)+
+      '<span class="nomj">'+echap(j.nom)+
+      '<span class="sousj">'+marques.join(' · ')+'</span></span>';
+    if(NET.isHote&&j.uid!==NET.uid){
+      const b=document.createElement('button'); b.className='btn danger mini'; b.textContent='Retirer';
+      b.addEventListener('click',()=>NET.ref.child('joueurs/'+j.uid).remove());
+      row.appendChild(b);
+    }
+    zone.appendChild(row);
+  });
+  /* réglages : seuls ceux de l'hôte comptent */
+  const estH=NET.isHote;
+  const seg=document.getElementById('seg-tueurs');
+  seg.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',Number(b.dataset.v)===(RG.tueurs||1));
+    b.disabled=!estH;
+  });
+  [['sw-medecin','medecin'],['sw-detective','detective'],['sw-reveler','reveler']].forEach(([id,k])=>{
+    const sw=document.getElementById(id);
+    sw.classList.toggle('on',!!RG[k]);
+    sw.style.pointerEvents=estH?'auto':'none';
+  });
+  document.getElementById('lobby-compo').textContent=compoTexte(liste.length,RG);
+  const err=validerComposition(liste.length,RG);
+  document.getElementById('lobby-notice').textContent=
+    estH?(err||''):'En attente de l\'hôte pour lancer la partie…';
+  const bl=document.getElementById('btn-lancer');
+  bl.style.display=estH?'block':'none';
+  bl.disabled=!!err;
+}
+
+/* ----- jeu ----- */
+const PANS=['pan-roles','pan-nuit','pan-attente','pan-jour','pan-vote','pan-crep','pan-fin'];
+function montrer(pan){
+  PANS.forEach(p=>{ document.getElementById(p).style.display=(p===pan)?'block':'none'; });
+}
+function texPhase(e){
+  if(e.ph==='roles') return '🎭 Distribution';
+  if(e.ph==='nuit') return '🌙 Nuit '+e.nuit;
+  if(e.ph==='jour') return '☀️ Jour '+e.nuit;
+  if(e.ph==='vote') return '🗳️ Vote';
+  if(e.ph==='crep') return '🌆 Crépuscule';
+  return '🏁 Fin';
+}
+function carteHTML(){
+  const m=moi();
+  if(!m) return '<div class="role-desc">Tu regardes la partie en spectateur.</div>';
+  const R=ROLES[m.role]||ROLES.civil;
+  let extra='';
+  if(m.role==='tueur'){
+    const autres=G.etat.joueurs.filter((j,i)=>j.role==='tueur'&&i!==G.myIdx);
+    if(autres.length) extra='<div class="role-extra">Ton complice : '+echap(autres.map(j=>j.nom).join(', '))+' 🤝</div>';
+  }
+  return '<div class="role-ic">'+R.ic+'</div><div class="role-nom">'+R.nom+'</div>'+
+    '<div class="role-desc">'+R.desc+'</div>'+extra+
+    (m.vif?'':'<div class="role-extra">💀 Tu es mort.</div>');
+}
+function grilleJoueurs(contId,opts){
+  const zone=document.getElementById(contId); zone.innerHTML='';
+  G.etat.joueurs.forEach((j,i)=>{
+    if(!j.vif) return;
+    const c=document.createElement('button'); c.className='cel';
+    c.innerHTML=avatar(i,j.nom)+'<span class="nm">'+echap(j.nom)+'</span>';
+    if(opts.interdits&&opts.interdits.has(i)) c.classList.add('off');
+    if(G.sel===i&&G.selKey===opts.cle) c.classList.add('sel');
+    c.addEventListener('click',()=>{
+      if(opts.interdits&&opts.interdits.has(i)) return;
+      if(opts.refus&&opts.refus(i)) return;
+      G.sel=(G.sel===i&&G.selKey===opts.cle)?null:i;
+      G.selKey=opts.cle;
+      render();
+    });
+    zone.appendChild(c);
+  });
+}
+function listeEtat(contId,revelerTout){
+  const zone=document.getElementById(contId); zone.innerHTML='';
+  G.etat.joueurs.forEach((j,i)=>{
+    const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
+    let sous=j.vif?'en vie':'mort 💀';
+    if(!j.vif&&(revelerTout||RG.reveler)) sous='mort 💀 — '+ROLES[j.role].nom+' '+ROLES[j.role].ic;
+    if(revelerTout) sous=ROLES[j.role].nom+' '+ROLES[j.role].ic+(j.vif?'':' — mort 💀');
+    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+(i===G.myIdx?' (toi)':'')+
+      '<span class="sousj">'+sous+'</span></span>';
+    zone.appendChild(row);
+  });
+}
+function rapportHTML(){
+  const e=G.etat,m=moi(),r=e.res;
+  if(!m) return '<div class="role-desc">Spectateur — rien à lire.</div>';
+  if(!m.vif&&!(r&&r.t==='nuit'&&r.mort===G.myIdx))
+    return '<div class="role-desc">Les morts ne rêvent pas. 💀</div>';
+  if(!r||r.t!=='nuit') return '<div class="role-desc">Rien à signaler.</div>';
+  const ac=(G.actes['m'+e.m+'n'+e.nuit]||{})[m.uid];
+  const nomDe=i=>(typeof i==='number'&&e.joueurs[i])?e.joueurs[i].nom:'—';
+  if(m.role==='detective'&&r.inspC>=0)
+    return '<div class="role-ic">🔍</div><div class="role-desc">Ton enquête sur <b>'+echap(nomDe(r.inspC))+'</b> :</div>'+
+      '<div class="role-nom">'+(r.inspR==='tueur'?'TUEUR 🔪':'INNOCENT 🌿')+'</div>';
+  if(m.role==='tueur')
+    return '<div class="role-ic">🔪</div><div class="role-desc">Cible de la nuit : <b>'+echap(nomDe(typeof ac==='number'?ac:r.mort))+'</b>.<br>'+
+      (r.mort>=0?'Contrat rempli.':(r.sauve?'Le médecin a déjoué ton plan…':'La nuit fut calme.'))+'</div>';
+  if(m.role==='medecin')
+    return '<div class="role-ic">💉</div><div class="role-desc">Tu as veillé sur <b>'+echap(nomDe(ac))+'</b>.<br>'+
+      (r.sauve&&typeof ac==='number'&&ac===e.prot?'Tu as sauvé une vie cette nuit ! ✨':'La nuit est passée.')+'</div>';
+  return '<div class="role-ic">🌙</div><div class="role-desc">Ton intuition de la nuit : <b>'+echap(nomDe(ac))+'</b>.<br>Garde-la pour toi…</div>';
+}
+function render(){
+  if(!G.etat){ montrer('pan-attente');
+    document.getElementById('attente-txt').textContent='Connexion à la partie…';
+    document.getElementById('cpt-attente').textContent='';
+    return; }
+  const e=G.etat;
+  document.getElementById('chip-code').textContent=NET.code||'—';
+  document.getElementById('chip-phase').textContent=texPhase(e);
+  document.getElementById('note-mort').style.display=(moi()&&!suisVif()&&e.ph!=='fin')?'block':'none';
+  if(e.ph==='roles'){
+    montrer('pan-roles');
+    document.getElementById('carte-role-in').innerHTML=carteHTML();
+    const pr=G.prets[keyRoles()]||{};
+    const n=e.joueurs.filter(j=>pr[j.uid]).length;
+    document.getElementById('cpt-roles').textContent=n+'/'+e.joueurs.length+' ont vu leur rôle';
+    document.getElementById('btn-pret').style.display=(G.myIdx!=null&&!pr[NET.uid])?'block':'none';
+  }else if(e.ph==='nuit'){
+    const ac=G.actes[keyNuit()]||{};
+    const viv=vivants(e.joueurs);
+    const n=viv.filter(j=>typeof ac[j.uid]==='number').length;
+    const cpt=n+'/'+viv.length+' gestes de nuit accomplis';
+    if(G.myIdx==null||!suisVif()||typeof ac[NET.uid]==='number'){
+      montrer('pan-attente');
+      document.getElementById('attente-ic').textContent='🌙';
+      document.getElementById('attente-txt').textContent='La nuit suit son cours…';
+      document.getElementById('cpt-attente').textContent=cpt;
+    }else{
+      montrer('pan-nuit');
+      document.getElementById('nuit-titre').textContent='Nuit '+e.nuit+' — la médina s\'endort';
+      const m=moi();
+      const CONS={
+        tueur:'Choisis ta victime, en silence.',
+        medecin:'Qui protèges-tu cette nuit ?',
+        detective:'Qui veux-tu inspecter cette nuit ?',
+        civil:'Note ton intuition de la nuit — geste secret, sans effet.',
+      };
+      document.getElementById('nuit-consigne').textContent=CONS[m.role]||CONS.civil;
+      grilleJoueurs('nuit-grille',{cle:'n'+e.m+'-'+e.nuit,
+        refus:i=>{
+          if(m.role==='medecin'&&i===e.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return true; }
+          return false;
+        }});
+      document.getElementById('cpt-nuit').textContent=cpt;
+      document.getElementById('btn-conf-nuit').disabled=!(typeof G.sel==='number'&&G.selKey==='n'+e.m+'-'+e.nuit);
+    }
+  }else if(e.ph==='jour'){
+    montrer('pan-jour');
+    const r=e.res||{};
+    const az=document.getElementById('jour-annonce');
+    if(r.mort>=0){
+      az.className='annonce rouge';
+      az.innerHTML='<span class="ic">💀</span><div class="gros">'+echap(e.joueurs[r.mort].nom)+' a été assassiné cette nuit</div>'+
+        (r.role?'<div class="det">C\'était… '+ROLES[r.role].nom+' '+ROLES[r.role].ic+'</div>':'<div class="det">Son rôle reste un mystère.</div>');
+    }else if(r.sauve){
+      az.className='annonce';
+      az.innerHTML='<span class="ic">✨</span><div class="gros">Le médecin a sauvé une vie cette nuit !</div><div class="det">Personne n\'est mort.</div>';
+    }else{
+      az.className='annonce';
+      az.innerHTML='<span class="ic">🕊️</span><div class="gros">Personne n\'est mort cette nuit</div>';
+    }
+    document.getElementById('carte-rapport-in').innerHTML=rapportHTML();
+    listeEtat('jour-liste',false);
+    document.getElementById('btn-vers-vote').style.display=NET.isHote?'block':'none';
+  }else if(e.ph==='vote'){
+    const vo=G.votes[keyVote()]||{};
+    const viv=vivants(e.joueurs);
+    const n=viv.filter(j=>typeof vo[j.uid]==='number').length;
+    const cpt=n+'/'+viv.length+' ont voté';
+    if(G.myIdx==null||!suisVif()||typeof vo[NET.uid]==='number'){
+      montrer('pan-attente');
+      document.getElementById('attente-ic').textContent='🗳️';
+      document.getElementById('attente-txt').textContent='Le village vote…';
+      document.getElementById('cpt-attente').textContent=cpt;
+    }else{
+      montrer('pan-vote');
+      const interdits=new Set([G.myIdx]); /* on ne vote pas pour soi */
+      grilleJoueurs('vote-grille',{cle:'v'+e.m+'-'+e.nuit,interdits});
+      document.getElementById('cpt-vote').textContent=cpt;
+      document.getElementById('btn-conf-vote').disabled=!(typeof G.sel==='number'&&G.selKey==='v'+e.m+'-'+e.nuit);
+    }
+  }else if(e.ph==='crep'){
+    montrer('pan-crep');
+    const r=e.res||{};
+    const az=document.getElementById('crep-annonce');
+    if(r.elimine>=0){
+      az.className='annonce rouge';
+      az.innerHTML='<span class="ic">⚖️</span><div class="gros">Le village a éliminé '+echap(e.joueurs[r.elimine].nom)+'</div>'+
+        (r.role?'<div class="det">C\'était… '+ROLES[r.role].nom+' '+ROLES[r.role].ic+'</div>':'<div class="det">Son rôle reste un mystère.</div>');
+    }else{
+      az.className='annonce';
+      az.innerHTML='<span class="ic">🤝</span><div class="gros">Égalité — personne n\'est éliminé</div>';
+    }
+    const tz=document.getElementById('crep-tally'); tz.innerHTML='';
+    const tally=r.tally||{};
+    const paires=Object.keys(tally).map(k=>[Number(k),tally[k]]).sort((a,b)=>b[1]-a[1]);
+    const max=paires.length?paires[0][1]:1;
+    paires.forEach(([i,n2])=>{
+      const d=document.createElement('div'); d.className='rangv';
+      d.innerHTML='<span style="flex:0 0 90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echap(e.joueurs[i].nom)+'</span>'+
+        '<span class="barre" style="flex:0 1 '+Math.round(100*n2/max)+'%"></span><span class="nb">'+n2+'</span>';
+      tz.appendChild(d);
+    });
+    document.getElementById('btn-vers-nuit').style.display=NET.isHote?'block':'none';
+  }else if(e.ph==='fin'){
+    montrer('pan-fin');
+    const az=document.getElementById('fin-annonce');
+    if(e.gagnant==='tueurs'){
+      az.className='annonce rouge';
+      az.innerHTML='<span class="ic">🔪</span><div class="gros">La mafia a pris la médina…</div><div class="det">Les tueurs l\'emportent.</div>';
+    }else{
+      az.className='annonce';
+      az.innerHTML='<span class="ic">🎉</span><div class="gros">Le village a gagné !</div><div class="det">Tous les tueurs ont été démasqués.</div>';
+    }
+    listeEtat('fin-liste',true);
+    document.getElementById('btn-rejouer').style.display=NET.isHote?'block':'none';
+  }
+}
+function echap(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ----- reprise de téléphone ----- */
+function ouvrirReprise(){
+  if(!G.etat) return;
+  const zone=document.getElementById('reprise-rows'); zone.innerHTML='';
+  G.etat.joueurs.forEach((j,i)=>{
+    const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
+    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+
+      '<span class="sousj">'+(j.vif?'en vie':'mort 💀')+'</span></span>';
+    const b=document.createElement('button'); b.className='btn sombre mini'; b.textContent='C\'est moi';
+    b.addEventListener('click',()=>reprendrePlace(i));
+    row.appendChild(b);
+    zone.appendChild(row);
+  });
+  showModal('modal-reprise');
+}
+
+/* ---------- anti-veille / resync iOS ---------- */
+function forcerResync(){
+  if(!NET.on||!NET.ref||!NET.db) return;
+  try{ NET.db.goOnline(); }catch(e){}
+  NET.ref.once('value',traiterPartie,function(){});
+  garderEcran();
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) forcerResync(); });
+window.addEventListener('pageshow',forcerResync);
+window.addEventListener('focus',forcerResync);
+let wl=null;
+function garderEcran(){
+  try{
+    if(navigator.wakeLock&&!wl){
+      navigator.wakeLock.request('screen').then(l=>{
+        wl=l; l.addEventListener('release',()=>{ wl=null; });
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+/* ---------- maintien du doigt = révéler ---------- */
+function bindSecret(id){
+  const el=document.getElementById(id);
+  const on=ev=>{ ev.preventDefault(); el.classList.add('vu'); };
+  const off=()=>el.classList.remove('vu');
+  el.addEventListener('pointerdown',on);
+  el.addEventListener('pointerup',off);
+  el.addEventListener('pointercancel',off);
+  el.addEventListener('pointerleave',off);
+  el.addEventListener('contextmenu',ev=>ev.preventDefault());
+}
+
+/* ---------- branchements ---------- */
+function brancher(){
+  document.getElementById('in-nom').value=lsGet('pt_nom')||'';
+  document.getElementById('btn-creer').addEventListener('click',creerPartie);
+  document.getElementById('btn-rejoindre').addEventListener('click',rejoindrePartie);
+  document.getElementById('btn-aide').addEventListener('click',()=>showModal('modal-aide'));
+  document.getElementById('btn-fermer-aide').addEventListener('click',hideModals);
+  /* lobby */
+  document.getElementById('btn-copier').addEventListener('click',()=>{
+    try{ navigator.clipboard.writeText(NET.code||''); toast('Code copié','ok'); }
+    catch(e){ toast(NET.code||'','ok'); }
+  });
+  document.getElementById('btn-whatsapp').addEventListener('click',()=>{
+    const txt='Rejoins ma partie de Mafia 🎩 Code : '+NET.code+' — '+location.origin+location.pathname;
+    window.open('https://wa.me/?text='+encodeURIComponent(txt));
+  });
+  document.getElementById('seg-tueurs').addEventListener('click',ev=>{
+    const b=ev.target.closest('button');
+    if(!b||!NET.isHote) return;
+    RG.tueurs=Number(b.dataset.v)||1;
+    NET.ref.child('regles').set(Object.assign({},RG));
+  });
+  [['sw-medecin','medecin'],['sw-detective','detective'],['sw-reveler','reveler']].forEach(([id,k])=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      if(!NET.isHote) return;
+      RG[k]=!RG[k];
+      NET.ref.child('regles').set(Object.assign({},RG));
+    });
+  });
+  document.getElementById('btn-lancer').addEventListener('click',lancerPartie);
+  document.getElementById('btn-quitter-lobby').addEventListener('click',()=>{
+    document.getElementById('quitter-txt').textContent=
+      NET.isHote?'Tu es l\'hôte : quitter fermera le salon pour tout le monde.':'Tu vas quitter la salle d\'attente.';
+    showModal('modal-quitter');
+  });
+  /* jeu */
+  document.getElementById('btn-pret').addEventListener('click',pretRole);
+  document.getElementById('btn-conf-nuit').addEventListener('click',()=>confirmerNuit());
+  document.getElementById('btn-conf-vote').addEventListener('click',()=>confirmerVote());
+  document.getElementById('btn-vers-vote').addEventListener('click',passerAuVote);
+  document.getElementById('btn-vers-nuit').addEventListener('click',tomberNuit);
+  document.getElementById('btn-rejouer').addEventListener('click',rejouer);
+  document.getElementById('btn-quitter-fin').addEventListener('click',()=>{
+    document.getElementById('quitter-txt').textContent='Retour à l\'accueil.';
+    showModal('modal-quitter');
+  });
+  document.getElementById('chip-carte').addEventListener('click',()=>{
+    document.getElementById('carte-modal-in').innerHTML=carteHTML();
+    showModal('modal-carte');
+  });
+  document.getElementById('btn-fermer-carte').addEventListener('click',hideModals);
+  document.getElementById('chip-menu').addEventListener('click',()=>showModal('modal-menu'));
+  document.getElementById('btn-menu-aide').addEventListener('click',()=>showModal('modal-aide'));
+  document.getElementById('btn-menu-quitter').addEventListener('click',()=>{
+    document.getElementById('quitter-txt').textContent='Tu vas quitter la partie en cours. Tu pourras revenir avec le code '+(NET.code||'')+'.';
+    showModal('modal-quitter');
+  });
+  document.getElementById('btn-fermer-menu').addEventListener('click',hideModals);
+  document.getElementById('btn-conf-quitter').addEventListener('click',quitterLigne);
+  document.getElementById('btn-ann-quitter').addEventListener('click',hideModals);
+  document.getElementById('btn-fermer-reprise').addEventListener('click',hideModals);
+  bindSecret('carte-role');
+  bindSecret('carte-rapport');
+  bindSecret('carte-modal');
+}
+brancher();
+</script>
+</body>
+</html>
