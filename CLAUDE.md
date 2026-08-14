@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.6)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.7)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -10,7 +10,7 @@ Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS +
 ```bash
 node tests/moteur.test.js        # 42 tests des règles Parchís, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie Parchís simulée entre 2 clients + 2 IA (lancer 3×)
-node tests/mafia.test.js         # 54 tests des règles Mafia, exécutés contre mafia/index.html
+node tests/mafia.test.js         # 59 tests des règles Mafia, exécutés contre mafia/index.html
 node tests/sim-mafia.js          # partie Mafia complète, 5 clients VM + reprise de téléphone (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 bash outils/deployer-mafia.sh    # fabrique mafia-netlify.zip à glisser sur Netlify
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.6, `mafia/index.html` + PWA)
+# Mafia — مافيا (v1.7, `mafia/index.html` + PWA)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -186,7 +186,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Tests Mafia
 
 - `tests/charge-mafia.js` : extraction du script de `mafia/index.html` en VM (réutilise le DOM factice de `charge.js`).
-- `tests/mafia.test.js` : 54 assertions (code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
+- `tests/mafia.test.js` : 59 assertions (narrateur — parité/déterminisme —, code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
 - `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme) **et nuit 1 forcée sans le geste d'un retardataire** (bouton hôte) **et reprise du téléphone de l'hôte avec transfert d'arbitrage**, convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
 
 ## Déploiement
@@ -199,6 +199,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 
 1. ~~Illustrations Nano Banana Pro~~ — fait (v1.4) : fond d'accueil, icône, 4 cartes de rôles (`gemini-3-pro-image`, sources dans `visuels/mafia-*.png`, prompts dans `visuels/README.md`, inlinés en WebP ~80 Ko). La clé Gemini reste hors dépôt.
 2. ~~Sons discrets~~ — fait (v1.6) : Web Audio synthétisé (`SONS`, `jouerSon`, `sonsPhase` — un son par CHANGEMENT de phase, jamais au rechargement), bascule 🔊/🔇 dans le menu ⋯ (`mf_sons` par téléphone), contexte audio réveillé au premier geste (`reveilAudio`, exigence iOS). Repli synthétisé seulement quand le son n'existe pas dans `SFX` : les **sons Suno** de Yassine (liens de partage `suno.com/s/...` collés dans le chat → mp3 téléchargeable depuis la page ; pas d'API Suno) sont découpés (ffmpeg, mono 48 kb/s) dans `sons/*.mp3` puis inlinés par `python3 outils/inliner-sons.py` (bloc `/*__SFX__*/`, pré-décodés au premier geste). Fait : `nuit`. Manquent : aube, mort, sauve, vote, egalite, roles, vjoie, vsombre.
-3. Minuteur de débats optionnel.
+3. ~~Narration~~ — fait (v1.7) : récits d'ambiance bilingues (`NARR`, 2-3 variantes par événement, tirage DÉTERMINISTE graine manche/nuit → même phrase sur tous les téléphones, affichés en `.narratif` dans les annonces) + **narrateur vocal optionnel** (`VOIX`, `parler()` via speechSynthesis fr-FR/ar-SA, bascule 🗣️ menu ⋯, `mf_voix` par téléphone, coupé par défaut — conseil : l'activer sur UN téléphone posé au milieu). `narrerPhase` suit les changements de phase comme `sonsPhase` (jamais au rechargement).
+4. Minuteur de débats optionnel.
 4. Rôles bonus (à valider) : sorcière, maire…
 5. Stats de fin enrichies (intuitions des civils révélées pour rire).

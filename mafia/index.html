@@ -185,6 +185,8 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 .annonce .gros{font-family:'Marcellus',serif;font-size:21px;color:#d9cba6;line-height:1.35}
 .annonce .ic{font-size:40px;display:block;margin-bottom:8px}
 .annonce .det{font-size:13px;color:#8d8375;margin-top:8px}
+.narratif{font-family:'Marcellus',Georgia,serif;font-style:italic;color:#b9a97f;
+  font-size:14px;margin-top:10px;line-height:1.55}
 .annonce.rouge .gros{color:#cf8d84}
 .attente{text-align:center;padding:26px 10px;color:#675f53;font-size:14px;font-weight:700}
 .attente .lune{font-size:44px;display:block;margin-bottom:10px;animation:flotte 3.4s ease-in-out infinite}
@@ -307,7 +309,8 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
   <!-- nuit -->
   <div id="pan-nuit" style="display:none">
-    <div class="annonce"><span class="ic">🌙</span><div class="gros" id="nuit-titre">La médina s'endort…</div></div>
+    <div class="annonce"><span class="ic">🌙</span><div class="gros" id="nuit-titre">La médina s'endort…</div>
+      <div class="narratif" id="nuit-narr"></div></div>
     <div class="panneau">
       <div class="consigne" id="nuit-consigne"></div>
       <div class="grille" id="nuit-grille"></div>
@@ -341,7 +344,8 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <!-- vote -->
   <div id="pan-vote" style="display:none">
     <div class="annonce"><span class="ic">🗳️</span><div class="gros" data-i18n="village_vote">Le village vote</div>
-      <div class="det" data-i18n="vote_det">Vote secret — désigne qui doit être éliminé</div></div>
+      <div class="det" data-i18n="vote_det">Vote secret — désigne qui doit être éliminé</div>
+      <div class="narratif" id="vote-narr"></div></div>
     <div class="panneau">
       <div class="grille" id="vote-grille"></div>
       <button class="btn marge" id="btn-conf-vote" disabled data-i18n="voter">Voter</button>
@@ -391,6 +395,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <h3 data-i18n="menu_t">Menu</h3>
   <button class="btn sombre" id="btn-menu-aide" data-i18n="regles_jeu">📜 Règles du jeu</button>
   <button class="btn sombre" id="btn-menu-sons">🔊 Sons : activés</button>
+  <button class="btn sombre" id="btn-menu-voix">🗣️ Narrateur vocal</button>
   <button class="btn sombre" id="btn-menu-reprendre" style="display:none" data-i18n="reprendre_place">🎭 Reprendre ma place</button>
   <div style="display:flex;gap:8px;margin-top:12px">
     <button class="btn sombre" id="btn-menu-fr" style="flex:1;margin:0">Français</button>
@@ -419,7 +424,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.6
+   MAFIA — مافيا  v1.7
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -527,6 +532,8 @@ fr:{
   cest_moi:"C'est moi", regarder:"Juste regarder",
   place_reprise:"Place reprise — bon retour dans la médina",
   sons_on:"🔊 Sons : activés", sons_off:"🔇 Sons : coupés",
+  voix_on:"🗣️ Narrateur vocal : activé", voix_off:"🤐 Narrateur vocal : coupé",
+  voix_test:"Le narrateur est prêt. Que la médina tremble…",
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
@@ -609,6 +616,8 @@ ar:{
   cest_moi:"هذا أنا", regarder:"مشاهدة فقط",
   place_reprise:"استرجعت مكانك — مرحبا بعودتك إلى المدينة",
   sons_on:"🔊 الأصوات: مفعلة", sons_off:"🔇 الأصوات: مقطوعة",
+  voix_on:"🗣️ الراوي الصوتي: مفعل", voix_off:"🤐 الراوي الصوتي: مقطوع",
+  voix_test:"الراوي جاهز. فلترتجف المدينة…",
 },
 };
 let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
@@ -854,6 +863,7 @@ function traiterPartie(snap){
          jamais empêcher la partie d'avancer */
       if(NET.isHote){ try{ veillerHote(); }catch(err){} planVeille(); }
       try{ sonsPhase(); }catch(err){}
+      try{ narrerPhase(); }catch(err){}
       render();
       if(p.statut==='jeu'&&G.myIdx==null&&!NET.reprisePropose){
         NET.reprisePropose=true; ouvrirReprise();
@@ -989,7 +999,7 @@ function rejoindrePartie(){
 function rejoindreRef(code){
   if(NET.ref) NET.ref.off(); /* jamais deux écouteurs (course autoRejoindre / clic) */
   NET.on=true; NET.code=code; NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
-  NET.presenceFaite=false; NET.presVus={}; NET.cleSon=null;
+  NET.presenceFaite=false; NET.presVus={}; NET.cleSon=null; NET.cleNarr=null;
   G.etat=null; G.myIdx=null; G.sel=null; G.selKey='';
   lsSet('mf_code',code); lsSet('mf_actif','1');
   NET.ref=NET.db.ref('parties/'+code);
@@ -1354,6 +1364,7 @@ function render(){
     }else{
       montrer('pan-nuit');
       document.getElementById('nuit-titre').textContent=t('nuit_titre',{n:e.nuit});
+      document.getElementById('nuit-narr').textContent=narratifPour(e);
       const m=moi();
       document.getElementById('nuit-consigne').textContent=t('cons_'+m.role)||t('cons_civil');
       grilleJoueurs('nuit-grille',{cle:'n'+e.m+'-'+e.nuit,
@@ -1380,6 +1391,7 @@ function render(){
       az.className='annonce';
       az.innerHTML='<span class="ic">🕊️</span><div class="gros">'+t('nuit_calme')+'</div>';
     }
+    az.innerHTML+='<div class="narratif">'+echap(narratifPour(e))+'</div>';
     document.getElementById('carte-rapport-in').innerHTML=rapportHTML();
     listeEtat('jour-liste',false);
     document.getElementById('btn-vers-vote').style.display=NET.isHote?'block':'none';
@@ -1398,6 +1410,7 @@ function render(){
       majAttente(viv.filter(j=>typeof vo[j.uid]!=='number'));
     }else{
       montrer('pan-vote');
+      document.getElementById('vote-narr').textContent=narratifPour(e);
       const interdits=new Set([G.myIdx]); /* on ne vote pas pour soi */
       grilleJoueurs('vote-grille',{cle:'v'+e.m+'-'+e.nuit,interdits});
       document.getElementById('cpt-vote').textContent=cpt;
@@ -1415,6 +1428,7 @@ function render(){
       az.className='annonce';
       az.innerHTML='<span class="ic">🤝</span><div class="gros">'+t('egalite')+'</div>';
     }
+    az.innerHTML+='<div class="narratif">'+echap(narratifPour(e))+'</div>';
     const tz=document.getElementById('crep-tally'); tz.innerHTML='';
     const tally=r.tally||{};
     /* RTDB peut renvoyer un tableau troué (clés numériques) : on filtre */
@@ -1439,6 +1453,7 @@ function render(){
       az.className='annonce';
       az.innerHTML='<span class="ic">🎉</span><div class="gros">'+t('village_gagne')+'</div><div class="det">'+t('village_det')+'</div>';
     }
+    az.innerHTML+='<div class="narratif">'+echap(narratifPour(e))+'</div>';
     listeEtat('fin-liste',true);
     document.getElementById('btn-rejouer').style.display=NET.isHote?'block':'none';
   }
@@ -1459,6 +1474,109 @@ function ouvrirReprise(){
     zone.appendChild(row);
   });
   showModal('modal-reprise');
+}
+
+/* ---------- narrateur (textes déterministes + voix optionnelle) ---------- */
+const NARR={
+fr:{
+  n_roles:["Les cartes sont distribuées… Découvre qui tu es, et garde le secret.",
+    "La médina choisit ses âmes cette nuit. Regarde ta carte, en silence."],
+  n_nuit:["La médina s'endort… Les lanternes s'éteignent une à une. Faites vos gestes.",
+    "La brume monte du détroit et les ruelles se vident… Que chacun fasse son geste.",
+    "Les portes se ferment, les chats s'enfuient… La nuit appartient au tueur."],
+  n_mort:["À l'aube, on a retrouvé {p} près de la fontaine. La médina est en deuil.",
+    "Le muezzin de l'aube a découvert le corps de {p}… Le tueur a encore frappé.",
+    "Triste matin : {p} ne verra pas le soleil se lever sur le détroit."],
+  n_sauve:["Le tueur a frappé cette nuit… mais le médecin veillait. Bien joué, docteur !",
+    "Un cri dans la nuit — puis plus rien. Le médecin est arrivé à temps. Bravo, docteur !"],
+  n_calme:["Une nuit étrangement calme… Trop calme, peut-être.",
+    "Rien à signaler cette nuit. Mais le tueur rôde toujours…"],
+  n_vote:["L'heure du jugement : le village désigne son suspect. Votez, en silence.",
+    "Les regards se croisent au café… Chacun vote, personne ne parle."],
+  n_elim:["Le village a tranché : {p} quitte la médina sous les huées. Sage décision ?",
+    "{p} proteste, mais la foule a parlé… Adieu, {p}."],
+  n_egalite:["Le village se déchire, aucune majorité — personne ne quitte la médina ce soir.",
+    "Les voix s'annulent… La médina retient son souffle jusqu'à la nuit."],
+  n_village:["Le dernier tueur est démasqué ! La médina respire enfin. Bravo, le village.",
+    "La lumière revient sur les ruelles blanches : le village a gagné !"],
+  n_tueurs:["Les lanternes s'éteignent pour de bon… La mafia règne sur la médina.",
+    "Trop tard : les tueurs sont désormais les maîtres du détroit."],
+},
+ar:{
+  n_roles:["وزعت البطاقات… اكتشف من أنت واحفظ السر.",
+    "المدينة تختار أرواحها هذه الليلة. انظر إلى بطاقتك في صمت."],
+  n_nuit:["المدينة تنام… الفوانيس تنطفئ واحدا تلو الآخر. قوموا بإشاراتكم.",
+    "الضباب يصعد من البوغاز والأزقة تفرغ… فليقم كل واحد بإشارته.",
+    "الأبواب تغلق والقطط تهرب… الليل ملك القاتل."],
+  n_mort:["مع الفجر وجد {p} قرب النافورة. المدينة في حداد.",
+    "مؤذن الفجر اكتشف جثة {p}… القاتل ضرب من جديد.",
+    "صباح حزين: {p} لن يرى الشمس تشرق على البوغاز."],
+  n_sauve:["ضرب القاتل هذه الليلة… لكن الطبيب كان ساهرا. أحسنت أيها الطبيب!",
+    "صرخة في الليل — ثم لا شيء. وصل الطبيب في الوقت المناسب. برافو أيها الطبيب!"],
+  n_calme:["ليلة هادئة بغرابة… ربما أهدأ مما يجب.",
+    "لا جديد هذه الليلة. لكن القاتل ما زال يجول…"],
+  n_vote:["ساعة الحكم: القرية تختار مشتبهها. صوتوا في صمت.",
+    "النظرات تتقاطع في المقهى… كل واحد يصوت ولا أحد يتكلم."],
+  n_elim:["القرية حسمت أمرها: {p} يغادر المدينة. قرار حكيم؟",
+    "{p} يحتج لكن الجمع قال كلمته… وداعا يا {p}."],
+  n_egalite:["القرية منقسمة، لا أغلبية — لن يغادر أحد هذا المساء.",
+    "الأصوات تتعادل… المدينة تحبس أنفاسها حتى الليل."],
+  n_village:["كشف آخر قاتل! المدينة تتنفس أخيرا. برافو أيها القرويون.",
+    "النور يعود إلى الأزقة البيضاء: القرية انتصرت!"],
+  n_tueurs:["الفوانيس تنطفئ إلى الأبد… المافيا تحكم المدينة.",
+    "فات الأوان: القتلة صاروا سادة البوغاز."],
+},
+};
+/* clé narrative + variables selon la phase courante */
+function cleNarrative(e){
+  if(e.ph==='roles') return ['n_roles',{}];
+  if(e.ph==='nuit') return ['n_nuit',{}];
+  if(e.ph==='jour'){
+    const r=e.res||{};
+    if(r.mort>=0&&e.joueurs[r.mort]) return ['n_mort',{p:e.joueurs[r.mort].nom}];
+    if(r.sauve) return ['n_sauve',{}];
+    return ['n_calme',{}];
+  }
+  if(e.ph==='vote') return ['n_vote',{}];
+  if(e.ph==='crep'){
+    const r=e.res||{};
+    if(r.elimine>=0&&e.joueurs[r.elimine]) return ['n_elim',{p:e.joueurs[r.elimine].nom}];
+    return ['n_egalite',{}];
+  }
+  if(e.ph==='fin') return [e.gagnant==='village'?'n_village':'n_tueurs',{}];
+  return [null,{}];
+}
+/* variante tirée DÉTERMINISTIQUEMENT (graine manche/nuit) :
+   tous les téléphones racontent la même histoire */
+function narratifPour(e){
+  const paire=cleNarrative(e), k=paire[0], vars=paire[1];
+  if(!k) return '';
+  const L=(NARR[LANGUE]&&NARR[LANGUE][k])||NARR.fr[k]||[];
+  if(!L.length) return '';
+  let s=L[(e.m*131+e.nuit*17+k.length*7)%L.length];
+  for(const v of Object.keys(vars)) s=s.split('{'+v+'}').join(vars[v]);
+  return s;
+}
+const VOIX={actif:lsGet('mf_voix')==='1'};
+function parler(txt){
+  try{
+    if(typeof speechSynthesis==='undefined'||!VOIX.actif||!txt) return;
+    const u=new SpeechSynthesisUtterance(txt.replace(/[^\p{L}\p{N}\s.,'!?…—:-]/gu,' '));
+    u.lang=(LANGUE==='ar')?'ar-SA':'fr-FR';
+    u.rate=0.95; u.pitch=0.85;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+/* une lecture par CHANGEMENT de phase — jamais en arrivant en cours */
+function narrerPhase(){
+  if(!G.etat||NET.statut==='lobby') return;
+  const e=G.etat, cle=e.m+'-'+e.ph+'-'+e.nuit;
+  if(NET.cleNarr===cle) return;
+  const premier=(NET.cleNarr==null);
+  NET.cleNarr=cle;
+  if(premier) return;
+  parler(narratifPour(e));
 }
 
 /* ---------- sons discrets ---------- */
@@ -1651,7 +1769,15 @@ function brancher(){
     document.getElementById('btn-menu-reprendre').style.display=
       (G.myIdx==null&&NET.statut==='jeu')?'block':'none';
     document.getElementById('btn-menu-sons').textContent=t(SONS.actif?'sons_on':'sons_off');
+    document.getElementById('btn-menu-voix').textContent=t(VOIX.actif?'voix_on':'voix_off');
     showModal('modal-menu');
+  });
+  document.getElementById('btn-menu-voix').addEventListener('click',()=>{
+    VOIX.actif=!VOIX.actif;
+    lsSet('mf_voix',VOIX.actif?'1':'0');
+    document.getElementById('btn-menu-voix').textContent=t(VOIX.actif?'voix_on':'voix_off');
+    if(VOIX.actif) parler(t('voix_test'));
+    else{ try{ speechSynthesis.cancel(); }catch(e){} }
   });
   document.getElementById('btn-menu-sons').addEventListener('click',()=>{
     SONS.actif=!SONS.actif;

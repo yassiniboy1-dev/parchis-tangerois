@@ -167,6 +167,21 @@ console.log('— langues (français / arabe) —');
   T('retour au français',X.t('ph_vote')==='🗳️ Vote');
 }
 
+console.log('— narrateur —');
+{
+  const fr=Object.keys(X.NARR.fr).sort(), ar=Object.keys(X.NARR.ar).sort();
+  T('clés narratives identiques FR/AR',JSON.stringify(fr)===JSON.stringify(ar));
+  T('mêmes nombres de variantes FR/AR (tirage identique)',
+    fr.every(k=>X.NARR.fr[k].length===X.NARR.ar[k].length&&X.NARR.fr[k].length>0));
+  const e={m:1,ph:'jour',nuit:2,res:{t:'nuit',mort:1,sauve:0},gagnant:null,
+    joueurs:[{uid:'a',nom:'Aziz'},{uid:'b',nom:'Badr'}]};
+  const s1=X.narratifPour(e), s2=X.narratifPour(e);
+  T('récit déterministe (même partie → même phrase partout)',s1===s2&&s1.length>0);
+  T('le récit d\'une mort nomme la victime',s1.indexOf('Badr')>=0);
+  T('médecin sauveur : « Bien joué, docteur ! » présent',
+    X.NARR.fr.n_sauve.some(s=>s.indexOf('Bien joué, docteur')>=0));
+}
+
 console.log('— réglages par défaut —');
 T('défauts : 1 tueur, médecin, détective, révélation',
   X.RG.tueurs===1&&X.RG.medecin===true&&X.RG.detective===true&&X.RG.reveler===true);
