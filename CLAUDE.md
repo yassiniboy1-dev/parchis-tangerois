@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v2.0)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v2.1)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v2.0, `mafia/index.html` + PWA)
+# Mafia — مافيا (v2.1, `mafia/index.html` + PWA)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local). Choix validés avec Yassine le 14/08/2026.
 
@@ -203,7 +203,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 
 1. ~~Illustrations Nano Banana Pro~~ — fait (v1.4) : fond d'accueil, icône, 4 cartes de rôles (`gemini-3-pro-image`, sources dans `visuels/mafia-*.png`, prompts dans `visuels/README.md`, inlinés en WebP ~80 Ko). La clé Gemini reste hors dépôt.
 2. ~~Sons discrets~~ — fait (v1.6) : Web Audio synthétisé (`SONS`, `jouerSon`, `sonsPhase` — un son par CHANGEMENT de phase, jamais au rechargement), bascule 🔊/🔇 dans le menu ⋯ (`mf_sons` par téléphone), contexte audio réveillé au premier geste (`reveilAudio`, exigence iOS). Repli synthétisé seulement quand le son n'existe pas dans `SFX` : les **sons Suno** de Yassine (liens de partage `suno.com/s/...` collés dans le chat → mp3 téléchargeable depuis la page ; pas d'API Suno) sont découpés (ffmpeg, mono 48 kb/s) dans `sons/*.mp3` puis inlinés par `python3 outils/inliner-sons.py` (bloc `/*__SFX__*/`, pré-décodés au premier geste). Sons en place : `nuit` (Suno), `aube, mort, sauve, vote, vjoie, vsombre` (**Kenney CC0** — packs Impact/Casino/Interface/Music Jingles, choisis par analyse durée/brillance/tendance mélodique, sax = film noir ; sources détaillées dans `sons/README.md`). `egalite`/`roles` restent synthétisés.
-3. ~~Narration~~ — fait (v1.7) : récits d'ambiance bilingues (`NARR`, 2-3 variantes par événement, tirage DÉTERMINISTE graine manche/nuit → même phrase sur tous les téléphones, affichés en `.narratif` dans les annonces) + **narrateur vocal optionnel** (`VOIX`, `parler()` via speechSynthesis fr-FR/ar-SA, bascule 🗣️ menu ⋯, `mf_voix` par téléphone, coupé par défaut — conseil : l'activer sur UN téléphone posé au milieu). `narrerPhase` suit les changements de phase comme `sonsPhase` (jamais au rechargement).
+3. ~~Narration~~ — fait (v1.7) : récits d'ambiance bilingues (`NARR`, 2-3 variantes par événement, tirage DÉTERMINISTE graine manche/nuit → même phrase sur tous les téléphones, affichés en `.narratif` dans les annonces) + **narrateur vocal optionnel** (`VOIX`, bascule 🗣️ menu ⋯, `mf_voix` par téléphone, coupé par défaut — conseil : l'activer sur UN téléphone posé au milieu). **v2.1 : voix pré-enregistrées ElevenLabs** (44 mp3 dans `mafia/voix/{fr|ar}_{clé}_{idx}.mp3`, voix Daniel, générées par un script en session avec la clé restreinte de Yassine — clé jamais dans le dépôt ; `n_mort`/`n_elim` = adaptations SANS prénom ; `narrerVoix` joue le fichier de la MÊME variante que le texte affiché, repli speechSynthesis fr-FR/ar-SA). Les 3 scripts de déploiement embarquent `voix/`. `narrerPhase` suit les changements de phase comme `sonsPhase` (jamais au rechargement).
 4. Minuteur de débats optionnel.
 4. Rôles bonus (à valider) : sorcière, maire…
 5. Stats de fin enrichies (intuitions des civils révélées pour rire).

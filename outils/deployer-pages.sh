@@ -6,6 +6,10 @@ cd "$(dirname "$0")/.." || exit 1
 WT=$(mktemp -d)
 git worktree add "$WT" gh-pages
 cp mafia/index.html mafia/manifest.json mafia/sw.js mafia/icon-192.png mafia/icon-512.png "$WT/"
+if [ -d mafia/voix ]; then
+  mkdir -p "$WT/voix"
+  cp mafia/voix/*.mp3 "$WT/voix/"
+fi
 touch "$WT/.nojekyll"
 git -C "$WT" add -A
 if git -C "$WT" diff --cached --quiet; then

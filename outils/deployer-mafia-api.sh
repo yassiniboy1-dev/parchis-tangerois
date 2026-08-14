@@ -20,6 +20,9 @@ declare -A FICHIERS=(
   ["/icon-192.png"]="mafia/icon-192.png"
   ["/icon-512.png"]="mafia/icon-512.png"
 )
+for V in mafia/voix/*.mp3; do
+  [ -f "$V" ] && FICHIERS["/voix/$(basename "$V")"]="$V"
+done
 
 JSON='{"files":{'
 SEP=''

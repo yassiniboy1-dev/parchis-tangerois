@@ -269,7 +269,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
 <!-- ======================= ACCUEIL ======================= -->
 <section class="ecran on" id="scr-accueil">
-  <div class="entete"><span class="chip" id="chip-ver">v2.0</span><span class="pousse"></span>
+  <div class="entete"><span class="chip" id="chip-ver">v2.1</span><span class="pousse"></span>
     <span class="chip btnc" id="chip-fr">Français</span>
     <span class="chip btnc" id="chip-ar">العربية</span>
   </div>
@@ -482,7 +482,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v2.0
+   MAFIA — مافيا  v2.1
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -1859,6 +1859,32 @@ function majMinuteur(){
 }
 setInterval(majMinuteur,1000);
 
+/* voix pré-enregistrée du narrateur (ElevenLabs, mafia/voix/) : même clé et
+   même variante que le texte affiché ; repli sur la synthèse du téléphone */
+function narrerVoix(e){
+  const paire=cleNarrative(e), k=paire[0];
+  if(!k) return;
+  const txt=narratifPour(e);
+  try{
+    if(!SONS.ctx||typeof fetch==='undefined'){ parler(txt); return; }
+    const L=(NARR[LANGUE]&&NARR[LANGUE][k])||NARR.fr[k]||[];
+    const idx=L.length?((e.m*131+e.nuit*17+k.length*7)%L.length):0;
+    const fichier='voix/'+LANGUE+'_'+k+'_'+idx+'.mp3';
+    const cle='vx:'+fichier;
+    const joue=buf=>{
+      try{
+        const c=SONS.ctx,s=c.createBufferSource(),g=c.createGain();
+        s.buffer=buf; g.gain.value=0.9;
+        s.connect(g); g.connect(c.destination); s.start();
+      }catch(err){ parler(txt); }
+    };
+    if(SONS.buf[cle]){ joue(SONS.buf[cle]); return; }
+    fetch(fichier).then(r=>{ if(!r.ok) throw new Error('absent'); return r.arrayBuffer(); })
+      .then(ab=>SONS.ctx.decodeAudioData(ab))
+      .then(buf=>{ SONS.buf[cle]=buf; joue(buf); })
+      .catch(()=>parler(txt));
+  }catch(err){ parler(txt); }
+}
 /* une lecture par CHANGEMENT de phase — jamais en arrivant en cours */
 function narrerPhase(){
   if(!G.etat||NET.statut==='lobby') return;
@@ -1866,8 +1892,8 @@ function narrerPhase(){
   if(NET.cleNarr===cle) return;
   const premier=(NET.cleNarr==null);
   NET.cleNarr=cle;
-  if(premier) return;
-  parler(narratifPour(e));
+  if(premier||!VOIX.actif) return;
+  narrerVoix(e);
 }
 
 /* ---------- sons discrets ---------- */
