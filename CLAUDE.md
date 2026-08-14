@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.8)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v2.0)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -10,7 +10,7 @@ Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS +
 ```bash
 node tests/moteur.test.js        # 42 tests des règles Parchís, exécutés contre index.html
 node tests/sim-multijoueur.js    # partie Parchís simulée entre 2 clients + 2 IA (lancer 3×)
-node tests/mafia.test.js         # 63 tests des règles Mafia, exécutés contre mafia/index.html
+node tests/mafia.test.js         # 66 tests des règles Mafia, exécutés contre mafia/index.html
 node tests/sim-mafia.js          # partie Mafia complète, 5 clients VM + reprise de téléphone (lancer 3×)
 bash outils/deployer.sh          # fabrique parchis-netlify.zip à glisser sur Netlify
 bash outils/deployer-mafia.sh    # fabrique mafia-netlify.zip à glisser sur Netlify
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.8, `mafia/index.html` + PWA)
+# Mafia — مافيا (v2.0, `mafia/index.html` + PWA)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local). Choix validés avec Yassine le 14/08/2026.
 
@@ -153,6 +153,7 @@ Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la mêm
 - La nuit, impossible de se désigner soi-même (refus par toast, pas de case grisée) — **sauf le médecin** (auto-protection). Évite le « suicide » du tueur découvert par la sim.
 - Jour : annonce de l'aube (mort / « le médecin a sauvé une vie » / rien), débats oraux, puis **vote secret** sur téléphone (pas pour soi). Égalité → personne n'est éliminé. Dépouillement public (compte par cible, pas qui a voté quoi).
 - Révélation du rôle des morts : interrupteur hôte (défaut : révéler).
+- **v2.0 « professionnelle »** : cinématiques plein écran au changement de phase (`#cine`, `cinema()`/`cinePhase`, 5 ambiances, coupées sous `prefers-reduced-motion`, jamais au rechargement) ; avatars emoji par joueur (`AVATARS`, `joueurs/{uid}/av`, modal `modal-avatar` en touchant sa ligne au lobby, bots = 🤖, propagé dans `etat.joueurs[].av`) ; minuteur de débats optionnel (`RG.minuteur` 0/120/300 s, seg hôte, horodatage synchronisé `etat.finDebat` posé à la résolution de nuit, compte à rebours local `majMinuteur`, alerte sans passage automatique) ; écran de fin enrichi (`etat.hist` rempli par les résolutions — `{t:'n'|'v',n,mort/elim,sauve}` —, déroulé + **intuitions nocturnes des civils** via `intuitionsCivils(joueurs,actes,m)` pur et testé, confettis village) ; dépouillement animé ; vibrations Android (`vibrer`).
 - Victoire : village si plus aucun tueur ; tueurs si `tueurs ≥ autres vivants`.
 - Les morts voient les phases publiques (+ leur propre carte), jamais les infos secrètes des autres.
 
@@ -188,7 +189,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 ## Tests Mafia
 
 - `tests/charge-mafia.js` : extraction du script de `mafia/index.html` en VM (réutilise le DOM factice de `charge.js`).
-- `tests/mafia.test.js` : 63 assertions (bots, narrateur — parité/déterminisme —, code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
+- `tests/mafia.test.js` : 66 assertions (intuitions v2.0, bots, narrateur — parité/déterminisme —, code choisi par l'hôte, langues FR/AR — parité des clés —, composition/validation des rôles, victoires, cible des tueurs, résolution de nuit — y compris gestes partiels après forçage —, protection non répétable, dépouillement/égalités/votes partiels, votes de morts ignorés).
 - `tests/sim-mafia.js` : 5 vrais clients VM + faux Firebase partagé, partie aléatoire complète, **reprise de téléphone testée au premier jour** (l'ancien client devient fantôme) **et nuit 1 forcée sans le geste d'un retardataire** (bouton hôte) **et reprise du téléphone de l'hôte avec transfert d'arbitrage**, convergence vérifiée à chaque étape, temps ÷12, plafond 600 pas.
 
 ## Déploiement

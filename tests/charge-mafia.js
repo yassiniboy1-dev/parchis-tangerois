@@ -38,5 +38,5 @@ const EXPOSER='\n;globalThis.__X={G,NET,RG,composerRoles,validerComposition,veri
   'rejoindreRef,lancerPartie,pretRole,confirmerNuit,confirmerVote,'+
   'passerAuVote,tomberNuit,rejouer,reprendrePlace,quitterLigne,initFirebase,'+
   'I18N,t,setLangue,getLangue:()=>LANGUE,codeValide,codeAleatoire,NARR,narratifPour,'+
-  'choixBotNuit,choixBotVote};';
+  'choixBotNuit,choixBotVote,intuitionsCivils};';
 module.exports={chargerContexte,extraireScript,EXPOSER};

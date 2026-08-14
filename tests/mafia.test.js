@@ -167,6 +167,17 @@ console.log('— langues (français / arabe) —');
   T('retour au français',X.t('ph_vote')==='🗳️ Vote');
 }
 
+console.log('— v2.0 : intuitions des civils —');
+{
+  const j=[{uid:'a',nom:'Aziz',role:'civil',vif:1,bot:0},{uid:'b',nom:'Badr',role:'tueur',vif:1,bot:0},
+    {uid:'c',nom:'Chafik',role:'civil',vif:1,bot:1},{uid:'d',nom:'Driss',role:'medecin',vif:1,bot:0}];
+  const actes={m1n1:{a:1,b:0,d:0},m1n2:{a:3,b:2}};
+  const r=X.intuitionsCivils(j,actes,1);
+  T('seuls les civils humains apparaissent',r.length===1&&r[0].nom==='Aziz');
+  T('leurs cibles nocturnes sont listées dans l\'ordre',JSON.stringify(r[0].cibles)===JSON.stringify(['Badr','Driss']));
+  T('autre manche → autres feuilles',X.intuitionsCivils(j,actes,2).length===0);
+}
+
 console.log('— bots —');
 {
   const j=js(['tueur','medecin','civil','civil'],[3]);
