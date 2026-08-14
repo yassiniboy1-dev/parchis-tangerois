@@ -144,6 +144,21 @@ console.log('— victoire par élimination nocturne —');
   T('1 tueur, 1 survivant : les tueurs gagnent',X.verifierVictoire(j)==='tueurs');
 }
 
+console.log('— langues (français / arabe) —');
+{
+  const fr=Object.keys(X.I18N.fr).sort(), ar=Object.keys(X.I18N.ar).sort();
+  const manqAr=fr.filter(k=>!X.I18N.ar[k]), manqFr=ar.filter(k=>!X.I18N.fr[k]);
+  T('toutes les clés françaises existent en arabe'+(manqAr.length?' (manque: '+manqAr.join(',')+')':''),manqAr.length===0);
+  T('aucune clé arabe orpheline'+(manqFr.length?' ('+manqFr.join(',')+')':''),manqFr.length===0);
+  T('langue par défaut : français',X.getLangue()==='fr');
+  T('interpolation {n}/{t}',X.t('cpt_vote',{n:3,t:7})==='3/7 ont voté');
+  X.setLangue('ar');
+  T('bascule arabe : phase de nuit traduite',X.t('ph_nuit',{n:2}).indexOf('الليلة')>=0);
+  T('composition en arabe',X.compoTexte(7,{tueurs:2,medecin:true,detective:true}).indexOf('قاتلان')>=0);
+  X.setLangue('fr');
+  T('retour au français',X.t('ph_vote')==='🗳️ Vote');
+}
+
 console.log('— réglages par défaut —');
 T('défauts : 1 tueur, médecin, détective, révélation',
   X.RG.tueurs===1&&X.RG.medecin===true&&X.RG.detective===true&&X.RG.reveler===true);

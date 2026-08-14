@@ -36,5 +36,6 @@ function chargerContexte(options){
 const EXPOSER='\n;globalThis.__X={G,NET,RG,composerRoles,validerComposition,verifierVictoire,'+
   'choisirCibleTueurs,resoudreNuit,depouillerVote,compoTexte,'+
   'rejoindreRef,lancerPartie,pretRole,confirmerNuit,confirmerVote,'+
-  'passerAuVote,tomberNuit,rejouer,reprendrePlace,quitterLigne,initFirebase};';
+  'passerAuVote,tomberNuit,rejouer,reprendrePlace,quitterLigne,initFirebase,'+
+  'I18N,t,setLangue,getLangue:()=>LANGUE};';
 module.exports={chargerContexte,extraireScript,EXPOSER};

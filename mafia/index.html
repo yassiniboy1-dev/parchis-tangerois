@@ -215,6 +215,11 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 .toast.warn{background:#332410;border-color:#54390f;color:#e3c28a}
 .toast.rouge{background:#3d1414;border-color:#5e2020;color:#e0a9a2}
 
+/* langue */
+.chip.actif{border-color:#d9a93c;color:#e3c877}
+.champ.code,#code-affiche,#chip-code{direction:ltr}
+[dir="rtl"] .logo{letter-spacing:.14em}
+
 /* divers */
 .espace{flex:1}
 .marge{margin-top:12px}
@@ -230,51 +235,55 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
 <!-- ======================= ACCUEIL ======================= -->
 <section class="ecran on" id="scr-accueil">
-  <div style="height:7dvh"></div>
+  <div class="entete"><span class="pousse"></span>
+    <span class="chip btnc" id="chip-fr">Français</span>
+    <span class="chip btnc" id="chip-ar">العربية</span>
+  </div>
+  <div style="height:4dvh"></div>
   <div class="logo">MAFIA</div>
   <div class="logo-ar">مافيا</div>
-  <div class="slogan">Un tueur rôde dans la médina… jeu de salon pour 4 à 12 téléphones</div>
+  <div class="slogan" data-i18n="slogan">Un tueur rôde dans la médina… jeu de salon pour 4 à 12 téléphones</div>
   <div style="height:4dvh"></div>
   <div class="panneau">
-    <input class="champ" id="in-nom" placeholder="Ton prénom" maxlength="14" autocomplete="off">
-    <button class="btn marge" id="btn-creer">🎩 Créer une partie</button>
+    <input class="champ" id="in-nom" placeholder="Ton prénom" data-i18n-ph="ph_prenom" maxlength="14" autocomplete="off">
+    <button class="btn marge" id="btn-creer" data-i18n="creer">🎩 Créer une partie</button>
     <div class="ligne-champ marge">
-      <input class="champ code" id="in-code" placeholder="CODE" maxlength="5" autocomplete="off" autocapitalize="characters">
-      <button class="btn sombre" id="btn-rejoindre">Rejoindre</button>
+      <input class="champ code" id="in-code" placeholder="CODE" data-i18n-ph="ph_code" maxlength="5" autocomplete="off" autocapitalize="characters">
+      <button class="btn sombre" id="btn-rejoindre" data-i18n="rejoindre">Rejoindre</button>
     </div>
     <div class="err" id="ligne-err"></div>
   </div>
-  <button class="btn sombre marge" id="btn-aide">📜 Comment jouer ?</button>
+  <button class="btn sombre marge" id="btn-aide" data-i18n="aide_btn">📜 Comment jouer ?</button>
   <div class="espace"></div>
-  <div class="notei">Tout le monde dans la même pièce, chacun son téléphone.<br>Les débats se font à voix haute — l'écran, lui, reste muet.</div>
+  <div class="notei" data-i18n="note_accueil">Tout le monde dans la même pièce, chacun son téléphone. Les débats se font à voix haute — l'écran, lui, reste muet.</div>
 </section>
 
 <!-- ======================= LOBBY ======================= -->
 <section class="ecran" id="scr-lobby">
-  <h2 class="titre">Salle d'attente</h2>
-  <p class="sous">Partage ce code — dès 4 joueurs, l'hôte lance la partie</p>
+  <h2 class="titre" data-i18n="lobby_titre">Salle d'attente</h2>
+  <p class="sous" data-i18n="lobby_sous">Partage ce code — dès 4 joueurs, l'hôte lance la partie</p>
   <div class="panneau marge">
     <div id="code-affiche">—</div>
     <div class="lien-partage">
-      <button class="btn sombre mini" id="btn-copier">📋 Copier</button>
-      <button class="btn mini" id="btn-whatsapp">💬 WhatsApp</button>
+      <button class="btn sombre mini" id="btn-copier" data-i18n="copier">📋 Copier</button>
+      <button class="btn mini" id="btn-whatsapp" data-i18n="whatsapp">💬 WhatsApp</button>
     </div>
   </div>
   <div class="panneau" id="lobby-joueurs"></div>
   <div class="panneau" id="lobby-regles">
-    <div class="regle"><div class="lib">Nombre de tueurs <small>2 tueurs à partir de 6 joueurs</small></div>
+    <div class="regle"><div class="lib"><span data-i18n="r_tueurs">Nombre de tueurs</span> <small data-i18n="r_tueurs_s">2 tueurs à partir de 6 joueurs</small></div>
       <div class="seg" id="seg-tueurs" style="width:110px">
         <button data-v="1">1</button><button data-v="2">2</button>
       </div>
     </div>
-    <div class="regle"><div class="lib">Médecin 💉 <small>protège une personne chaque nuit</small></div><div class="switch" id="sw-medecin"></div></div>
-    <div class="regle"><div class="lib">Détective 🔍 <small>inspecte une personne chaque nuit</small></div><div class="switch" id="sw-detective"></div></div>
-    <div class="regle"><div class="lib">Révéler le rôle des morts <small>sinon, mystère jusqu'à la fin</small></div><div class="switch" id="sw-reveler"></div></div>
+    <div class="regle"><div class="lib"><span data-i18n="r_medecin">Médecin 💉</span> <small data-i18n="r_medecin_s">protège une personne chaque nuit</small></div><div class="switch" id="sw-medecin"></div></div>
+    <div class="regle"><div class="lib"><span data-i18n="r_detective">Détective 🔍</span> <small data-i18n="r_detective_s">inspecte une personne chaque nuit</small></div><div class="switch" id="sw-detective"></div></div>
+    <div class="regle"><div class="lib"><span data-i18n="r_reveler">Révéler le rôle des morts</span> <small data-i18n="r_reveler_s">sinon, mystère jusqu'à la fin</small></div><div class="switch" id="sw-reveler"></div></div>
     <div class="consigne marge" id="lobby-compo"></div>
   </div>
   <div class="err" id="lobby-notice"></div>
-  <button class="btn" id="btn-lancer">🌙 Lancer la partie</button>
-  <button class="btn sombre" id="btn-quitter-lobby">Quitter</button>
+  <button class="btn" id="btn-lancer" data-i18n="lancer">🌙 Lancer la partie</button>
+  <button class="btn sombre" id="btn-quitter-lobby" data-i18n="quitter">Quitter</button>
 </section>
 
 <!-- ======================= JEU ======================= -->
@@ -282,23 +291,23 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <div class="entete">
     <span class="chip" id="chip-code">—</span>
     <span class="chip" id="chip-phase">—</span>
-    <span class="chip alerte" id="chip-conn">⚠︎ reconnexion…</span>
+    <span class="chip alerte" id="chip-conn" data-i18n="reconnexion">⚠︎ reconnexion…</span>
     <span class="pousse"></span>
-    <span class="chip btnc" id="chip-carte">🎭 Ma carte</span>
+    <span class="chip btnc" id="chip-carte" data-i18n="ma_carte">🎭 Ma carte</span>
     <span class="chip btnc" id="chip-menu">⋯</span>
   </div>
 
   <!-- distribution des rôles -->
   <div id="pan-roles" style="display:none">
-    <h2 class="titre">Ton rôle</h2>
-    <p class="sous">Maintiens le doigt sur la carte pour la lire — à l'abri des regards</p>
+    <h2 class="titre" data-i18n="ton_role">Ton rôle</h2>
+    <p class="sous" data-i18n="role_sous">Maintiens le doigt sur la carte pour la lire — à l'abri des regards</p>
     <div class="secret marge" id="carte-role">
-      <div class="voile"><span class="oeil">👁</span>Maintenir pour révéler</div>
+      <div class="voile"><span class="oeil">👁</span><span data-i18n="maintenir">Maintenir pour révéler</span></div>
       <div class="dedans" id="carte-role-in"></div>
     </div>
-    <button class="btn marge" id="btn-pret">J'ai compris</button>
+    <button class="btn marge" id="btn-pret" data-i18n="compris">J'ai compris</button>
     <div class="compteur" id="cpt-roles"></div>
-    <button class="btn sombre marge" id="btn-forcer-roles" style="display:none">⏭️ Continuer sans les absents</button>
+    <button class="btn sombre marge" id="btn-forcer-roles" style="display:none" data-i18n="forcer">⏭️ Continuer sans les absents</button>
   </div>
 
   <!-- nuit -->
@@ -307,10 +316,10 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
     <div class="panneau">
       <div class="consigne" id="nuit-consigne"></div>
       <div class="grille" id="nuit-grille"></div>
-      <button class="btn marge" id="btn-conf-nuit" disabled>Confirmer</button>
+      <button class="btn marge" id="btn-conf-nuit" disabled data-i18n="confirmer">Confirmer</button>
     </div>
     <div class="compteur" id="cpt-nuit"></div>
-    <div class="notei">Tous les écrans se ressemblent cette nuit — impossible de deviner qui fait quoi.</div>
+    <div class="notei" data-i18n="note_nuit">Tous les écrans se ressemblent cette nuit — impossible de deviner qui fait quoi.</div>
   </div>
 
   <!-- attente générique (nuit/vote faits) -->
@@ -318,29 +327,29 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
     <div class="attente"><span class="lune" id="attente-ic">🌙</span><span id="attente-txt">La nuit suit son cours…</span></div>
     <div class="compteur" id="cpt-attente"></div>
     <div class="compteur" id="attente-manque"></div>
-    <button class="btn sombre marge" id="btn-reprendre" style="display:none">🎭 Reprendre ma place</button>
-    <button class="btn marge" id="btn-forcer" style="display:none">⏭️ Continuer sans les absents</button>
+    <button class="btn sombre marge" id="btn-reprendre" style="display:none" data-i18n="reprendre_place">🎭 Reprendre ma place</button>
+    <button class="btn marge" id="btn-forcer" style="display:none" data-i18n="forcer">⏭️ Continuer sans les absents</button>
   </div>
 
   <!-- jour : annonce de l'aube + débats -->
   <div id="pan-jour" style="display:none">
     <div class="annonce" id="jour-annonce"></div>
     <div class="secret" id="carte-rapport">
-      <div class="voile"><span class="oeil">🗞</span>Rapport de la nuit — maintenir pour lire</div>
+      <div class="voile"><span class="oeil">🗞</span><span data-i18n="rapport_voile">Rapport de la nuit — maintenir pour lire</span></div>
       <div class="dedans" id="carte-rapport-in"></div>
     </div>
     <div class="panneau marge" id="jour-liste"></div>
-    <p class="consigne marge">Débattez à voix haute : qui est suspect ?</p>
-    <button class="btn marge" id="btn-vers-vote" style="display:none">🗳️ Passer au vote</button>
+    <p class="consigne marge" data-i18n="debats">Débattez à voix haute : qui est suspect ?</p>
+    <button class="btn marge" id="btn-vers-vote" style="display:none" data-i18n="vers_vote">🗳️ Passer au vote</button>
   </div>
 
   <!-- vote -->
   <div id="pan-vote" style="display:none">
-    <div class="annonce"><span class="ic">🗳️</span><div class="gros">Le village vote</div>
-      <div class="det">Vote secret — désigne qui doit être éliminé</div></div>
+    <div class="annonce"><span class="ic">🗳️</span><div class="gros" data-i18n="village_vote">Le village vote</div>
+      <div class="det" data-i18n="vote_det">Vote secret — désigne qui doit être éliminé</div></div>
     <div class="panneau">
       <div class="grille" id="vote-grille"></div>
-      <button class="btn marge" id="btn-conf-vote" disabled>Voter</button>
+      <button class="btn marge" id="btn-conf-vote" disabled data-i18n="voter">Voter</button>
     </div>
     <div class="compteur" id="cpt-vote"></div>
   </div>
@@ -348,61 +357,65 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <!-- crépuscule : résultat du vote -->
   <div id="pan-crep" style="display:none">
     <div class="annonce" id="crep-annonce"></div>
-    <div class="panneau"><div class="consigne">Dépouillement</div><div class="tally" id="crep-tally"></div></div>
-    <button class="btn marge" id="btn-vers-nuit" style="display:none">🌙 La nuit tombe</button>
+    <div class="panneau"><div class="consigne" data-i18n="depouillement">Dépouillement</div><div class="tally" id="crep-tally"></div></div>
+    <button class="btn marge" id="btn-vers-nuit" style="display:none" data-i18n="vers_nuit">🌙 La nuit tombe</button>
   </div>
 
   <!-- fin -->
   <div id="pan-fin" style="display:none">
     <div class="annonce" id="fin-annonce"></div>
     <div class="panneau" id="fin-liste"></div>
-    <button class="btn marge" id="btn-rejouer" style="display:none">🔁 Rejouer (mêmes joueurs)</button>
-    <button class="btn sombre" id="btn-quitter-fin">Quitter</button>
+    <button class="btn marge" id="btn-rejouer" style="display:none" data-i18n="rejouer_btn">🔁 Rejouer (mêmes joueurs)</button>
+    <button class="btn sombre" id="btn-quitter-fin" data-i18n="quitter">Quitter</button>
   </div>
 
-  <div class="notei" id="note-mort" style="display:none">💀 Tu es mort. Reste discret : les morts ne parlent pas, mais ils voient la suite.</div>
+  <div class="notei" id="note-mort" style="display:none" data-i18n="note_mort">💀 Tu es mort. Reste discret : les morts ne parlent pas, mais ils voient la suite.</div>
 </section>
 
 <!-- ======================= MODALS ======================= -->
 <div class="modal" id="modal-aide"><div class="box">
-  <h3>📜 Comment jouer</h3>
-  <p><b>Mafia</b> se joue de 4 à 12 joueurs, tous dans la même pièce, chacun avec son téléphone. Les rôles sont distribués en secret : <b>tueur(s) 🔪</b>, <b>médecin 💉</b>, <b>détective 🔍</b> et <b>civils 🌿</b>.</p>
-  <p><b>La nuit</b> : tout le monde touche son écran en silence. Le tueur choisit sa victime, le médecin protège quelqu'un (jamais la même personne deux nuits de suite), le détective inspecte, les civils font un geste factice — tous les écrans se ressemblent.</p>
-  <p><b>Le jour</b> : on découvre ce qui s'est passé, on débat à voix haute, puis chacun vote en secret sur son téléphone. Le plus voté est éliminé ; en cas d'égalité, personne ne meurt.</p>
-  <p><b>Victoire</b> : le village gagne quand tous les tueurs sont éliminés. Les tueurs gagnent quand ils sont aussi nombreux que les survivants.</p>
-  <p>Astuce : baisse la luminosité de ton téléphone et garde ta carte pour toi 🤫</p>
-  <button class="btn sombre" id="btn-fermer-aide">Fermer</button>
+  <h3 data-i18n="aide_t">📜 Comment jouer</h3>
+  <p data-i18n-html="aide1"><b>Mafia</b> se joue de 4 à 12 joueurs, tous dans la même pièce, chacun avec son téléphone. Les rôles sont distribués en secret : <b>tueur(s) 🔪</b>, <b>médecin 💉</b>, <b>détective 🔍</b> et <b>civils 🌿</b>.</p>
+  <p data-i18n-html="aide2"><b>La nuit</b> : tout le monde touche son écran en silence. Le tueur choisit sa victime, le médecin protège quelqu'un (jamais la même personne deux nuits de suite), le détective inspecte, les civils font un geste factice — tous les écrans se ressemblent.</p>
+  <p data-i18n-html="aide3"><b>Le jour</b> : on découvre ce qui s'est passé, on débat à voix haute, puis chacun vote en secret sur son téléphone. Le plus voté est éliminé ; en cas d'égalité, personne ne meurt.</p>
+  <p data-i18n-html="aide4"><b>Victoire</b> : le village gagne quand tous les tueurs sont éliminés. Les tueurs gagnent quand ils sont aussi nombreux que les survivants.</p>
+  <p data-i18n="aide5">Astuce : baisse la luminosité de ton téléphone et garde ta carte pour toi 🤫</p>
+  <button class="btn sombre" id="btn-fermer-aide" data-i18n="fermer">Fermer</button>
 </div></div>
 
 <div class="modal" id="modal-carte"><div class="box">
-  <h3>🎭 Ma carte</h3>
+  <h3 data-i18n="ma_carte">🎭 Ma carte</h3>
   <div class="secret" id="carte-modal">
-    <div class="voile"><span class="oeil">👁</span>Maintenir pour révéler</div>
+    <div class="voile"><span class="oeil">👁</span><span data-i18n="maintenir">Maintenir pour révéler</span></div>
     <div class="dedans" id="carte-modal-in"></div>
   </div>
-  <button class="btn sombre" id="btn-fermer-carte">Fermer</button>
+  <button class="btn sombre" id="btn-fermer-carte" data-i18n="fermer">Fermer</button>
 </div></div>
 
 <div class="modal" id="modal-menu"><div class="box">
-  <h3>Menu</h3>
-  <button class="btn sombre" id="btn-menu-aide">📜 Règles du jeu</button>
-  <button class="btn sombre" id="btn-menu-reprendre" style="display:none">🎭 Reprendre ma place</button>
-  <button class="btn danger" id="btn-menu-quitter">🚪 Quitter la partie</button>
-  <button class="btn sombre" id="btn-fermer-menu">Retour</button>
+  <h3 data-i18n="menu_t">Menu</h3>
+  <button class="btn sombre" id="btn-menu-aide" data-i18n="regles_jeu">📜 Règles du jeu</button>
+  <button class="btn sombre" id="btn-menu-reprendre" style="display:none" data-i18n="reprendre_place">🎭 Reprendre ma place</button>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn sombre" id="btn-menu-fr" style="flex:1;margin:0">Français</button>
+    <button class="btn sombre" id="btn-menu-ar" style="flex:1;margin:0">العربية</button>
+  </div>
+  <button class="btn danger" id="btn-menu-quitter" data-i18n="quitter_partie">🚪 Quitter la partie</button>
+  <button class="btn sombre" id="btn-fermer-menu" data-i18n="retour">Retour</button>
 </div></div>
 
 <div class="modal" id="modal-quitter"><div class="box">
-  <h3>Quitter ?</h3>
+  <h3 data-i18n="quitter_t">Quitter ?</h3>
   <p id="quitter-txt">Tu vas quitter la partie en cours.</p>
-  <button class="btn danger" id="btn-conf-quitter">Oui, quitter</button>
-  <button class="btn sombre" id="btn-ann-quitter">Rester</button>
+  <button class="btn danger" id="btn-conf-quitter" data-i18n="oui_quitter">Oui, quitter</button>
+  <button class="btn sombre" id="btn-ann-quitter" data-i18n="rester">Rester</button>
 </div></div>
 
 <div class="modal" id="modal-reprise"><div class="box">
-  <h3>Reprendre ta place</h3>
-  <p>Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :</p>
+  <h3 data-i18n="reprise_t">Reprendre ta place</h3>
+  <p data-i18n="reprise_p">Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :</p>
   <div id="reprise-rows"></div>
-  <button class="btn sombre" id="btn-fermer-reprise">Juste regarder</button>
+  <button class="btn sombre" id="btn-fermer-reprise" data-i18n="regarder">Juste regarder</button>
 </div></div>
 
 <div id="toasts"></div>
@@ -410,7 +423,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v1.1
+   MAFIA — مافيا  v1.2
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -429,12 +442,204 @@ const FIREBASE_CONFIG={
 /* ---------- règles (l'hôte les règle au lobby) ---------- */
 const RG={ tueurs:1, medecin:true, detective:true, reveler:true };
 
-const ROLES={
-  tueur:{ic:'🔪',nom:'Tueur',desc:'Chaque nuit, choisis une victime. Le jour, fonds-toi dans la foule et détourne les soupçons.'},
-  medecin:{ic:'💉',nom:'Médecin',desc:'Chaque nuit, protège une personne (toi compris) — mais jamais la même deux nuits de suite.'},
-  detective:{ic:'🔍',nom:'Détective',desc:'Chaque nuit, inspecte une personne : tu sauras si c\'est un tueur ou un innocent. N\'en dis pas trop…'},
-  civil:{ic:'🌿',nom:'Civil',desc:'Observe, débats, vote. Ton intuition de la nuit reste secrète — elle brouille les pistes.'},
+const ROLES={ tueur:{ic:'🔪'}, medecin:{ic:'💉'}, detective:{ic:'🔍'}, civil:{ic:'🌿'} };
+
+/* ==========================================================
+   LANGUES — français / arabe, choix PAR TÉLÉPHONE (mf_lang)
+   ========================================================== */
+const I18N={
+fr:{
+  slogan:"Un tueur rôde dans la médina… jeu de salon pour 4 à 12 téléphones",
+  ph_prenom:"Ton prénom", ph_code:"CODE",
+  creer:"🎩 Créer une partie", rejoindre:"Rejoindre", aide_btn:"📜 Comment jouer ?",
+  note_accueil:"Tout le monde dans la même pièce, chacun son téléphone. Les débats se font à voix haute — l'écran, lui, reste muet.",
+  lobby_titre:"Salle d'attente", lobby_sous:"Partage ce code — dès 4 joueurs, l'hôte lance la partie",
+  copier:"📋 Copier", whatsapp:"💬 WhatsApp", copie_ok:"Code copié",
+  wa_txt:"Rejoins ma partie de Mafia 🎩 Code : {c} — {u}",
+  r_tueurs:"Nombre de tueurs", r_tueurs_s:"2 tueurs à partir de 6 joueurs",
+  r_medecin:"Médecin 💉", r_medecin_s:"protège une personne chaque nuit",
+  r_detective:"Détective 🔍", r_detective_s:"inspecte une personne chaque nuit",
+  r_reveler:"Révéler le rôle des morts", r_reveler_s:"sinon, mystère jusqu'à la fin",
+  lancer:"🌙 Lancer la partie", quitter:"Quitter", retirer:"Retirer",
+  toi:"toi", hote:"hôte", attente_hote_lance:"En attente de l'hôte pour lancer la partie…",
+  err_min4:"Il faut au moins 4 joueurs.", err_max12:"12 joueurs maximum.",
+  err_2t6:"2 tueurs demandent au moins 6 joueurs.",
+  err_reseau:"Réseau indisponible ici — ouvre le site déployé sur Netlify.",
+  err_code5:"Code à 5 lettres.", err_conn:"Connexion impossible. Vérifie ta 4G/WiFi.",
+  err_aucune:"Aucune partie avec ce code.", err_parchis:"Ce code est une partie de Parchís, pas de Mafia.",
+  err_pleine:"Partie complète (12 joueurs).", partie_fermee:"La partie a été fermée",
+  ma_carte:"🎭 Ma carte", reconnexion:"⚠︎ reconnexion…",
+  ph_roles:"🎭 Distribution", ph_nuit:"🌙 Nuit {n}", ph_jour:"☀️ Jour {n}",
+  ph_vote:"🗳️ Vote", ph_crep:"🌆 Crépuscule", ph_fin:"🏁 Fin",
+  ton_role:"Ton rôle", role_sous:"Maintiens le doigt sur la carte pour la lire — à l'abri des regards",
+  maintenir:"Maintenir pour révéler", compris:"J'ai compris",
+  cpt_roles:"{n}/{t} ont vu leur rôle", on_attend:"On attend : {l}",
+  forcer:"⏭️ Continuer sans les absents", reprendre_place:"🎭 Reprendre ma place",
+  role_tueur:"Tueur", role_medecin:"Médecin", role_detective:"Détective", role_civil:"Civil",
+  desc_tueur:"Chaque nuit, choisis une victime. Le jour, fonds-toi dans la foule et détourne les soupçons.",
+  desc_medecin:"Chaque nuit, protège une personne (toi compris) — mais jamais la même deux nuits de suite.",
+  desc_detective:"Chaque nuit, inspecte une personne : tu sauras si c'est un tueur ou un innocent. N'en dis pas trop…",
+  desc_civil:"Observe, débats, vote. Ton intuition de la nuit reste secrète — elle brouille les pistes.",
+  complice:"Ton complice : {l} 🤝", carte_mort:"💀 Tu es mort.", carte_spect:"Tu regardes la partie en spectateur.",
+  nuit_titre:"Nuit {n} — la médina s'endort",
+  cons_tueur:"Choisis ta victime, en silence.", cons_medecin:"Qui protèges-tu cette nuit ?",
+  cons_detective:"Qui veux-tu inspecter cette nuit ?", cons_civil:"Note ton intuition de la nuit — geste secret, sans effet.",
+  confirmer:"Confirmer", cpt_nuit:"{n}/{t} gestes de nuit accomplis",
+  note_nuit:"Tous les écrans se ressemblent cette nuit — impossible de deviner qui fait quoi.",
+  pas_toi:"Pas toi-même — choisis quelqu'un d'autre", pas_2nuits:"Pas deux nuits de suite sur la même personne",
+  attente_nuit:"La nuit suit son cours…", geste_fait:"Ton geste est fait — la nuit suit son cours…",
+  spect_att:"Tu regardes en spectateur…", connexion_partie:"Connexion à la partie…",
+  assassine:"{p} a été assassiné cette nuit", c_etait:"C'était… {r}", role_mystere:"Son rôle reste un mystère.",
+  sauve_annonce:"Le médecin a sauvé une vie cette nuit !", personne_mort:"Personne n'est mort.",
+  nuit_calme:"Personne n'est mort cette nuit",
+  rapport_voile:"Rapport de la nuit — maintenir pour lire",
+  debats:"Débattez à voix haute : qui est suspect ?", vers_vote:"🗳️ Passer au vote",
+  en_vie:"en vie", mort_lbl:"mort 💀",
+  rap_spect:"Spectateur — rien à lire.", rap_assassine:"On t'a assassiné cette nuit… Les morts ne parlent pas.",
+  rap_morts:"Les morts ne rêvent pas. 💀", rap_rien:"Rien à signaler.",
+  rap_enquete:"Ton enquête sur {p} :", v_tueur:"TUEUR 🔪", v_innocent:"INNOCENT 🌿",
+  rap_cible:"Cible de la nuit : {p}.", contrat:"Contrat rempli.",
+  dejoue:"Le médecin a déjoué ton plan…", nuit_fut_calme:"La nuit fut calme.",
+  rap_veille:"Tu as veillé sur {p}.", vie_sauvee:"Tu as sauvé une vie cette nuit ! ✨", nuit_passee:"La nuit est passée.",
+  rap_intuition:"Ton intuition de la nuit : {p}. Garde-la pour toi…",
+  village_vote:"Le village vote", vote_det:"Vote secret — désigne qui doit être éliminé",
+  voter:"Voter", cpt_vote:"{n}/{t} ont voté", vote_att:"Le village vote…",
+  vote_fait:"Ton vote est enregistré — le village vote…",
+  elimine_annonce:"Le village a éliminé {p}", egalite:"Égalité — personne n'est éliminé",
+  depouillement:"Dépouillement", vers_nuit:"🌙 La nuit tombe",
+  mafia_gagne:"La mafia a pris la médina…", mafia_det:"Les tueurs l'emportent.",
+  village_gagne:"Le village a gagné !", village_det:"Tous les tueurs ont été démasqués.",
+  rejouer_btn:"🔁 Rejouer (mêmes joueurs)",
+  note_mort:"💀 Tu es mort. Reste discret : les morts ne parlent pas, mais ils voient la suite.",
+  aide_t:"📜 Comment jouer",
+  aide1:"<b>Mafia</b> se joue de 4 à 12 joueurs, tous dans la même pièce, chacun avec son téléphone. Les rôles sont distribués en secret : <b>tueur(s) 🔪</b>, <b>médecin 💉</b>, <b>détective 🔍</b> et <b>civils 🌿</b>.",
+  aide2:"<b>La nuit</b> : tout le monde touche son écran en silence. Le tueur choisit sa victime, le médecin protège quelqu'un (jamais la même personne deux nuits de suite), le détective inspecte, les civils font un geste factice — tous les écrans se ressemblent.",
+  aide3:"<b>Le jour</b> : on découvre ce qui s'est passé, on débat à voix haute, puis chacun vote en secret sur son téléphone. Le plus voté est éliminé ; en cas d'égalité, personne ne meurt.",
+  aide4:"<b>Victoire</b> : le village gagne quand tous les tueurs sont éliminés. Les tueurs gagnent quand ils sont aussi nombreux que les survivants.",
+  aide5:"Astuce : baisse la luminosité de ton téléphone et garde ta carte pour toi 🤫",
+  fermer:"Fermer", menu_t:"Menu", regles_jeu:"📜 Règles du jeu", quitter_partie:"🚪 Quitter la partie", retour:"Retour",
+  quitter_t:"Quitter ?", quit_lobby_hote:"Tu es l'hôte : quitter fermera le salon pour tout le monde.",
+  quit_lobby:"Tu vas quitter la salle d'attente.",
+  quit_partie:"Tu vas quitter la partie en cours. Tu pourras revenir avec le code {c}.",
+  quit_accueil:"Retour à l'accueil.", oui_quitter:"Oui, quitter", rester:"Rester",
+  reprise_t:"Reprendre ta place",
+  reprise_p:"Une partie est en cours avec ce code. Si tu as changé de téléphone, reprends ton siège :",
+  cest_moi:"C'est moi", regarder:"Juste regarder",
+  place_reprise:"Place reprise — bon retour dans la médina",
+},
+ar:{
+  slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
+  ph_prenom:"اسمك", ph_code:"الرمز",
+  creer:"🎩 أنشئ لعبة", rejoindre:"انضم", aide_btn:"📜 كيف نلعب؟",
+  note_accueil:"الجميع في نفس الغرفة، ولكل واحد هاتفه. النقاش يكون بصوت عال — أما الشاشة فتبقى صامتة.",
+  lobby_titre:"قاعة الانتظار", lobby_sous:"شارك هذا الرمز — ابتداء من 4 لاعبين يطلق المضيف اللعبة",
+  copier:"📋 نسخ", whatsapp:"💬 واتساب", copie_ok:"تم نسخ الرمز",
+  wa_txt:"انضم إلى لعبتي مافيا 🎩 الرمز: {c} — {u}",
+  r_tueurs:"عدد القتلة", r_tueurs_s:"قاتلان ابتداء من 6 لاعبين",
+  r_medecin:"الطبيب 💉", r_medecin_s:"يحمي شخصا كل ليلة",
+  r_detective:"المحقق 🔍", r_detective_s:"يحقق مع شخص كل ليلة",
+  r_reveler:"كشف دور الموتى", r_reveler_s:"وإلا يبقى السر حتى النهاية",
+  lancer:"🌙 ابدأ اللعبة", quitter:"خروج", retirer:"إزالة",
+  toi:"أنت", hote:"المضيف", attente_hote_lance:"في انتظار أن يطلق المضيف اللعبة…",
+  err_min4:"يلزم 4 لاعبين على الأقل.", err_max12:"12 لاعبا كحد أقصى.",
+  err_2t6:"قاتلان يتطلبان 6 لاعبين على الأقل.",
+  err_reseau:"الشبكة غير متوفرة هنا — افتح الموقع المنشور.",
+  err_code5:"الرمز من 5 أحرف.", err_conn:"تعذر الاتصال. تحقق من الإنترنت.",
+  err_aucune:"لا توجد لعبة بهذا الرمز.", err_parchis:"هذا الرمز للعبة بارشيس وليس مافيا.",
+  err_pleine:"اللعبة مكتملة (12 لاعبا).", partie_fermee:"أغلقت اللعبة",
+  ma_carte:"🎭 بطاقتي", reconnexion:"⚠︎ إعادة الاتصال…",
+  ph_roles:"🎭 توزيع الأدوار", ph_nuit:"🌙 الليلة {n}", ph_jour:"☀️ النهار {n}",
+  ph_vote:"🗳️ التصويت", ph_crep:"🌆 الغسق", ph_fin:"🏁 النهاية",
+  ton_role:"دورك", role_sous:"اضغط بإصبعك على البطاقة لقراءتها — بعيدا عن الأنظار",
+  maintenir:"اضغط باستمرار للكشف", compris:"فهمت",
+  cpt_roles:"{n}/{t} رأوا دورهم", on_attend:"في انتظار: {l}",
+  forcer:"⏭️ المتابعة بدون الغائبين", reprendre_place:"🎭 استرجاع مكاني",
+  role_tueur:"القاتل", role_medecin:"الطبيب", role_detective:"المحقق", role_civil:"مدني",
+  desc_tueur:"كل ليلة اختر ضحية. وفي النهار اندمج مع الناس وأبعد الشبهات عنك.",
+  desc_medecin:"كل ليلة احم شخصا (حتى نفسك) — لكن ليس نفس الشخص ليلتين متتاليتين.",
+  desc_detective:"كل ليلة حقق مع شخص لتعرف هل هو قاتل أم بريء. لا تكشف الكثير…",
+  desc_civil:"راقب وناقش وصوت. حدسك الليلي يبقى سريا — وهو يخلط الأوراق.",
+  complice:"شريكك: {l} 🤝", carte_mort:"💀 أنت ميت.", carte_spect:"أنت تشاهد اللعبة كمتفرج.",
+  nuit_titre:"الليلة {n} — المدينة تنام",
+  cons_tueur:"اختر ضحيتك في صمت.", cons_medecin:"من تحمي هذه الليلة؟",
+  cons_detective:"مع من تريد التحقيق هذه الليلة؟", cons_civil:"سجل حدسك الليلي — إشارة سرية بلا تأثير.",
+  confirmer:"تأكيد", cpt_nuit:"{n}/{t} أنجزوا إشارة الليل",
+  note_nuit:"كل الشاشات متشابهة هذه الليلة — لا يمكن معرفة من يفعل ماذا.",
+  pas_toi:"ليس أنت — اختر شخصا آخر", pas_2nuits:"ليس نفس الشخص ليلتين متتاليتين",
+  attente_nuit:"الليل يمضي…", geste_fait:"تمت إشارتك — الليل يمضي…",
+  spect_att:"أنت تشاهد كمتفرج…", connexion_partie:"جار الاتصال باللعبة…",
+  assassine:"اغتيل {p} هذه الليلة", c_etait:"لقد كان… {r}", role_mystere:"دوره يبقى لغزا.",
+  sauve_annonce:"الطبيب أنقذ حياة هذه الليلة!", personne_mort:"لم يمت أحد.",
+  nuit_calme:"لم يمت أحد هذه الليلة",
+  rapport_voile:"تقرير الليلة — اضغط باستمرار للقراءة",
+  debats:"ناقشوا بصوت عال: من هو المشتبه به؟", vers_vote:"🗳️ الانتقال إلى التصويت",
+  en_vie:"حي", mort_lbl:"ميت 💀",
+  rap_spect:"متفرج — لا شيء للقراءة.", rap_assassine:"لقد اغتلت هذه الليلة… الموتى لا يتكلمون.",
+  rap_morts:"الموتى لا يحلمون. 💀", rap_rien:"لا جديد.",
+  rap_enquete:"تحقيقك مع {p}:", v_tueur:"قاتل 🔪", v_innocent:"بريء 🌿",
+  rap_cible:"هدف الليلة: {p}.", contrat:"تم تنفيذ المهمة.",
+  dejoue:"الطبيب أحبط خطتك…", nuit_fut_calme:"كانت الليلة هادئة.",
+  rap_veille:"لقد سهرت على حماية {p}.", vie_sauvee:"لقد أنقذت حياة هذه الليلة! ✨", nuit_passee:"مرت الليلة.",
+  rap_intuition:"حدسك الليلي: {p}. احتفظ به لنفسك…",
+  village_vote:"القرية تصوت", vote_det:"تصويت سري — اختر من يجب إقصاؤه",
+  voter:"صوت", cpt_vote:"{n}/{t} صوتوا", vote_att:"القرية تصوت…",
+  vote_fait:"سجل صوتك — القرية تصوت…",
+  elimine_annonce:"القرية أقصت {p}", egalite:"تعادل — لم يقص أحد",
+  depouillement:"فرز الأصوات", vers_nuit:"🌙 الليل يحل",
+  mafia_gagne:"المافيا سيطرت على المدينة…", mafia_det:"القتلة انتصروا.",
+  village_gagne:"القرية انتصرت!", village_det:"تم كشف كل القتلة.",
+  rejouer_btn:"🔁 إعادة اللعب (نفس اللاعبين)",
+  note_mort:"💀 أنت ميت. كن كتوما: الموتى لا يتكلمون لكنهم يشاهدون البقية.",
+  aide_t:"📜 كيف نلعب",
+  aide1:"<b>مافيا</b> تلعب من 4 إلى 12 لاعبا، كلهم في نفس الغرفة وكل واحد بهاتفه. توزع الأدوار سرا: <b>قاتل (أو قاتلان) 🔪</b>، <b>طبيب 💉</b>، <b>محقق 🔍</b> والباقي <b>مدنيون 🌿</b>.",
+  aide2:"<b>في الليل</b>: الجميع يلمس شاشته في صمت. القاتل يختار ضحيته، الطبيب يحمي شخصا (ليس نفس الشخص ليلتين متتاليتين)، المحقق يحقق، والمدنيون يقومون بإشارة وهمية — كل الشاشات متشابهة.",
+  aide3:"<b>في النهار</b>: نكتشف ما حدث، نتناقش بصوت عال، ثم يصوت كل واحد سرا على هاتفه. من ينال أكثر الأصوات يقصى؛ وعند التعادل لا يموت أحد.",
+  aide4:"<b>الفوز</b>: تفوز القرية عندما يقصى كل القتلة. ويفوز القتلة عندما يصبح عددهم مساويا لعدد الباقين.",
+  aide5:"نصيحة: اخفض إضاءة هاتفك واحتفظ ببطاقتك لنفسك 🤫",
+  fermer:"إغلاق", menu_t:"القائمة", regles_jeu:"📜 قواعد اللعبة", quitter_partie:"🚪 مغادرة اللعبة", retour:"رجوع",
+  quitter_t:"مغادرة؟", quit_lobby_hote:"أنت المضيف: مغادرتك ستغلق الصالة على الجميع.",
+  quit_lobby:"ستغادر قاعة الانتظار.",
+  quit_partie:"ستغادر اللعبة الجارية. يمكنك العودة بالرمز {c}.",
+  quit_accueil:"العودة إلى البداية.", oui_quitter:"نعم، غادر", rester:"ابق",
+  reprise_t:"استرجاع مكانك",
+  reprise_p:"هناك لعبة جارية بهذا الرمز. إذا غيرت هاتفك فاسترجع مكانك:",
+  cest_moi:"هذا أنا", regarder:"مشاهدة فقط",
+  place_reprise:"استرجعت مكانك — مرحبا بعودتك إلى المدينة",
+},
 };
+let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
+function t(k,vars){
+  let s=(I18N[LANGUE][k]!=null)?I18N[LANGUE][k]:(I18N.fr[k]||'');
+  if(vars) for(const v of Object.keys(vars)) s=s.split('{'+v+'}').join(vars[v]);
+  return s;
+}
+function nomRole(r){ return t('role_'+r); }
+function setLangue(l){
+  LANGUE=(l==='ar')?'ar':'fr';
+  lsSet('mf_lang',LANGUE);
+  appliquerLangue();
+}
+function appliquerLangue(){
+  try{
+    document.documentElement.setAttribute('lang',LANGUE);
+    document.documentElement.setAttribute('dir',LANGUE==='ar'?'rtl':'ltr');
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const s=t(el.getAttribute('data-i18n')); if(s) el.textContent=s;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+      const s=t(el.getAttribute('data-i18n-html')); if(s) el.innerHTML=s;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+      const s=t(el.getAttribute('data-i18n-ph')); if(s) el.setAttribute('placeholder',s);
+    });
+    document.getElementById('chip-fr').classList.toggle('actif',LANGUE==='fr');
+    document.getElementById('chip-ar').classList.toggle('actif',LANGUE==='ar');
+  }catch(e){}
+  if(NET.on){
+    if(NET.statut==='lobby') renderLobby();
+    else if(NET.statut) render();
+  }
+}
 
 /* ---------- état local ---------- */
 const G={
@@ -475,9 +680,9 @@ function composerRoles(n,rg,rnd){
   return roles;
 }
 function validerComposition(n,rg){
-  if(n<4) return 'Il faut au moins 4 joueurs.';
-  if(n>12) return '12 joueurs maximum.';
-  if((rg.tueurs||1)>=2&&n<6) return '2 tueurs demandent au moins 6 joueurs.';
+  if(n<4) return t('err_min4');
+  if(n>12) return t('err_max12');
+  if((rg.tueurs||1)>=2&&n<6) return t('err_2t6');
   return null;
 }
 function vivants(joueurs){ return joueurs.filter(j=>j.vif); }
@@ -606,8 +811,8 @@ function normaliserEtat(v){
 function traiterPartie(snap){
   try{
     const p=snap.val();
-    if(!p){ quitterLigne(); toast('La partie a été fermée','warn'); return; }
-    if(p.jeu!=='mafia'){ quitterLigne(); toast('Ce code est une partie de Parchís, pas de Mafia','warn'); return; }
+    if(!p){ quitterLigne(); toast(t('partie_fermee'),'warn'); return; }
+    if(p.jeu!=='mafia'){ quitterLigne(); toast(t('err_parchis'),'warn'); return; }
     NET.isHote=(p.hote===NET.uid);
     NET.hoteUid=p.hote;
     NET.statut=p.statut;
@@ -725,7 +930,7 @@ function lireNom(){
 }
 function creerPartie(){
   ligneErr('');
-  if(!initFirebase()){ ligneErr('Réseau indisponible ici — ouvre le site déployé sur Netlify.'); return; }
+  if(!initFirebase()){ ligneErr(t('err_reseau')); return; }
   const nom=lireNom();
   const code=codeAleatoire();
   const ref=NET.db.ref('parties/'+code);
@@ -736,29 +941,29 @@ function creerPartie(){
       v:1, jeu:'mafia', creele:Date.now(), hote:NET.uid, statut:'lobby',
       joueurs:j, regles:Object.assign({},RG),
     },err=>{
-      if(err){ ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'); return; }
+      if(err){ ligneErr(t('err_conn')); return; }
       nettoyage();
       rejoindreRef(code);
     });
-  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+  },()=>ligneErr(t('err_conn')));
 }
 function rejoindrePartie(){
   ligneErr('');
-  if(!initFirebase()){ ligneErr('Réseau indisponible ici — ouvre le site déployé sur Netlify.'); return; }
+  if(!initFirebase()){ ligneErr(t('err_reseau')); return; }
   const code=(document.getElementById('in-code').value||'').trim().toUpperCase();
-  if(code.length!==5){ ligneErr('Code à 5 lettres.'); return; }
+  if(code.length!==5){ ligneErr(t('err_code5')); return; }
   const nom=lireNom();
   NET.db.ref('parties/'+code).once('value',s=>{
     const p=s.val();
-    if(!p){ ligneErr('Aucune partie avec ce code.'); return; }
-    if(p.jeu!=='mafia'){ ligneErr('Ce code est une partie de Parchís, pas de Mafia.'); return; }
+    if(!p){ ligneErr(t('err_aucune')); return; }
+    if(p.jeu!=='mafia'){ ligneErr(t('err_parchis')); return; }
     if(p.statut==='lobby'){
       const nb=Object.keys(p.joueurs||{}).length;
-      if(nb>=12&&!(p.joueurs||{})[NET.uid]){ ligneErr('Partie complète (12 joueurs).'); return; }
+      if(nb>=12&&!(p.joueurs||{})[NET.uid]){ ligneErr(t('err_pleine')); return; }
       NET.db.ref('parties/'+code+'/joueurs/'+NET.uid).set({nom:nom,ts:Date.now()});
     }
     rejoindreRef(code);
-  },()=>ligneErr('Connexion impossible. Vérifie ta 4G/WiFi.'));
+  },()=>ligneErr(t('err_conn')));
 }
 function rejoindreRef(code){
   NET.on=true; NET.code=code; NET.appliedSeq=0; NET.faits={}; NET.reprisePropose=false;
@@ -828,8 +1033,8 @@ function confirmerNuit(cible){
   const m=moi();
   /* soi-même : seul le médecin (auto-protection) — refus par toast, jamais de
      case grisée qui différencierait les écrans */
-  if(cible===G.myIdx&&m.role!=='medecin'){ toast('Pas toi-même — choisis quelqu\'un d\'autre','warn'); return; }
-  if(m.role==='medecin'&&cible===G.etat.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return; }
+  if(cible===G.myIdx&&m.role!=='medecin'){ toast(t('pas_toi'),'warn'); return; }
+  if(m.role==='medecin'&&cible===G.etat.prot){ toast(t('pas_2nuits'),'warn'); return; }
   NET.ref.child('actes/'+keyNuit()+'/'+NET.uid).set(cible);
   G.sel=null;
 }
@@ -859,7 +1064,7 @@ function reprendrePlace(i){
      transfert plus personne ne résout les nuits (bug trouvé en revue) */
   if(ancien&&ancien===NET.hoteUid&&ancien!==NET.uid) NET.ref.child('hote').set(NET.uid);
   hideModals();
-  toast('Place reprise — bon retour dans la médina','ok');
+  toast(t('place_reprise'),'ok');
 }
 
 /* ==========================================================
@@ -893,12 +1098,19 @@ function avatar(i,nom){
     (nom||'?').trim().charAt(0).toUpperCase()+'</span>';
 }
 function compoTexte(n,rg){
-  const t=rg.tueurs||1;
-  const civils=n-t-(rg.medecin?1:0)-(rg.detective?1:0);
-  const bouts=[t+(t>1?' tueurs':' tueur')];
+  const nt=rg.tueurs||1;
+  const civils=Math.max(0,n-nt-(rg.medecin?1:0)-(rg.detective?1:0));
+  if(LANGUE==='ar'){
+    const bouts=[nt===1?'قاتل واحد':'قاتلان'];
+    if(rg.medecin) bouts.push('طبيب');
+    if(rg.detective) bouts.push('محقق');
+    bouts.push(civils===1?'مدني واحد':civils+' مدنيين');
+    return n+' لاعبين: '+bouts.join('، ');
+  }
+  const bouts=[nt+(nt>1?' tueurs':' tueur')];
   if(rg.medecin) bouts.push('1 médecin');
   if(rg.detective) bouts.push('1 détective');
-  bouts.push(Math.max(0,civils)+(civils>1?' civils':' civil'));
+  bouts.push(civils+(civils>1?' civils':' civil'));
   return n+' joueur'+(n>1?'s':'')+' : '+bouts.join(', ');
 }
 
@@ -912,13 +1124,13 @@ function renderLobby(){
   liste.forEach((j,i)=>{
     const row=document.createElement('div'); row.className='rangj';
     const marques=[];
-    if(j.uid===NET.hoteUid) marques.push('hôte');
-    if(j.uid===NET.uid) marques.push('toi');
+    if(j.uid===NET.hoteUid) marques.push(t('hote'));
+    if(j.uid===NET.uid) marques.push(t('toi'));
     row.innerHTML=avatar(i,j.nom)+
       '<span class="nomj">'+echap(j.nom)+
       '<span class="sousj">'+marques.join(' · ')+'</span></span>';
     if(NET.isHote&&j.uid!==NET.uid){
-      const b=document.createElement('button'); b.className='btn danger mini'; b.textContent='Retirer';
+      const b=document.createElement('button'); b.className='btn danger mini'; b.textContent=t('retirer');
       b.addEventListener('click',()=>NET.ref.child('joueurs/'+j.uid).remove());
       row.appendChild(b);
     }
@@ -939,7 +1151,7 @@ function renderLobby(){
   document.getElementById('lobby-compo').textContent=compoTexte(liste.length,RG);
   const err=validerComposition(liste.length,RG);
   document.getElementById('lobby-notice').textContent=
-    estH?(err||''):'En attente de l\'hôte pour lancer la partie…';
+    estH?(err||''):t('attente_hote_lance');
   const bl=document.getElementById('btn-lancer');
   bl.style.display=estH?'block':'none';
   bl.disabled=!!err;
@@ -951,25 +1163,25 @@ function montrer(pan){
   PANS.forEach(p=>{ document.getElementById(p).style.display=(p===pan)?'block':'none'; });
 }
 function texPhase(e){
-  if(e.ph==='roles') return '🎭 Distribution';
-  if(e.ph==='nuit') return '🌙 Nuit '+e.nuit;
-  if(e.ph==='jour') return '☀️ Jour '+e.nuit;
-  if(e.ph==='vote') return '🗳️ Vote';
-  if(e.ph==='crep') return '🌆 Crépuscule';
-  return '🏁 Fin';
+  if(e.ph==='roles') return t('ph_roles');
+  if(e.ph==='nuit') return t('ph_nuit',{n:e.nuit});
+  if(e.ph==='jour') return t('ph_jour',{n:e.nuit});
+  if(e.ph==='vote') return t('ph_vote');
+  if(e.ph==='crep') return t('ph_crep');
+  return t('ph_fin');
 }
 function carteHTML(){
   const m=moi();
-  if(!m) return '<div class="role-desc">Tu regardes la partie en spectateur.</div>';
+  if(!m) return '<div class="role-desc">'+t('carte_spect')+'</div>';
   const R=ROLES[m.role]||ROLES.civil;
   let extra='';
   if(m.role==='tueur'){
     const autres=G.etat.joueurs.filter((j,i)=>j.role==='tueur'&&i!==G.myIdx);
-    if(autres.length) extra='<div class="role-extra">Ton complice : '+echap(autres.map(j=>j.nom).join(', '))+' 🤝</div>';
+    if(autres.length) extra='<div class="role-extra">'+t('complice',{l:echap(autres.map(j=>j.nom).join(', '))})+'</div>';
   }
-  return '<div class="role-ic">'+R.ic+'</div><div class="role-nom">'+R.nom+'</div>'+
-    '<div class="role-desc">'+R.desc+'</div>'+extra+
-    (m.vif?'':'<div class="role-extra">💀 Tu es mort.</div>');
+  return '<div class="role-ic">'+R.ic+'</div><div class="role-nom">'+echap(nomRole(m.role))+'</div>'+
+    '<div class="role-desc">'+t('desc_'+m.role)+'</div>'+extra+
+    (m.vif?'':'<div class="role-extra">'+t('carte_mort')+'</div>');
 }
 function grilleJoueurs(contId,opts){
   const zone=document.getElementById(contId); zone.innerHTML='';
@@ -993,42 +1205,43 @@ function listeEtat(contId,revelerTout){
   const zone=document.getElementById(contId); zone.innerHTML='';
   G.etat.joueurs.forEach((j,i)=>{
     const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
-    let sous=j.vif?'en vie':'mort 💀';
-    if(!j.vif&&(revelerTout||RG.reveler)) sous='mort 💀 — '+ROLES[j.role].nom+' '+ROLES[j.role].ic;
-    if(revelerTout) sous=ROLES[j.role].nom+' '+ROLES[j.role].ic+(j.vif?'':' — mort 💀');
-    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+(i===G.myIdx?' (toi)':'')+
+    let sous=j.vif?t('en_vie'):t('mort_lbl');
+    if(!j.vif&&(revelerTout||RG.reveler)) sous=t('mort_lbl')+' — '+nomRole(j.role)+' '+ROLES[j.role].ic;
+    if(revelerTout) sous=nomRole(j.role)+' '+ROLES[j.role].ic+(j.vif?'':' — '+t('mort_lbl'));
+    row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+(i===G.myIdx?' ('+t('toi')+')':'')+
       '<span class="sousj">'+sous+'</span></span>';
     zone.appendChild(row);
   });
 }
 function rapportHTML(){
   const e=G.etat,m=moi(),r=e.res;
-  if(!m) return '<div class="role-desc">Spectateur — rien à lire.</div>';
+  if(!m) return '<div class="role-desc">'+t('rap_spect')+'</div>';
   /* les morts ne reçoivent JAMAIS d'info secrète — même le détective
      assassiné la nuit de son enquête n'emporte pas son résultat */
   if(!m.vif){
     if(r&&r.t==='nuit'&&r.mort===G.myIdx)
-      return '<div class="role-ic">🕯️</div><div class="role-desc">On t\'a assassiné cette nuit… Les morts ne parlent pas.</div>';
-    return '<div class="role-desc">Les morts ne rêvent pas. 💀</div>';
+      return '<div class="role-ic">🕯️</div><div class="role-desc">'+t('rap_assassine')+'</div>';
+    return '<div class="role-desc">'+t('rap_morts')+'</div>';
   }
-  if(!r||r.t!=='nuit') return '<div class="role-desc">Rien à signaler.</div>';
+  if(!r||r.t!=='nuit') return '<div class="role-desc">'+t('rap_rien')+'</div>';
   const ac=(G.actes['m'+e.m+'n'+e.nuit]||{})[m.uid];
   const nomDe=i=>(typeof i==='number'&&e.joueurs[i])?e.joueurs[i].nom:'—';
+  const gras=s=>'<b>'+echap(s)+'</b>';
   if(m.role==='detective'&&r.inspC>=0)
-    return '<div class="role-ic">🔍</div><div class="role-desc">Ton enquête sur <b>'+echap(nomDe(r.inspC))+'</b> :</div>'+
-      '<div class="role-nom">'+(r.inspR==='tueur'?'TUEUR 🔪':'INNOCENT 🌿')+'</div>';
+    return '<div class="role-ic">🔍</div><div class="role-desc">'+t('rap_enquete',{p:gras(nomDe(r.inspC))})+'</div>'+
+      '<div class="role-nom">'+(r.inspR==='tueur'?t('v_tueur'):t('v_innocent'))+'</div>';
   if(m.role==='tueur')
-    return '<div class="role-ic">🔪</div><div class="role-desc">Cible de la nuit : <b>'+echap(nomDe(typeof ac==='number'?ac:r.mort))+'</b>.<br>'+
-      (r.mort>=0?'Contrat rempli.':(r.sauve?'Le médecin a déjoué ton plan…':'La nuit fut calme.'))+'</div>';
+    return '<div class="role-ic">🔪</div><div class="role-desc">'+t('rap_cible',{p:gras(nomDe(typeof ac==='number'?ac:r.mort))})+'<br>'+
+      (r.mort>=0?t('contrat'):(r.sauve?t('dejoue'):t('nuit_fut_calme')))+'</div>';
   if(m.role==='medecin')
-    return '<div class="role-ic">💉</div><div class="role-desc">Tu as veillé sur <b>'+echap(nomDe(ac))+'</b>.<br>'+
-      (r.sauve&&typeof ac==='number'&&ac===e.prot?'Tu as sauvé une vie cette nuit ! ✨':'La nuit est passée.')+'</div>';
-  return '<div class="role-ic">🌙</div><div class="role-desc">Ton intuition de la nuit : <b>'+echap(nomDe(ac))+'</b>.<br>Garde-la pour toi…</div>';
+    return '<div class="role-ic">💉</div><div class="role-desc">'+t('rap_veille',{p:gras(nomDe(ac))})+'<br>'+
+      (r.sauve&&typeof ac==='number'&&ac===e.prot?t('vie_sauvee'):t('nuit_passee'))+'</div>';
+  return '<div class="role-ic">🌙</div><div class="role-desc">'+t('rap_intuition',{p:gras(nomDe(ac))})+'</div>';
 }
 /* écran d'attente : liste des retardataires + boutons de secours */
 function majAttente(manquants){
   document.getElementById('attente-manque').textContent=
-    manquants.length?('On attend : '+manquants.join(', ')):'';
+    manquants.length?t('on_attend',{l:manquants.join(', ')}):'';
   document.getElementById('btn-forcer').style.display=
     (NET.isHote&&manquants.length)?'block':'none';
   document.getElementById('btn-reprendre').style.display=
@@ -1036,7 +1249,7 @@ function majAttente(manquants){
 }
 function render(){
   if(!G.etat){ montrer('pan-attente');
-    document.getElementById('attente-txt').textContent='Connexion à la partie…';
+    document.getElementById('attente-txt').textContent=t('connexion_partie');
     document.getElementById('cpt-attente').textContent='';
     majAttente([]);
     return; }
@@ -1050,38 +1263,32 @@ function render(){
     const pr=G.prets[keyRoles()]||{};
     const n=e.joueurs.filter(j=>pr[j.uid]).length;
     const manq=e.joueurs.filter(j=>!pr[j.uid]).map(j=>j.nom);
-    document.getElementById('cpt-roles').textContent=n+'/'+e.joueurs.length+' ont vu leur rôle'+
-      (manq.length&&manq.length<e.joueurs.length?' — on attend : '+manq.join(', '):'');
+    document.getElementById('cpt-roles').textContent=t('cpt_roles',{n:n,t:e.joueurs.length})+
+      (manq.length&&manq.length<e.joueurs.length?' — '+t('on_attend',{l:manq.join(', ')}):'');
     document.getElementById('btn-pret').style.display=(G.myIdx!=null&&!pr[NET.uid])?'block':'none';
     document.getElementById('btn-forcer-roles').style.display=(NET.isHote&&manq.length&&manq.length<e.joueurs.length)?'block':'none';
   }else if(e.ph==='nuit'){
     const ac=G.actes[keyNuit()]||{};
     const viv=vivants(e.joueurs);
     const n=viv.filter(j=>typeof ac[j.uid]==='number').length;
-    const cpt=n+'/'+viv.length+' gestes de nuit accomplis';
+    const cpt=t('cpt_nuit',{n:n,t:viv.length});
     if(G.myIdx==null||!suisVif()||typeof ac[NET.uid]==='number'){
       montrer('pan-attente');
       document.getElementById('attente-ic').textContent='🌙';
       document.getElementById('attente-txt').textContent=
-        (G.myIdx==null)?'Tu regardes en spectateur…':
-        (suisVif()?'Ton geste est fait — la nuit suit son cours…':'La nuit suit son cours…');
+        (G.myIdx==null)?t('spect_att'):
+        (suisVif()?t('geste_fait'):t('attente_nuit'));
       document.getElementById('cpt-attente').textContent=cpt;
       majAttente(viv.filter(j=>typeof ac[j.uid]!=='number').map(j=>j.nom));
     }else{
       montrer('pan-nuit');
-      document.getElementById('nuit-titre').textContent='Nuit '+e.nuit+' — la médina s\'endort';
+      document.getElementById('nuit-titre').textContent=t('nuit_titre',{n:e.nuit});
       const m=moi();
-      const CONS={
-        tueur:'Choisis ta victime, en silence.',
-        medecin:'Qui protèges-tu cette nuit ?',
-        detective:'Qui veux-tu inspecter cette nuit ?',
-        civil:'Note ton intuition de la nuit — geste secret, sans effet.',
-      };
-      document.getElementById('nuit-consigne').textContent=CONS[m.role]||CONS.civil;
+      document.getElementById('nuit-consigne').textContent=t('cons_'+m.role)||t('cons_civil');
       grilleJoueurs('nuit-grille',{cle:'n'+e.m+'-'+e.nuit,
         refus:i=>{
-          if(i===G.myIdx&&m.role!=='medecin'){ toast('Pas toi-même — choisis quelqu\'un d\'autre','warn'); return true; }
-          if(m.role==='medecin'&&i===e.prot){ toast('Pas deux nuits de suite sur la même personne','warn'); return true; }
+          if(i===G.myIdx&&m.role!=='medecin'){ toast(t('pas_toi'),'warn'); return true; }
+          if(m.role==='medecin'&&i===e.prot){ toast(t('pas_2nuits'),'warn'); return true; }
           return false;
         }});
       document.getElementById('cpt-nuit').textContent=cpt;
@@ -1093,14 +1300,14 @@ function render(){
     const az=document.getElementById('jour-annonce');
     if(r.mort>=0){
       az.className='annonce rouge';
-      az.innerHTML='<span class="ic">💀</span><div class="gros">'+echap(e.joueurs[r.mort].nom)+' a été assassiné cette nuit</div>'+
-        (r.role?'<div class="det">C\'était… '+ROLES[r.role].nom+' '+ROLES[r.role].ic+'</div>':'<div class="det">Son rôle reste un mystère.</div>');
+      az.innerHTML='<span class="ic">💀</span><div class="gros">'+t('assassine',{p:echap(e.joueurs[r.mort].nom)})+'</div>'+
+        (r.role?'<div class="det">'+t('c_etait',{r:nomRole(r.role)+' '+ROLES[r.role].ic})+'</div>':'<div class="det">'+t('role_mystere')+'</div>');
     }else if(r.sauve){
       az.className='annonce';
-      az.innerHTML='<span class="ic">✨</span><div class="gros">Le médecin a sauvé une vie cette nuit !</div><div class="det">Personne n\'est mort.</div>';
+      az.innerHTML='<span class="ic">✨</span><div class="gros">'+t('sauve_annonce')+'</div><div class="det">'+t('personne_mort')+'</div>';
     }else{
       az.className='annonce';
-      az.innerHTML='<span class="ic">🕊️</span><div class="gros">Personne n\'est mort cette nuit</div>';
+      az.innerHTML='<span class="ic">🕊️</span><div class="gros">'+t('nuit_calme')+'</div>';
     }
     document.getElementById('carte-rapport-in').innerHTML=rapportHTML();
     listeEtat('jour-liste',false);
@@ -1109,13 +1316,13 @@ function render(){
     const vo=G.votes[keyVote()]||{};
     const viv=vivants(e.joueurs);
     const n=viv.filter(j=>typeof vo[j.uid]==='number').length;
-    const cpt=n+'/'+viv.length+' ont voté';
+    const cpt=t('cpt_vote',{n:n,t:viv.length});
     if(G.myIdx==null||!suisVif()||typeof vo[NET.uid]==='number'){
       montrer('pan-attente');
       document.getElementById('attente-ic').textContent='🗳️';
       document.getElementById('attente-txt').textContent=
-        (G.myIdx==null)?'Tu regardes en spectateur…':
-        (suisVif()?'Ton vote est enregistré — le village vote…':'Le village vote…');
+        (G.myIdx==null)?t('spect_att'):
+        (suisVif()?t('vote_fait'):t('vote_att'));
       document.getElementById('cpt-attente').textContent=cpt;
       majAttente(viv.filter(j=>typeof vo[j.uid]!=='number').map(j=>j.nom));
     }else{
@@ -1131,11 +1338,11 @@ function render(){
     const az=document.getElementById('crep-annonce');
     if(r.elimine>=0){
       az.className='annonce rouge';
-      az.innerHTML='<span class="ic">⚖️</span><div class="gros">Le village a éliminé '+echap(e.joueurs[r.elimine].nom)+'</div>'+
-        (r.role?'<div class="det">C\'était… '+ROLES[r.role].nom+' '+ROLES[r.role].ic+'</div>':'<div class="det">Son rôle reste un mystère.</div>');
+      az.innerHTML='<span class="ic">⚖️</span><div class="gros">'+t('elimine_annonce',{p:echap(e.joueurs[r.elimine].nom)})+'</div>'+
+        (r.role?'<div class="det">'+t('c_etait',{r:nomRole(r.role)+' '+ROLES[r.role].ic})+'</div>':'<div class="det">'+t('role_mystere')+'</div>');
     }else{
       az.className='annonce';
-      az.innerHTML='<span class="ic">🤝</span><div class="gros">Égalité — personne n\'est éliminé</div>';
+      az.innerHTML='<span class="ic">🤝</span><div class="gros">'+t('egalite')+'</div>';
     }
     const tz=document.getElementById('crep-tally'); tz.innerHTML='';
     const tally=r.tally||{};
@@ -1156,10 +1363,10 @@ function render(){
     const az=document.getElementById('fin-annonce');
     if(e.gagnant==='tueurs'){
       az.className='annonce rouge';
-      az.innerHTML='<span class="ic">🔪</span><div class="gros">La mafia a pris la médina…</div><div class="det">Les tueurs l\'emportent.</div>';
+      az.innerHTML='<span class="ic">🔪</span><div class="gros">'+t('mafia_gagne')+'</div><div class="det">'+t('mafia_det')+'</div>';
     }else{
       az.className='annonce';
-      az.innerHTML='<span class="ic">🎉</span><div class="gros">Le village a gagné !</div><div class="det">Tous les tueurs ont été démasqués.</div>';
+      az.innerHTML='<span class="ic">🎉</span><div class="gros">'+t('village_gagne')+'</div><div class="det">'+t('village_det')+'</div>';
     }
     listeEtat('fin-liste',true);
     document.getElementById('btn-rejouer').style.display=NET.isHote?'block':'none';
@@ -1174,8 +1381,8 @@ function ouvrirReprise(){
   G.etat.joueurs.forEach((j,i)=>{
     const row=document.createElement('div'); row.className='rangj'+(j.vif?'':' mort');
     row.innerHTML=avatar(i,j.nom)+'<span class="nomj">'+echap(j.nom)+
-      '<span class="sousj">'+(j.vif?'en vie':'mort 💀')+'</span></span>';
-    const b=document.createElement('button'); b.className='btn sombre mini'; b.textContent='C\'est moi';
+      '<span class="sousj">'+(j.vif?t('en_vie'):t('mort_lbl'))+'</span></span>';
+    const b=document.createElement('button'); b.className='btn sombre mini'; b.textContent=t('cest_moi');
     b.addEventListener('click',()=>reprendrePlace(i));
     row.appendChild(b);
     zone.appendChild(row);
@@ -1225,12 +1432,14 @@ function brancher(){
   document.getElementById('btn-aide').addEventListener('click',()=>showModal('modal-aide'));
   document.getElementById('btn-fermer-aide').addEventListener('click',hideModals);
   /* lobby */
+  document.getElementById('chip-fr').addEventListener('click',()=>setLangue('fr'));
+  document.getElementById('chip-ar').addEventListener('click',()=>setLangue('ar'));
   document.getElementById('btn-copier').addEventListener('click',()=>{
-    try{ navigator.clipboard.writeText(NET.code||''); toast('Code copié','ok'); }
+    try{ navigator.clipboard.writeText(NET.code||''); toast(t('copie_ok'),'ok'); }
     catch(e){ toast(NET.code||'','ok'); }
   });
   document.getElementById('btn-whatsapp').addEventListener('click',()=>{
-    const txt='Rejoins ma partie de Mafia 🎩 Code : '+NET.code+' — '+location.origin+location.pathname;
+    const txt=t('wa_txt',{c:NET.code,u:location.origin+location.pathname});
     window.open('https://wa.me/?text='+encodeURIComponent(txt));
   });
   document.getElementById('seg-tueurs').addEventListener('click',ev=>{
@@ -1249,7 +1458,7 @@ function brancher(){
   document.getElementById('btn-lancer').addEventListener('click',lancerPartie);
   document.getElementById('btn-quitter-lobby').addEventListener('click',()=>{
     document.getElementById('quitter-txt').textContent=
-      NET.isHote?'Tu es l\'hôte : quitter fermera le salon pour tout le monde.':'Tu vas quitter la salle d\'attente.';
+      NET.isHote?t('quit_lobby_hote'):t('quit_lobby');
     showModal('modal-quitter');
   });
   /* jeu */
@@ -1263,7 +1472,7 @@ function brancher(){
   document.getElementById('btn-vers-nuit').addEventListener('click',tomberNuit);
   document.getElementById('btn-rejouer').addEventListener('click',rejouer);
   document.getElementById('btn-quitter-fin').addEventListener('click',()=>{
-    document.getElementById('quitter-txt').textContent='Retour à l\'accueil.';
+    document.getElementById('quitter-txt').textContent=t('quit_accueil');
     showModal('modal-quitter');
   });
   document.getElementById('chip-carte').addEventListener('click',()=>{
@@ -1278,8 +1487,10 @@ function brancher(){
   });
   document.getElementById('btn-menu-aide').addEventListener('click',()=>showModal('modal-aide'));
   document.getElementById('btn-menu-reprendre').addEventListener('click',ouvrirReprise);
+  document.getElementById('btn-menu-fr').addEventListener('click',()=>{ setLangue('fr'); hideModals(); });
+  document.getElementById('btn-menu-ar').addEventListener('click',()=>{ setLangue('ar'); hideModals(); });
   document.getElementById('btn-menu-quitter').addEventListener('click',()=>{
-    document.getElementById('quitter-txt').textContent='Tu vas quitter la partie en cours. Tu pourras revenir avec le code '+(NET.code||'')+'.';
+    document.getElementById('quitter-txt').textContent=t('quit_partie',{c:NET.code||''});
     showModal('modal-quitter');
   });
   document.getElementById('btn-fermer-menu').addEventListener('click',hideModals);
@@ -1289,6 +1500,7 @@ function brancher(){
   bindSecret('carte-role');
   bindSecret('carte-rapport');
   bindSecret('carte-modal');
+  appliquerLangue();
 }
 brancher();
 </script>
