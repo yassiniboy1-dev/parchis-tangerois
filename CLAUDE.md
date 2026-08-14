@@ -1,4 +1,4 @@
-# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.3)
+# Parchís Tangérois — البارشيس الطنجاوي (v3.7) + Mafia (v1.4)
 
 Deux jeux pour Yassine, chacun en **un seul fichier** `index.html` (vanilla JS + CSS), déployés sur **Netlify**, multijoueur via **Firebase Realtime Database** (même projet pour les deux) :
 
@@ -137,7 +137,7 @@ Projet **parchissi-35156** (europe-west1), config déjà dans `index.html`. Règ
 
 ---
 
-# Mafia — مافيا (v1.3, `mafia/index.html`)
+# Mafia — مافيا (v1.4, `mafia/index.html`)
 
 Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la même pièce**, chacun son téléphone, débats à voix haute. 4 à 12 joueurs, en ligne uniquement (pas de mode local, pas d'IA). Choix validés avec Yassine le 14/08/2026.
 
@@ -157,6 +157,7 @@ Jeu de salon multi-téléphones (type Loup-Garou) : **tout le monde dans la mêm
 ## Discrétion (conventions impératives du jeu)
 
 - Thème **très sombre** (« noir tangérois »), textes tamisés — jamais de gros rôle en clair à l'écran.
+- **Visuels (v1.4)** : fond d'accueil assombri par dégradé (`#scr-accueil`, var `--fond-accueil`), illustrations des cartes de rôles dans `ART` (visibles seulement carte tenue), favicon/apple-touch PNG. Page totale ~255 Ko.
 - **Code de partie choisi par l'hôte (v1.3)** : champ optionnel à la création (`in-code-perso`, `codeValide` = 3–8 lettres/chiffres A-Z0-9). Code pris et actif → erreur ; partie périmée (>48 h) au même code → écrasée ; champ vide → `codeAleatoire()`. Rejoindre accepte 3–8 caractères.
 - **Bilingue français/arabe (v1.2)** : choix PAR TÉLÉPHONE (`mf_lang`, jamais synchronisé), bascule à l'accueil et dans le menu ⋯. Dictionnaire `I18N` + `t(clé,{vars})` ; statique via `data-i18n`/`data-i18n-html`/`data-i18n-ph` (appliquerLangue), dynamique via `t()`. Arabe = `dir=rtl` sur `<html>` (les champs code restent `ltr`). Le test de parité des clés FR/AR casse si une traduction manque.
 - Toute info secrète passe par `.secret` + `bindSecret` : visible **seulement en maintenant le doigt**, se recache au relâchement.
@@ -193,7 +194,7 @@ Même base RTDB, même nœud : `parties/{CODE}` avec **`jeu:'mafia'`** (les règ
 
 ## Backlog Mafia (à discuter avec Yassine)
 
-1. Illustrations **Nano Banana Pro** (clé Gemini de Yassine, jamais dans le dépôt) : fond d'accueil « médina la nuit », cartes de rôles, icône — style noir tangérois validé.
+1. ~~Illustrations Nano Banana Pro~~ — fait (v1.4) : fond d'accueil, icône, 4 cartes de rôles (`gemini-3-pro-image`, sources dans `visuels/mafia-*.png`, prompts dans `visuels/README.md`, inlinés en WebP ~80 Ko). La clé Gemini reste hors dépôt.
 2. Sons discrets de rythme de nuit (optionnels, coupables).
 3. Minuteur de débats optionnel.
 4. Rôles bonus (à valider) : sorcière, maire…

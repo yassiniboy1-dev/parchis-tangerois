@@ -77,3 +77,8 @@ Fresh teal-green radial background (#2fb express... use #2fbd77 to #1d8a4a) with
 Leave the bottom fifth of the image calm and simple for a label overlay.
 Absolutely NO text, NO letters, NO numbers anywhere — chat bubbles must be empty shapes. No watermark.
 ```
+
+## Visuels Mafia (v1.4, Nano Banana Pro — `gemini-3-pro-image`)
+
+`mafia-fond.png` (fond d'accueil 9:16), `mafia-icone.png` (icône 1:1, coins arrondis blancs rognés de 11 % à l'intégration), `mafia-tueur/medecin/detective/civil.png` (cartes 3:2 ; le tueur avait un cadre blanc, rogné automatiquement + marge 2 %).
+Style commun des prompts : « 1950s film noir illustration of Tangier, deep indigo/near-black palette, warm amber lantern light as the only accent, no text ». Intégrés dans `mafia/index.html` en WebP 640-720 px q70 (~80 Ko au total) : fond via `--fond-accueil` (bloc `<style id="art">`), cartes via `const ART`, favicon/apple-touch en PNG.
