@@ -269,7 +269,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
 <!-- ======================= ACCUEIL ======================= -->
 <section class="ecran on" id="scr-accueil">
-  <div class="entete"><span class="chip" id="chip-ver">v2.2</span><span class="pousse"></span>
+  <div class="entete"><span class="chip" id="chip-ver">v2.3</span><span class="pousse"></span>
     <span class="chip btnc" id="chip-fr">Français</span>
     <span class="chip btnc" id="chip-ar">العربية</span>
   </div>
@@ -482,7 +482,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v2.2
+   MAFIA — مافيا  v2.3
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -1860,30 +1860,51 @@ function majMinuteur(){
 setInterval(majMinuteur,1000);
 
 /* voix pré-enregistrée du narrateur (ElevenLabs, mafia/voix/) : même clé et
-   même variante que le texte affiché ; repli sur la synthèse du téléphone */
-function narrerVoix(e){
-  const paire=cleNarrative(e), k=paire[0];
-  if(!k) return;
-  const txt=narratifPour(e);
+   même variante que le texte affiché. Lecture par élément <audio> (joue même
+   iPhone en silencieux, marche en PWA), repli Web Audio, repli synthèse. */
+function jouerVoixBuffer(fichier,secours){
   try{
-    if(!SONS.ctx||typeof fetch==='undefined'){ parler(txt); return; }
-    const L=(NARR[LANGUE]&&NARR[LANGUE][k])||NARR.fr[k]||[];
-    const idx=L.length?((e.m*131+e.nuit*17+k.length*7)%L.length):0;
-    const fichier='voix/'+LANGUE+'_'+k+'_'+idx+'.mp3';
+    if(!SONS.ctx||typeof fetch==='undefined'){ parler(secours); return; }
     const cle='vx:'+fichier;
     const joue=buf=>{
       try{
         const c=SONS.ctx,s=c.createBufferSource(),g=c.createGain();
         s.buffer=buf; g.gain.value=0.9;
         s.connect(g); g.connect(c.destination); s.start();
-      }catch(err){ parler(txt); }
+      }catch(err){ parler(secours); }
     };
     if(SONS.buf[cle]){ joue(SONS.buf[cle]); return; }
     fetch(fichier).then(r=>{ if(!r.ok) throw new Error('absent'); return r.arrayBuffer(); })
       .then(ab=>SONS.ctx.decodeAudioData(ab))
       .then(buf=>{ SONS.buf[cle]=buf; joue(buf); })
-      .catch(()=>parler(txt));
-  }catch(err){ parler(txt); }
+      .catch(()=>parler(secours));
+  }catch(err){ parler(secours); }
+}
+function jouerVoixURL(fichier,secours){
+  try{
+    if(typeof Audio!=='undefined'){
+      if(!VOIX.el){
+        VOIX.el=new Audio();
+        VOIX.el.setAttribute('playsinline','');
+        VOIX.el.preload='auto';
+      }
+      VOIX.el.onerror=function(){ jouerVoixBuffer(fichier,secours); };
+      VOIX.el.src=fichier;
+      VOIX.el.volume=1;
+      const pr=VOIX.el.play();
+      if(pr&&pr.catch) pr.catch(function(){ jouerVoixBuffer(fichier,secours); });
+      return;
+    }
+  }catch(err){}
+  jouerVoixBuffer(fichier,secours);
+}
+function narrerVoix(e){
+  const paire=cleNarrative(e), k=paire[0];
+  if(!k) return;
+  const txt=narratifPour(e);
+  const L=(NARR[LANGUE]&&NARR[LANGUE][k])||NARR.fr[k]||[];
+  const idx=L.length?((e.m*131+e.nuit*17+k.length*7)%L.length):0;
+  jouerVoixURL('voix/'+LANGUE+'_'+k+'_'+idx+'.mp3',txt);
 }
 /* une lecture par CHANGEMENT de phase — jamais en arrivant en cours */
 function narrerPhase(){
@@ -2100,8 +2121,12 @@ function brancher(){
     VOIX.actif=!VOIX.actif;
     lsSet('mf_voix',VOIX.actif?'1':'0');
     document.getElementById('btn-menu-voix').textContent=t(VOIX.actif?'voix_on':'voix_off');
-    if(VOIX.actif) parler(t('voix_test'));
-    else{ try{ speechSynthesis.cancel(); }catch(e){} }
+    reveilAudio();
+    if(VOIX.actif) jouerVoixURL('voix/'+LANGUE+'_n_roles_0.mp3',t('voix_test'));
+    else{
+      try{ if(VOIX.el){ VOIX.el.pause(); } }catch(e){}
+      try{ speechSynthesis.cancel(); }catch(e){}
+    }
   });
   document.getElementById('btn-menu-sons').addEventListener('click',()=>{
     SONS.actif=!SONS.actif;
