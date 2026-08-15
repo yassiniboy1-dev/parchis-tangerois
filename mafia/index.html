@@ -269,9 +269,10 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
 <!-- ======================= ACCUEIL ======================= -->
 <section class="ecran on" id="scr-accueil">
-  <div class="entete"><span class="chip" id="chip-ver">v2.3</span><span class="pousse"></span>
+  <div class="entete"><span class="chip" id="chip-ver">v2.4</span><span class="pousse"></span>
     <span class="chip btnc" id="chip-fr">Français</span>
     <span class="chip btnc" id="chip-ar">العربية</span>
+    <span class="chip btnc" id="chip-menu-acc">⚙️</span>
   </div>
   <div style="height:4dvh"></div>
   <div class="logo">MAFIA</div>
@@ -297,6 +298,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 
 <!-- ======================= LOBBY ======================= -->
 <section class="ecran" id="scr-lobby">
+  <div class="entete"><span class="pousse"></span><span class="chip btnc" id="chip-menu-lobby">⚙️</span></div>
   <h2 class="titre" data-i18n="lobby_titre">Salle d'attente</h2>
   <p class="sous" data-i18n="lobby_sous">Partage ce code — dès 4 joueurs, l'hôte lance la partie</p>
   <div class="panneau marge">
@@ -462,6 +464,13 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
   <button class="btn sombre" id="btn-ann-quitter" data-i18n="rester">Rester</button>
 </div></div>
 
+<div class="modal" id="modal-voixprop"><div class="box">
+  <h3 data-i18n="voix_prop_t">🗣️ Narrateur vocal</h3>
+  <p data-i18n="voix_prop_p">Une voix grave peut raconter la partie : la nuit qui tombe, les morts, les votes. Conseil : active-la sur UN seul téléphone, posé au milieu de la table.</p>
+  <button class="btn" id="btn-voix-oui" data-i18n="voix_activer">Activer sur ce téléphone</button>
+  <button class="btn sombre" id="btn-voix-non" data-i18n="plus_tard">Plus tard</button>
+</div></div>
+
 <div class="modal" id="modal-avatar"><div class="box">
   <h3 data-i18n="avatar_t">Choisis ton avatar</h3>
   <div class="grille-av" id="grille-av"></div>
@@ -482,7 +491,7 @@ h2.titre{font-family:'Marcellus',Georgia,serif;font-size:22px;color:#d9cba6;text
 <script>
 'use strict';
 /* ==========================================================
-   MAFIA — مافيا  v2.3
+   MAFIA — مافيا  v2.4
    Jeu de salon multi-téléphones (Firebase RTDB), même base
    de données que le Parchís Tangérois (nœud parties/, champ
    jeu:'mafia' pour distinguer les deux jeux).
@@ -601,6 +610,9 @@ fr:{
   d_sauve:"✨ sauvé par le médecin", d_calme:"🕊️ personne", d_egalite:"🤝 égalité",
   intuition_ligne:"{p} suspectait : {l}",
   avatar_t:"Choisis ton avatar", avatar_touche:"touche pour choisir ton avatar",
+  voix_prop_t:"🗣️ Narrateur vocal",
+  voix_prop_p:"Une voix grave peut raconter la partie : la nuit qui tombe, les morts, les votes. Conseil : active-la sur UN seul téléphone, posé au milieu de la table.",
+  voix_activer:"Activer sur ce téléphone", plus_tard:"Plus tard",
 },
 ar:{
   slogan:"قاتل يجول في المدينة… لعبة جماعية لـ 4 إلى 12 هاتفا",
@@ -694,6 +706,9 @@ ar:{
   d_sauve:"✨ أنقذه الطبيب", d_calme:"🕊️ لا أحد", d_egalite:"🤝 تعادل",
   intuition_ligne:"{p} كان يشك في: {l}",
   avatar_t:"اختر صورتك", avatar_touche:"المس لاختيار صورتك",
+  voix_prop_t:"🗣️ الراوي الصوتي",
+  voix_prop_p:"صوت عميق يمكنه أن يروي اللعبة: الليل، الموتى، التصويت. نصيحة: فعله على هاتف واحد فقط موضوع وسط الطاولة.",
+  voix_activer:"تفعيل على هذا الهاتف", plus_tard:"لاحقا",
 },
 };
 let LANGUE=(lsGet('mf_lang')==='ar')?'ar':'fr';
@@ -948,6 +963,11 @@ function traiterPartie(snap){
     if(p.statut==='lobby'){
       NET.reprisePropose=false;
       showEcran('scr-lobby'); renderLobby();
+      /* première fois hôte : proposer le narrateur vocal (un téléphone au milieu) */
+      if(NET.isHote&&!NET.voixPropose&&lsGet('mf_voix_vu')!=='1'){
+        NET.voixPropose=true;
+        showModal('modal-voixprop');
+      }
     }else{
       if(!document.getElementById('scr-game').classList.contains('on')){
         showEcran('scr-game'); garderEcran();
@@ -1298,7 +1318,7 @@ function showEcran(id){
 }
 function showModal(id){ hideModals(); document.getElementById(id).classList.add('on'); }
 function hideModals(){
-  ['modal-aide','modal-carte','modal-menu','modal-quitter','modal-reprise','modal-avatar'].forEach(m=>{
+  ['modal-aide','modal-carte','modal-menu','modal-quitter','modal-reprise','modal-avatar','modal-voixprop'].forEach(m=>{
     document.getElementById(m).classList.remove('on');
   });
 }
@@ -2110,13 +2130,17 @@ function brancher(){
     showModal('modal-carte');
   });
   document.getElementById('btn-fermer-carte').addEventListener('click',hideModals);
-  document.getElementById('chip-menu').addEventListener('click',()=>{
+  const ouvrirMenu=()=>{
     document.getElementById('btn-menu-reprendre').style.display=
       (G.myIdx==null&&NET.statut==='jeu')?'block':'none';
+    document.getElementById('btn-menu-quitter').style.display=NET.on?'block':'none';
     document.getElementById('btn-menu-sons').textContent=t(SONS.actif?'sons_on':'sons_off');
     document.getElementById('btn-menu-voix').textContent=t(VOIX.actif?'voix_on':'voix_off');
     showModal('modal-menu');
-  });
+  };
+  document.getElementById('chip-menu').addEventListener('click',ouvrirMenu);
+  document.getElementById('chip-menu-acc').addEventListener('click',ouvrirMenu);
+  document.getElementById('chip-menu-lobby').addEventListener('click',ouvrirMenu);
   document.getElementById('btn-menu-voix').addEventListener('click',()=>{
     VOIX.actif=!VOIX.actif;
     lsSet('mf_voix',VOIX.actif?'1':'0');
@@ -2148,6 +2172,17 @@ function brancher(){
   document.getElementById('btn-ann-quitter').addEventListener('click',hideModals);
   document.getElementById('btn-fermer-reprise').addEventListener('click',hideModals);
   document.getElementById('btn-fermer-avatar').addEventListener('click',hideModals);
+  document.getElementById('btn-voix-oui').addEventListener('click',()=>{
+    lsSet('mf_voix_vu','1');
+    VOIX.actif=true; lsSet('mf_voix','1');
+    reveilAudio();
+    hideModals();
+    jouerVoixURL('voix/'+LANGUE+'_n_roles_0.mp3',t('voix_test'));
+  });
+  document.getElementById('btn-voix-non').addEventListener('click',()=>{
+    lsSet('mf_voix_vu','1');
+    hideModals();
+  });
   bindSecret('carte-role');
   bindSecret('carte-rapport');
   bindSecret('carte-modal');
