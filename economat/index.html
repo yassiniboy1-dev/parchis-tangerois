@@ -1405,7 +1405,7 @@ async function importSales(file, posId) {
       const buf = await file.arrayBuffer();
       let texte = new TextDecoder().decode(buf);
       /* export Excel FR fréquent en Windows-1252 : repli si l'UTF-8 a produit des caractères de remplacement */
-      if (texte.includes("�")) { try { texte = new TextDecoder("windows-1252").decode(buf); } catch (e) {} }
+      if (texte.includes(String.fromCharCode(0xFFFD))) { try { texte = new TextDecoder("windows-1252").decode(buf); } catch (e) {} }
       rows = parseCSV(texte);
     } else {
       if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne sait pas lire les .xlsx — exporte le fichier en CSV depuis la caisse.");
