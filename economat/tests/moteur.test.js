@@ -20,6 +20,7 @@ const EXPOSER = `;globalThis.API = {
   csvCell, groupByCat, delProduit, delPos,
   levenshtein, suggererAssociation, analyserVeille, veilleAssocier, construireDigest,
   importChoisir, getImportEnAttente: () => importEnAttente,
+  genererCodeLiaison, appliquerVentesLiaison, retirerPendingJour, liaisonEtatHTML,
   confirmer: () => { const cb = confirmCb; fermerModals(); if (cb) cb(); },
   getS: () => S, setS: (x) => { S = x; },
   mkDate: (y, m, d, h, mi) => new Date(y, m, d, h || 0, mi || 0),
@@ -337,6 +338,61 @@ function fixtureXlsx(compresser, d1904) {
   let renduN = true;
   try { A.render(); } catch (e) { renduN = false; }
   ok(renduN, 'l\'app démarre après une sauvegarde contenant des éléments invalides');
+
+  console.log('— liaison caisse (Elyx) —');
+  {
+    const c1 = A.genererCodeLiaison(), c2 = A.genererCodeLiaison();
+    ok(/^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(c1) && !/[ILO01]/.test(c1), 'code de liaison au format XXXX-XXXX-XXXX-XXXX, sans caractères ambigus');
+    ok(c1 !== c2, 'deux codes générés diffèrent');
+
+    const S0 = A.etatVierge();
+    S0.produits = [{ id: 'p_cafe', kind: 'produit', name: 'Café noir', prix: '12', fabrique: false, rendement: '1', recipe: [] }];
+    S0.pos = [{ id: 'pos_vue', name: 'La Vue' }, { id: 'pos_rare', name: 'Rare' }];
+    S0.liaison = { code: 'TEST-TEST-TEST-TEST', creele: 1, vus: {}, dernierSync: 0, dernierRecu: 0 };
+    S0.salesByDay = { '2026-03-10': { pos_vue: { ancien: 5 } } };
+    A.setS(S0);
+    let r = A.appliquerVentesLiaison({
+      pos_vue: {
+        '2026-03-10': { t: 1000, src: 'a.csv', lignes: [{ n: 'CAFE NOIR', q: 3 }, { n: 'MYSTERE 33CL', q: 2 }] },
+        'nimporte-quoi': { t: 1000, lignes: [{ n: 'CAFE NOIR', q: 9 }] },
+      },
+      pos_fantome: { '2026-03-11': { t: 1000, lignes: [{ n: 'CAFE NOIR', q: 4 }] } },
+    });
+    let Sx = A.getS();
+    ok(r.jours === 1 && r.inconnus === 1, 'liaison : un jour appliqué, un nom inconnu compté');
+    ok(Sx.salesByDay['2026-03-10'].pos_vue.p_cafe === 3 && Sx.salesByDay['2026-03-10'].pos_vue.ancien === undefined, 'le jour reçu REMPLACE le jour existant (la caisse fait foi)');
+    ok(Sx.pendingRows.pos_vue && Sx.pendingRows.pos_vue['MYSTERE 33CL'] && Sx.pendingRows.pos_vue['MYSTERE 33CL'][0].qty === 2, 'nom de caisse inconnu envoyé dans la file à associer');
+    ok(!Sx.salesByDay['nimporte-quoi'] && !Sx.salesByDay['2026-03-11'], 'clés de jour invalides et adresses inconnues ignorées');
+    ok(Sx.dateFrom === '2026-03-10' && Sx.dateTo === '2026-03-10', 'période étendue au jour reçu');
+    ok(Sx.liaison.vus['pos_vue|2026-03-10'] === 1000 && Sx.liaison.dernierRecu === 1000, 'horodatage de la caisse retenu (vus + dernierRecu)');
+
+    r = A.appliquerVentesLiaison({ pos_vue: { '2026-03-10': { t: 1000, src: 'a.csv', lignes: [{ n: 'CAFE NOIR', q: 99 }] } } });
+    ok(r.jours === 0 && A.getS().salesByDay['2026-03-10'].pos_vue.p_cafe === 3, 'même horodatage → redite ignorée');
+    r = A.appliquerVentesLiaison({ pos_vue: { '2026-03-10': { t: 2000, src: 'a.csv', lignes: [{ n: 'CAFE NOIR', q: 7 }] } } });
+    ok(r.jours === 1 && A.getS().salesByDay['2026-03-10'].pos_vue.p_cafe === 7, 'horodatage plus récent → jour remplacé');
+    ok(!A.getS().pendingRows.pos_vue || !A.getS().pendingRows.pos_vue['MYSTERE 33CL'], 'la file à associer du jour remplacé est nettoyée (retirerPendingJour)');
+
+    Sx = A.getS(); Sx.nameMap['mystere 33cl'] = 'p_cafe'; A.setS(Sx);
+    A.appliquerVentesLiaison({ pos_vue: { '2026-03-12': { t: 3000, lignes: [{ n: 'MYSTERE 33CL', q: 5 }] } } });
+    ok(A.getS().salesByDay['2026-03-12'].pos_vue.p_cafe === 5, 'les associations mémorisées (nameMap) s\'appliquent aux ventes de la caisse');
+
+    A.appliquerVentesLiaison({ pos_vue: { '2026-03-13': { t: 4000, lignes: [{ n: '__proto__', q: 2 }] } } });
+    const pend = A.getS().pendingRows.pos_vue;
+    ok(Object.prototype.hasOwnProperty.call(pend, '__proto__') && Array.isArray(pend['__proto__']), 'nom de caisse « __proto__ » rangé comme propriété propre, sans polluer les prototypes');
+
+    /* le veilleur signale une liaison silencieuse */
+    Sx = A.getS(); Sx.liaison.dernierRecu = Date.now() - 72 * 3600 * 1000; Sx.liaison.creele = 1; A.setS(Sx);
+    ok(A.analyserVeille().some((a) => a.cle.indexOf('liaison:') === 0 && a.titre.includes('rien envoyé')), 'veilleur : caisse silencieuse depuis 3 jours signalée');
+    Sx.liaison.dernierRecu = Date.now(); A.setS(Sx);
+    ok(!A.analyserVeille().some((a) => a.cle.indexOf('liaison:') === 0), 'veilleur : pas d\'alerte quand la caisse vient d\'envoyer');
+
+    /* assainissement d'une liaison corrompue */
+    A.setS(Object.assign(A.etatVierge(), { liaison: { code: 'ABCD-EFGH-JKMN-PQRS', vus: [] } })); A.assainirEtat();
+    ok(A.getS().liaison && typeof A.getS().liaison.vus === 'object' && !Array.isArray(A.getS().liaison.vus), 'assainirEtat répare un vus corrompu');
+    A.setS(Object.assign(A.etatVierge(), { liaison: { pas: 'de code' } })); A.assainirEtat();
+    ok(A.getS().liaison === null, 'assainirEtat retire une liaison sans code');
+    ok(typeof A.liaisonEtatHTML() === 'string', 'liaisonEtatHTML ne casse pas sans liaison');
+  }
 
   /* persistance via localStorage simulé */
   const store = {};

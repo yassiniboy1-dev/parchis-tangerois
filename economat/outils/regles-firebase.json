@@ -1,0 +1,14 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "parties": {
+      ".read": true,
+      ".indexOn": ["creele"],
+      "$code": { ".write": true }
+    },
+    "economat": {
+      "$code": { ".read": true, ".write": true }
+    }
+  }
+}

@@ -110,6 +110,7 @@ select.fld{cursor:pointer}
 .stat .v{font-family:'Work Sans',system-ui,sans-serif;font-size:21px;font-weight:600;margin-top:3px}
 .stat .u{font-size:12px;color:var(--soft);font-weight:500}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.liaison-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:17px;font-weight:700;letter-spacing:2px;color:var(--ink);background:var(--panel);border:1px dashed var(--saf);border-radius:10px;padding:10px 14px;text-align:center;user-select:all;-webkit-user-select:all;overflow-wrap:anywhere}
 .b-good{background:var(--vgood);color:var(--green)}.b-bad{background:var(--vbad);color:var(--red)}.b-warn{background:var(--vwarn);color:var(--safd)}
 .flagb{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--safd);background:var(--vwarn);border:1px solid #F1C99E;border-radius:6px;padding:1px 7px;white-space:nowrap}
 .vbtn{appearance:none;font-size:11px;font-weight:600;color:#0a7d33;background:#E8F6EC;border:1px solid #B8E2C4;border-radius:6px;padding:8px 12px;min-height:36px;cursor:pointer;font-family:'Work Sans',system-ui,sans-serif}
@@ -234,7 +235,7 @@ select.fld{cursor:pointer}
         <p id="brand-sub">La Vue · Rare — food cost &amp; labo</p>
       </div>
     </div>
-    <span class="verchip">v4.1</span>
+    <span class="verchip">v4.2</span>
   </div>
   <div class="tabs" id="tabs" style="display:none"></div>
   <main id="vue"></main>
@@ -279,7 +280,7 @@ select.fld{cursor:pointer}
 <script>
 'use strict';
 /* ============================================================
-   Économat Pro v4.1 — La Vue · Rare (Tanger)
+   Économat Pro v4.2 — La Vue · Rare (Tanger)
    Un seul fichier. Aucune dépendance. Données sur l'appareil.
    ============================================================ */
 
@@ -585,6 +586,24 @@ function analyserVeille() {
     });
   });
 
+  /* 9. liaison caisse silencieuse : le pont est peut-être fermé ou l'export Elyx arrêté */
+  if (S.liaison) {
+    const ref = Math.max(num(S.liaison.dernierRecu), num(S.liaison.creele));
+    const heures = ref ? (Date.now() - ref) / 3600000 : 0;
+    if (heures > 48) {
+      const joursSil = Math.floor(heures / 24);
+      const dejaRecu = num(S.liaison.dernierRecu) > 0;
+      alertes.push({
+        cle: "liaison:" + (dejaRecu ? "silence:" + joursSil : "vide:" + joursSil),
+        niveau: "attention",
+        titre: dejaRecu ? `La caisse n'a rien envoyé depuis ${joursSil} jours` : "La liaison caisse n'a encore rien reçu",
+        detail: dejaRecu
+          ? "Le pont Elyx est peut-être fermé sur le PC de la caisse, ou le dossier d'export a changé. Vérifie que la page pont-elyx est ouverte et que l'export programmé d'Elyx tourne toujours."
+          : "Ouvre pont-elyx.html sur le PC de la caisse avec ton code de liaison, et vérifie que les règles Firebase sont publiées — guide dans Réglages.",
+      });
+    }
+  }
+
   return alertes;
 }
 
@@ -793,7 +812,7 @@ function etatVierge() {
     v: 4, matieres: [], produits: [], pos: DEFAULT_POS.map((p) => ({ ...p })),
     sales: {}, recu: {}, reel: {}, salesByDay: {}, nameMap: {}, pendingRows: {},
     period: "", dateFrom: "", dateTo: "", cmpEco: false, objectifFC: 30, entered: false,
-    veilleVu: {}, copilote: null
+    veilleVu: {}, copilote: null, liaison: null
   };
 }
 let S = etatVierge();
@@ -817,6 +836,8 @@ function assainirEtat() {
     if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = {};
   });
   if (S.copilote && typeof S.copilote !== "object") S.copilote = null;
+  if (S.liaison && (typeof S.liaison !== "object" || Array.isArray(S.liaison) || !S.liaison.code)) S.liaison = null;
+  if (S.liaison && (!S.liaison.vus || typeof S.liaison.vus !== "object" || Array.isArray(S.liaison.vus))) S.liaison.vus = {};
   if (!(num(S.objectifFC) > 0 && num(S.objectifFC) < 100)) S.objectifFC = 30;
 }
 const ecrireEtat = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) { stockageOK = false; } };
@@ -1749,6 +1770,23 @@ function vueReglages() {
   </div>
 
   <div class="card">
+    <h2 class="h">🔌 Liaison caisse (Elyx)</h2>
+    ${S.liaison ? `
+    <p class="sub">Les ventes envoyées par la caisse arrivent toutes seules (à l'ouverture de l'app, puis toutes les 5 minutes). Chaque journée reçue <b>remplace</b> ce que l'app avait pour ce jour et cette adresse : la caisse fait foi. Les noms de caisse inconnus passent par la file « à associer » habituelle.</p>
+    <div class="liaison-code">${esc(S.liaison.code)}</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-sm" data-act="liaison-copier">Copier le code</button>
+      <button class="btn btn-sm btn-p" data-act="liaison-sync">Synchroniser maintenant</button>
+      <button class="btn btn-sm btn-d" data-act="liaison-couper">Couper la liaison</button>
+    </div>
+    <div id="liaison-etat" style="margin-top:10px">${liaisonEtatHTML()}</div>
+    <p class="sub" style="margin-top:10px">Mise en route (une seule fois, sur le PC de chaque caisse) : ouvre la page <b>pont-elyx.html</b> dans Chrome ou Edge, colle ce code, choisis l'adresse (La Vue ou Rare) et montre-lui le dossier où Elyx dépose ses exports (modules Exporter / Scheduler, fichiers CSV ou Excel). Le pont surveille le dossier et envoie les nouveautés automatiquement. Ce code est un secret : ne le partage qu'avec tes caisses.</p>`
+  : `
+    <p class="sub">Relie l'app au système de caisse <b>Elyx</b> des deux restaurants : Elyx dépose ses exports de ventes dans un dossier, une petite page « pont » ouverte sur le PC de la caisse les envoie ici (via Firebase), et les ventes apparaissent toutes seules — plus d'import manuel. Active la liaison pour obtenir ton code secret, puis suis le guide affiché.</p>
+    <button class="btn btn-p" data-act="liaison-activer">Activer la liaison</button>`}
+  </div>
+
+  <div class="card">
     <h2 class="h">🤖 Copilote Claude (option)</h2>
     <p class="sub">Avec une clé API Anthropic, un bouton « Analyser la période » apparaît sur la synthèse : Claude lit le résumé chiffré (CA, food cost, top produits, alertes du veilleur — jamais tes fichiers) et rédige un diagnostic avec des recommandations. Clé à créer sur <b>console.anthropic.com</b> (facturé à l'usage par Anthropic, quelques centimes par analyse). La clé reste sur cet appareil et n'est <b>jamais incluse dans les sauvegardes</b>.</p>
     ${lireCleApi()
@@ -1764,7 +1802,7 @@ function vueReglages() {
 
   <div class="card">
     <h2 class="h">À propos</h2>
-    <p class="sub" style="margin:0">Économat Pro v4.1 — application autonome, sans compte ni serveur : tout est calculé et enregistré sur ton appareil. Ajoute-la à l'écran d'accueil de l'iPhone (Partager → « Sur l'écran d'accueil ») pour l'utiliser comme une app.</p>
+    <p class="sub" style="margin:0">Économat Pro v4.2 — application autonome, sans compte ni serveur : tout est calculé et enregistré sur ton appareil. Ajoute-la à l'écran d'accueil de l'iPhone (Partager → « Sur l'écran d'accueil ») pour l'utiliser comme une app.</p>
   </div>`;
 }
 
@@ -1900,6 +1938,153 @@ function veilleAssocier(posId) {
     S.pendingRows = d.pendingRows; S.salesByDay = d.salesByDay; S.nameMap = d.nameMap;
     S.dateFrom = d.dateFrom; S.dateTo = d.dateTo;
   });
+}
+
+/* ---------- liaison caisse (Elyx via Firebase) ---------- */
+/* La caisse ne parle pas directement à l'app : le pont (pont-elyx.html, sur le PC de la caisse)
+   dépose les ventes agrégées par jour dans Firebase sous economat/{code}, et l'app vient les lire.
+   Le code de liaison est le seul secret : long, aléatoire, jamais deviné. */
+const LIAISON_BASE = "https://parchissi-35156-default-rtdb.europe-west1.firebasedatabase.app/economat/";
+let liaisonBusy = false, liaisonInfo = null;
+function genererCodeLiaison() {
+  const ALPH = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; /* sans I, L, O, 0 ni 1, trop faciles à confondre */
+  const n = ALPH.length, plafond = n * Math.floor(256 / n);
+  const tirer = () => {
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const b = new Uint8Array(1);
+      do { crypto.getRandomValues(b); } while (b[0] >= plafond); /* échantillonnage par rejet : pas de biais */
+      return ALPH[b[0] % n];
+    }
+    return ALPH[Math.floor(Math.random() * n)];
+  };
+  const g = () => tirer() + tirer() + tirer() + tirer();
+  return g() + "-" + g() + "-" + g() + "-" + g();
+}
+function retirerPendingJour(posId, day) {
+  const pend = S.pendingRows[posId]; if (!pend) return;
+  Object.keys(pend).forEach((nm2) => {
+    const reste = (Array.isArray(pend[nm2]) ? pend[nm2] : []).filter((e) => e && e.day !== day);
+    if (reste.length) poserCle(pend, nm2, reste); else delete pend[nm2];
+  });
+}
+/* applique l'arbre ventes/{posId}/{jour} reçu de Firebase.
+   Chaque jour reçu REMPLACE ce que l'app avait pour ce jour et cette adresse (la caisse fait foi),
+   et n'est appliqué qu'une fois par horodatage (S.liaison.vus). */
+function appliquerVentesLiaison(data) {
+  if (!S.liaison || !data || typeof data !== "object") return { jours: 0, inconnus: 0 };
+  const byId = getById();
+  const prodByName = Object.create(null); S.produits.forEach((p) => { if (p.name) prodByName[normN(p.name)] = p.id; });
+  let jours = 0; const inconnus = new Set();
+  S.pos.forEach((P) => {
+    const noeud = Object.prototype.hasOwnProperty.call(data, P.id) ? data[P.id] : null;
+    if (!noeud || typeof noeud !== "object") return;
+    Object.keys(noeud).forEach((day) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+      const entree = noeud[day];
+      if (!entree || typeof entree !== "object" || !Array.isArray(entree.lignes)) return;
+      const t = num(entree.t) || 0;
+      const cle = P.id + "|" + day;
+      const vu = Object.prototype.hasOwnProperty.call(S.liaison.vus, cle) ? num(S.liaison.vus[cle]) : 0;
+      if (t && vu >= t) return;
+      retirerPendingJour(P.id, day);
+      S.salesByDay[day] = S.salesByDay[day] || {};
+      S.salesByDay[day][P.id] = {};
+      entree.lignes.forEach((l) => {
+        if (!l || typeof l !== "object") return;
+        const pname = String(l.n || "").trim(); const qty = num(l.q);
+        if (!pname || !qty) return;
+        const mappe = Object.prototype.hasOwnProperty.call(S.nameMap, normN(pname)) ? S.nameMap[normN(pname)] : null;
+        const pid = prodByName[normN(pname)] || (mappe && byId[mappe] ? mappe : null);
+        if (!pid) {
+          inconnus.add(pname);
+          S.pendingRows[P.id] = S.pendingRows[P.id] || {};
+          const avant = Object.prototype.hasOwnProperty.call(S.pendingRows[P.id], pname) ? S.pendingRows[P.id][pname] : [];
+          poserCle(S.pendingRows[P.id], pname, [...avant, { day, qty }]);
+          return;
+        }
+        S.salesByDay[day][P.id][pid] = num(S.salesByDay[day][P.id][pid]) + qty;
+      });
+      poserCle(S.liaison.vus, cle, t || Date.now());
+      if (!S.dateFrom || day < S.dateFrom) S.dateFrom = day;
+      if (!S.dateTo || day > S.dateTo) S.dateTo = day;
+      if (t > num(S.liaison.dernierRecu)) S.liaison.dernierRecu = t;
+      jours++;
+    });
+  });
+  return { jours, inconnus: inconnus.size };
+}
+const liaisonURL = (chemin) => LIAISON_BASE + S.liaison.code + chemin + ".json";
+async function synchroniserLiaison(silencieux) {
+  if (!S.liaison || liaisonBusy || typeof fetch === "undefined") return;
+  liaisonBusy = true;
+  majLiaisonEtat("Synchronisation…");
+  try {
+    /* la configuration (liste des adresses) est re-poussée à chaque synchro : le pont la lit */
+    const posMap = {}; S.pos.forEach((P) => { posMap[P.id] = P.name || "(adresse)"; });
+    const rc = await fetch(liaisonURL("/config"), { method: "PUT", body: JSON.stringify({ v: 1, creele: num(S.liaison.creele) || Date.now(), pos: posMap }) });
+    if (rc.status === 401 || rc.status === 403) throw new Error("REGLES");
+    if (!rc.ok) throw new Error("HTTP " + rc.status);
+    const rv = await fetch(liaisonURL("/ventes"));
+    if (rv.status === 401 || rv.status === 403) throw new Error("REGLES");
+    if (!rv.ok) throw new Error("HTTP " + rv.status);
+    const data = await rv.json();
+    const res = appliquerVentesLiaison(data || {});
+    S.liaison.dernierSync = Date.now();
+    liaisonInfo = { ok: true };
+    save();
+    if (res.jours) {
+      toast(`Caisse synchronisée : ${res.jours} jour(s) mis à jour${res.inconnus ? `, ${res.inconnus} nom(s) à associer` : ""}.`);
+      if (saisieEnCours()) majLiaisonEtat(); else render();
+    } else {
+      if (!silencieux) toast("Caisse synchronisée — rien de nouveau.");
+      majLiaisonEtat();
+    }
+  } catch (e) {
+    liaisonInfo = { error: (e && e.message === "REGLES")
+      ? "Firebase a refusé l'accès : les règles de la base ne sont pas encore publiées (vois le guide sous le code)."
+      : "Synchronisation impossible (hors ligne ?). Nouvelle tentative au prochain passage sur l'app." };
+    if (!silencieux) toast("Liaison caisse : " + liaisonInfo.error);
+    majLiaisonEtat();
+  }
+  liaisonBusy = false;
+}
+const saisieEnCours = () => { try { const a = document.activeElement; return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")); } catch (e) { return false; } };
+const fmtQuand = (ts) => { if (!num(ts)) return "—"; const d = new Date(num(ts)); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} à ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+function liaisonEtatHTML() {
+  if (!S.liaison) return "";
+  const m = [];
+  if (liaisonInfo && liaisonInfo.error) m.push(`<span class="badge b-bad">⚠ ${esc(liaisonInfo.error)}</span>`);
+  else if (num(S.liaison.dernierSync)) m.push(`<span class="badge b-good">Dernière synchro : ${esc(fmtQuand(S.liaison.dernierSync))} ✓</span>`);
+  else m.push(`<span class="badge b-warn">Pas encore synchronisé</span>`);
+  const nb = Object.keys(S.liaison.vus || {}).length;
+  if (nb) m.push(`<span class="tag">${nb} journée(s) reçue(s) — dernier envoi de la caisse : ${esc(fmtQuand(S.liaison.dernierRecu))}</span>`);
+  else m.push(`<span class="tag">La caisse n'a encore rien envoyé.</span>`);
+  return m.join(" ");
+}
+function majLiaisonEtat(txt) {
+  const el = $("liaison-etat");
+  if (el) el.innerHTML = txt ? `<span class="tag">${esc(txt)}</span>` : liaisonEtatHTML();
+}
+function activerLiaison() {
+  if (S.liaison) return;
+  S.liaison = { code: genererCodeLiaison(), creele: Date.now(), vus: {}, dernierSync: 0, dernierRecu: 0 };
+  liaisonInfo = null;
+  save(); render();
+  synchroniserLiaison(true); /* pousse la configuration tout de suite et vérifie l'accès */
+}
+function couperLiaison() {
+  if (!S.liaison) return;
+  demanderConfirm("Couper la liaison caisse ?", "Le pont de la caisse ne pourra plus envoyer les ventes avec ce code (les journées déjà reçues restent dans l'app). Tu pourras réactiver la liaison plus tard — avec un nouveau code à ressaisir sur la caisse.", "Couper", () => {
+    const url = LIAISON_BASE + S.liaison.code + ".json";
+    S.liaison = null; liaisonInfo = null;
+    save(); render();
+    if (typeof fetch !== "undefined") { try { fetch(url, { method: "DELETE" }); } catch (e) {} } /* nettoyage, sans garantie */
+  });
+}
+async function copierCodeLiaison() {
+  if (!S.liaison) return;
+  try { await navigator.clipboard.writeText(S.liaison.code); toast("Code copié."); }
+  catch (e) { toast("Copie impossible sur ce navigateur — recopie le code à la main."); }
 }
 
 /* ---------- exports & sauvegarde ---------- */
@@ -2188,6 +2373,10 @@ function onClick(e) {
     if (v) { ecrireCleApi(v); toast("Clé enregistrée — le copilote est disponible sur la synthèse."); render(); }
   }
   else if (act === "copilote-cle-del") { ecrireCleApi(""); toast("Clé retirée."); render(); }
+  else if (act === "liaison-activer") activerLiaison();
+  else if (act === "liaison-sync") synchroniserLiaison(false);
+  else if (act === "liaison-couper") couperLiaison();
+  else if (act === "liaison-copier") copierCodeLiaison();
 }
 function onInput(e) {
   const t = e.target; if (!t || !t.dataset) return;
@@ -2307,6 +2496,10 @@ function bindGlobal() {
     if (typeof window.scrollTo === "function") window.scrollTo(0, 0);
   });
   if (window.addEventListener) window.addEventListener("resize", debounce(() => { if (tab === "synthese") render(); }, 300));
+  /* liaison caisse : resynchroniser quand on revient sur l'app (réveil iPhone, changement d'onglet) */
+  const resyncLiaison = debounce(() => { if (S.liaison) synchroniserLiaison(true); }, 800);
+  if (window.addEventListener) window.addEventListener("focus", resyncLiaison);
+  if (document.addEventListener) document.addEventListener("visibilitychange", () => { try { if (document.visibilityState === "visible") resyncLiaison(); } catch (e) {} });
   const lie = (id, fn) => { const el = $(id); if (el && el.addEventListener) el.addEventListener("click", fn); };
   lie("mc-non", fermerModals);
   lie("mc-oui", () => { const cb = confirmCb; fermerModals(); if (cb) cb(); });
@@ -2331,6 +2524,8 @@ function boot() {
   bindGlobal();
   render();
   if (!stockageOK) toast("Stockage local indisponible — pense à exporter une sauvegarde (Réglages).");
+  if (S.liaison) synchroniserLiaison(true);
+  setInterval(() => { if (S.liaison) synchroniserLiaison(true); }, 5 * 60 * 1000);
 }
 boot();
 

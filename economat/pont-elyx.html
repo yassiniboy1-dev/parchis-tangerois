@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pont Elyx → Économat Pro</title>
+<style>
+:root{--paper:#FAF4EA;--panel:#F3EAD9;--card:#FFFDF8;--ink:#241C16;--soft:#7A6B5A;--line:#E7DAC4;
+--saf:#C2570F;--safd:#9C440B;--green:#2F7D5B;--red:#B23A2E;--vgood:#E6F1EB;--vbad:#F7E6E3;--vwarn:#FCE9D6}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:22px 16px 60px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:24px;letter-spacing:-.3px}
+h1 small{display:block;font-size:13px;font-weight:500;color:var(--soft);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px;box-shadow:0 1px 2px rgba(36,28,22,.05)}
+.h{font-size:16px;margin-bottom:6px}
+.sub{font-size:13px;color:var(--soft);margin-bottom:10px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fld{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 11px;min-height:38px}
+.fld:focus{outline:2px solid var(--saf);outline-offset:-1px}
+.btn{font:inherit;font-weight:600;min-height:38px;padding:8px 15px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;touch-action:manipulation}
+.btn:hover{border-color:var(--saf)}
+.btn-p{background:var(--saf);border-color:var(--saf);color:#fff}.btn-p:hover{background:var(--safd)}
+.btn-d{color:var(--red);border-color:#EAD3CF}.btn-d:hover{background:var(--vbad);border-color:var(--red)}
+.btn:disabled{opacity:.45;cursor:default}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.b-good{background:var(--vgood);color:var(--green)}.b-bad{background:var(--vbad);color:var(--red)}.b-warn{background:var(--vwarn);color:var(--safd)}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px}
+.etape{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--saf);color:#fff;font-size:13px;font-weight:700;margin-right:8px;flex:none}
+.depot{display:block;border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--soft);font-size:13px;margin-top:8px;cursor:pointer}
+.depot.sur{border-color:var(--saf);background:var(--vwarn);color:var(--safd)}
+#journal{list-style:none;max-height:340px;overflow-y:auto;font-size:13px}
+#journal li{padding:5px 2px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+#journal li.err{color:var(--red)}
+#journal li.ok{color:var(--green)}
+.jt{color:var(--soft);font-variant-numeric:tabular-nums;margin-right:8px}
+select.fld{min-width:160px}
+.masque{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pont Elyx → Économat Pro
+    <small>À laisser ouvert sur le PC de la caisse : il surveille le dossier d'export d'Elyx et envoie les ventes à l'app.</small>
+  </h1>
+
+  <div class="card">
+    <h2 class="h"><span class="etape">1</span>Code de liaison</h2>
+    <p class="sub">Le code s'obtient dans <b>Économat Pro → Réglages → Liaison caisse</b> (bouton « Activer la liaison »). L'app doit avoir synchronisé au moins une fois pour que le code soit reconnu ici.</p>
+    <div class="row" id="bloc-code">
+      <input class="fld code" id="in-code" style="flex:1 1 240px" placeholder="ABCD-EFGH-JKMN-PQRS" autocomplete="off" spellcheck="false">
+      <button class="btn btn-p" id="bt-connecter">Se connecter</button>
+    </div>
+    <div class="row masque" id="bloc-connecte">
+      <span class="badge b-good">Connecté ✓</span>
+      <span class="code" id="code-affiche"></span>
+      <label for="sel-pos" style="font-size:13px;color:var(--soft)">Cette caisse est :</label>
+      <select class="fld" id="sel-pos"></select>
+      <button class="btn" id="bt-changer">Changer de code</button>
+    </div>
+    <p class="sub" id="msg-code" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card">
+    <h2 class="h"><span class="etape">2</span>Dossier des exports Elyx</h2>
+    <p class="sub">Dans Elyx, programme un export des ventes (modules <b>Exporter</b> / <b>Scheduler</b>) vers un dossier du PC, en CSV ou Excel, avec au minimum les colonnes <b>date</b>, <b>désignation</b> et <b>quantité</b>. Montre ce dossier au pont : il le relit régulièrement et n'envoie que les nouveautés. Fonctionne dans <b>Chrome</b> ou <b>Edge</b>.</p>
+    <div class="row">
+      <button class="btn btn-p" id="bt-dossier">Choisir le dossier…</button>
+      <button class="btn masque" id="bt-reprendre"></button>
+      <span id="nom-dossier" class="badge b-warn">Aucun dossier surveillé</span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label for="sel-freq" style="font-size:13px;color:var(--soft)">Vérifier le dossier :</label>
+      <select class="fld" id="sel-freq">
+        <option value="60000">toutes les minutes</option>
+        <option value="300000" selected>toutes les 5 minutes</option>
+        <option value="900000">tous les quarts d'heure</option>
+      </select>
+      <button class="btn" id="bt-analyser">Analyser maintenant</button>
+    </div>
+    <p class="sub" id="msg-dossier" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card">
+    <h2 class="h">Dépôt manuel (secours)</h2>
+    <p class="sub">Si le navigateur ne sait pas surveiller un dossier, ou pour envoyer un fichier ponctuel : glisse les fichiers d'export ici (ou clique). Même format, même traitement.</p>
+    <label class="depot" id="zone-depot">Glisser les fichiers CSV / Excel ici — ou cliquer pour choisir
+      <input type="file" id="in-fichiers" multiple accept=".csv,.xlsx,.xls" style="display:none">
+    </label>
+  </div>
+
+  <div class="card">
+    <h2 class="h">Journal</h2>
+    <p class="sub"><span id="stat-envois" class="badge b-warn">Aucun envoi pour l'instant</span></p>
+    <ul id="journal"></ul>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   Pont Elyx → Économat Pro (v4.2)
+   Tourne sur le PC de la caisse. Lit les exports d'Elyx
+   (CSV/XLSX), agrège les ventes par journée de travail et les
+   dépose dans Firebase sous economat/{code de liaison}.
+   Les parseurs sont ceux d'Économat Pro (index.html), copiés
+   à l'identique — toute correction doit être reportée ici.
+   ============================================================ */
+
+/* ---------- aides (copiées d'index.html) ---------- */
+const num = (x) => { const n = parseFloat(String(x ?? "").replace(",", ".")); return isFinite(n) ? n : 0; };
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const normN = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const fmtLocalD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const DAY_START = 6; /* journée de travail 6h → 4h : la nuit est rattachée à la veille */
+const bizDayKey = (d) => { const x = new Date(d.getTime()); x.setHours(x.getHours() - DAY_START); return fmtLocalD(x); };
+function parseDT(dVal, tVal) {
+  if (dVal instanceof Date && !isNaN(dVal)) {
+    const ts = (tVal != null) ? String(tVal) : "";
+    const mt = ts.match(/(\d{1,2}):(\d{2})/);
+    if (mt) { const x = new Date(dVal.getTime()); x.setHours(+mt[1], +mt[2], 0, 0); return x; }
+    return dVal;
+  }
+  const str = String(dVal || "").trim(); if (!str) return null;
+  let y, mo, da, hh = 0, mi = 0;
+  const ymd = str.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  const dmy = str.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (ymd) { y = +ymd[1]; mo = +ymd[2]; da = +ymd[3]; }
+  else if (dmy) { da = +dmy[1]; mo = +dmy[2]; y = +dmy[3]; if (y < 100) y += 2000; }
+  else { const d = new Date(str); return isNaN(d) ? null : d; }
+  const tsrc = (tVal != null && String(tVal).trim()) ? String(tVal) : str;
+  const mt = tsrc.match(/(\d{1,2}):(\d{2})/);
+  if (mt) { hh = +mt[1]; mi = +mt[2]; }
+  else { hh = 12; mi = 0; } /* date sans heure → midi : la vente reste sur le jour indiqué */
+  const d2 = new Date(y, mo - 1, da, hh, mi);
+  /* aller-retour vérifié : rejette 05/26/2025 (format US) et 31/04 au lieu de déborder en silence */
+  return (d2.getMonth() === mo - 1 && d2.getDate() === da) ? d2 : null;
+}
+const pickCol = (keys, pats) => keys.find((k) => pats.some((p) => normN(k).includes(p)));
+
+/* ---------- lecture CSV (copiée d'index.html) ---------- */
+function parseCSV(text) {
+  text = String(text || "");
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const firstLine = (text.match(/^[^\r\n]*/) || [""])[0];
+  let delim = ",";
+  let best = -1;
+  [";", ",", "\t"].forEach((d) => {
+    let cnt = 0, inQ = false;
+    for (let i = 0; i < firstLine.length; i++) {
+      const c = firstLine[i];
+      if (c === '"') inQ = !inQ;
+      else if (c === d && !inQ) cnt++;
+    }
+    if (cnt > best) { best = cnt; delim = d; }
+  });
+  const rows = []; let row = [], cell = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+      else cell += c;
+    } else if (c === '"') inQ = true;
+    else if (c === delim) { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      row = [];
+    } else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); if (row.length > 1 || row[0] !== "") rows.push(row); }
+  if (!rows.length) return [];
+  const head = rows[0].map((hh, i) => String(hh || "").trim() || ("COL" + (i + 1)));
+  return rows.slice(1).map((r) => { const o = {}; head.forEach((hh, i) => { o[hh] = r[i] !== undefined ? r[i] : ""; }); return o; });
+}
+
+/* ---------- lecture XLSX (zip + XML, copiée d'index.html) ---------- */
+async function inflateRaw(u8) {
+  const st = new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+async function lireZip(buf) {
+  const u8 = new Uint8Array(buf); const dv = new DataView(buf);
+  if (u8.length >= 4 && dv.getUint32(0, true) === 0xE011CFD0)
+    throw new Error("classeur .xls ancien format (Excel 97-2003) : dans Elyx, choisis un export .xlsx ou CSV.");
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 22 - 65535); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("Ce fichier n'est pas un classeur Excel valide (.xlsx).");
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const files = {};
+  for (let k = 0; k < count; k++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off + 10, true);
+    const csize = dv.getUint32(off + 20, true);
+    const nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+    const lho = dv.getUint32(off + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(off + 46, off + 46 + nlen));
+    files[name] = { method, csize, lho };
+    off += 46 + nlen + elen + clen;
+  }
+  const lire = async (name) => {
+    const f = files[name]; if (!f) return null;
+    const p = f.lho;
+    const n2 = dv.getUint16(p + 26, true), e2 = dv.getUint16(p + 28, true);
+    const data = u8.subarray(p + 30 + n2 + e2, p + 30 + n2 + e2 + f.csize);
+    const raw = f.method === 0 ? data : await inflateRaw(data);
+    return new TextDecoder().decode(raw);
+  };
+  return { noms: Object.keys(files), lire };
+}
+const decXML = (s) => String(s || "")
+  .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
+  .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+function colIndex(ref) {
+  let n = 0;
+  for (let i = 0; i < ref.length; i++) {
+    const c = ref.charCodeAt(i);
+    if (c >= 65 && c <= 90) n = n * 26 + (c - 64); else break;
+  }
+  return n - 1;
+}
+function estFormatDate(code) {
+  const c = String(code || "").replace(/"[^"]*"/g, "").replace(/\[[^\]]*\]/g, "").replace(/\\./g, "");
+  return /[dmyhs]/i.test(c) && !/[0#?]/.test(c.replace(/[dmyhsAMP\/\-:., ]/gi, ""));
+}
+function serialVersDate(serial, d1904) {
+  const jours = Math.floor(serial);
+  const frac = serial - jours;
+  const d = d1904 ? new Date(1904, 0, 1) : new Date(1899, 11, 30);
+  d.setDate(d.getDate() + jours);
+  const mins = Math.round(frac * 1440);
+  if (mins > 0) d.setMinutes(d.getMinutes() + mins);
+  else d.setHours(12); /* date Excel sans heure → midi (voir parseDT) */
+  return d;
+}
+async function lireXlsx(buf) {
+  const zip = await lireZip(buf);
+  let sheetPath = "xl/worksheets/sheet1.xml";
+  const wb = await zip.lire("xl/workbook.xml");
+  const d1904 = !!(wb && /<workbookPr\b[^>]*date1904="(?:1|true)"/.test(wb));
+  if (wb) {
+    const m = wb.match(/<sheet\b[^>]*r:id="(rId\d+)"/);
+    const rels = await zip.lire("xl/_rels/workbook.xml.rels");
+    if (m && rels) {
+      const rm = rels.match(new RegExp('<Relationship\\b[^>]*Id="' + m[1] + '"[^>]*Target="([^"]+)"')) ||
+        rels.match(new RegExp('<Relationship\\b[^>]*Target="([^"]+)"[^>]*Id="' + m[1] + '"'));
+      if (rm) sheetPath = ("xl/" + rm[1].replace(/^\//, "").replace(/^xl\//, "")).replace(/^xl\/xl\//, "xl/");
+    }
+  }
+  let sx = await zip.lire(sheetPath);
+  if (!sx) { const alt = zip.noms.find((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)); if (alt) sx = await zip.lire(alt); }
+  if (!sx) throw new Error("Feuille de calcul introuvable dans le classeur.");
+  const shared = [];
+  const ss = await zip.lire("xl/sharedStrings.xml");
+  if (ss) {
+    const re = /<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g; let m;
+    while ((m = re.exec(ss))) {
+      let txt = ""; const rt = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let t;
+      while ((t = rt.exec(m[1]))) txt += decXML(t[1]);
+      shared.push(txt);
+    }
+  }
+  const dateStyles = new Set();
+  const st = await zip.lire("xl/styles.xml");
+  if (st) {
+    const custom = {};
+    const rf = /<numFmt\b[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g; let m;
+    while ((m = rf.exec(st))) custom[+m[1]] = decXML(m[2]);
+    const cx = st.match(/<cellXfs[^>]*>([\s\S]*?)<\/cellXfs>/);
+    if (cx) {
+      const rx = /<xf\b[^>]*>/g; let i = 0, x;
+      while ((x = rx.exec(cx[1]))) {
+        const idm = x[0].match(/numFmtId="(\d+)"/);
+        const id = idm ? +idm[1] : 0;
+        const builtin = (id >= 14 && id <= 22) || (id >= 45 && id <= 47) || (id >= 27 && id <= 36) || (id >= 50 && id <= 58);
+        if (builtin || (custom[id] !== undefined && estFormatDate(custom[id]))) dateStyles.add(i);
+        i++;
+      }
+    }
+  }
+  const grid = [];
+  const rr = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g;
+  let rowM, rowN = -1;
+  while ((rowM = rr.exec(sx))) {
+    const ra = rowM[1].match(/\br="(\d+)"/);
+    rowN = ra ? +ra[1] - 1 : rowN + 1;
+    let col = -1;
+    const rc = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let c;
+    while ((c = rc.exec(rowM[2] || ""))) {
+      const attrs = c[1], body = c[2] || "";
+      const rm = attrs.match(/\br="([A-Z]+)(\d+)"/);
+      col = rm ? colIndex(rm[1]) : col + 1;
+      const tm = attrs.match(/\bt="([^"]+)"/); const type = tm ? tm[1] : "n";
+      const sm = attrs.match(/\bs="(\d+)"/); const styl = sm ? +sm[1] : -1;
+      let val = "";
+      const vm = body.match(/<v[^>]*>([\s\S]*?)<\/v>/);
+      if (type === "inlineStr") {
+        const it = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let t;
+        while ((t = it.exec(body))) val += decXML(t[1]);
+      } else if (vm) {
+        if (type === "s") val = shared[+vm[1]] !== undefined ? shared[+vm[1]] : "";
+        else if (type === "str" || type === "e" || type === "d") val = decXML(vm[1]); /* t="d" : date ISO → parseDT sait la lire */
+        else if (type === "b") val = vm[1] === "1" ? "VRAI" : "FAUX";
+        else {
+          const nv = parseFloat(vm[1]);
+          val = (isFinite(nv) && dateStyles.has(styl)) ? serialVersDate(nv, d1904) : (isFinite(nv) ? nv : decXML(vm[1]));
+        }
+      }
+      (grid[rowN] = grid[rowN] || [])[col] = val;
+    }
+  }
+  const first = grid.findIndex((r) => r && r.some((v) => v !== "" && v !== undefined));
+  if (first < 0) return [];
+  const head = (grid[first] || []).map((hh, i) => String(hh || "").trim() || ("COL" + (i + 1)));
+  const out = [];
+  for (let r = first + 1; r < grid.length; r++) {
+    const src = grid[r]; if (!src) continue;
+    const o = {}; let vide = true;
+    head.forEach((hh, i) => {
+      const v = src[i] !== undefined ? src[i] : "";
+      if (v !== "") vide = false;
+      o[hh] = v;
+    });
+    if (!vide) out.push(o);
+  }
+  return out;
+}
+
+/* ---------- agrégation & plan d'envoi (pur, testé par tests/pont.test.js) ---------- */
+/* lignes brutes → { jours: { "2026-08-16": { "NOM CAISSE": qté } }, lignes, ignorees } */
+function agregerLignes(rows) {
+  if (!rows || !rows.length) return { jours: Object.create(null), lignes: 0, ignorees: 0 };
+  const keys = Object.keys(rows[0]);
+  const cDate = pickCol(keys, ["date", "jour", "datetime"]);
+  const cTime = pickCol(keys, ["heure", "time"]);
+  const cProd = pickCol(keys, ["produit", "designation", "article", "libell", "name", "item"]);
+  const cQty = pickCol(keys, ["quantite", "qte", "qty", "quant", "vendu", "nombre"]);
+  if (!cDate || !cProd || !cQty)
+    throw new Error("Colonnes non reconnues (" + keys.join(", ") + ") : il faut au minimum une date, un produit et une quantité.");
+  const jours = Object.create(null);
+  let lignes = 0, ignorees = 0;
+  rows.forEach((row) => {
+    const dt = parseDT(row[cDate], cTime ? row[cTime] : null);
+    const pname = String(row[cProd] || "").trim();
+    const qty = num(row[cQty]);
+    if (!dt || !pname || !qty) { ignorees++; return; }
+    lignes++;
+    const day = bizDayKey(dt);
+    const j = jours[day] || (jours[day] = Object.create(null));
+    j[pname] = (j[pname] || 0) + qty;
+  });
+  return { jours, lignes, ignorees };
+}
+/* { nom: qté } → [{ n, q }] trié par nom : sérialisation stable pour l'empreinte */
+function lignesTriees(parNom) {
+  return Object.keys(parNom).sort().map((n) => ({ n, q: parNom[n] }));
+}
+/* fichiers = [{ nom, mtime, jours }] → { jour: { lignes, src } }.
+   Si deux fichiers contiennent le même jour, le fichier le plus récent gagne. */
+function combinerFichiers(fichiers) {
+  const combines = Object.create(null);
+  [...fichiers].sort((a, b) => a.mtime - b.mtime).forEach((f) => {
+    Object.keys(f.jours).forEach((day) => {
+      combines[day] = { lignes: lignesTriees(f.jours[day]), src: f.nom };
+    });
+  });
+  return combines;
+}
+/* n'envoie que les jours dont le contenu a changé depuis le dernier envoi réussi */
+function planifierEnvois(combines, dejaEnvoye) {
+  const envois = [];
+  Object.keys(combines).forEach((day) => {
+    const fp = JSON.stringify(combines[day].lignes);
+    if (dejaEnvoye[day] !== fp) envois.push({ day, lignes: combines[day].lignes, src: combines[day].src, fp });
+  });
+  return envois.sort((a, b) => (a.day < b.day ? -1 : 1));
+}
+
+/* ---------- état & rangement local ---------- */
+const BASE = "https://parchissi-35156-default-rtdb.europe-west1.firebasedatabase.app/economat/";
+const ETAT = { code: "", config: null, posId: "", dossier: null, minuterie: null, occupe: false };
+const cacheFichiers = Object.create(null); /* nom → { emp, jours, erreur } */
+const lsGet = (k) => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const lsSet = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
+const cleEnvoye = () => "pontElyx:envoye:" + ETAT.code + ":" + ETAT.posId;
+function lireEnvoye() { try { const d = JSON.parse(lsGet(cleEnvoye()) || "{}"); return (d && typeof d === "object" && !Array.isArray(d)) ? d : {}; } catch (e) { return {}; } }
+function ecrireEnvoye(d) { lsSet(cleEnvoye(), JSON.stringify(d)); }
+
+/* poignée du dossier surveillé, gardée dans IndexedDB pour survivre au rechargement */
+function idb() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open("pont-elyx", 1);
+    rq.onupgradeneeded = () => { rq.result.createObjectStore("poignees"); };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function garderPoignee(h) {
+  try { const db = await idb(); const tx = db.transaction("poignees", "readwrite"); tx.objectStore("poignees").put(h, "dossier"); } catch (e) {}
+}
+async function relirePoignee() {
+  try {
+    const db = await idb();
+    return await new Promise((res) => {
+      const rq = db.transaction("poignees").objectStore("poignees").get("dossier");
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror = () => res(null);
+    });
+  } catch (e) { return null; }
+}
+
+/* ---------- journal ---------- */
+const $ = (id) => document.getElementById(id);
+function journal(txt, classe) {
+  const ul = $("journal"); if (!ul || !ul.insertBefore) return;
+  const li = document.createElement("li");
+  if (classe) li.className = classe;
+  const d = new Date();
+  li.innerHTML = `<span class="jt">${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}</span>${esc(txt)}`;
+  ul.insertBefore(li, ul.firstChild);
+  while (ul.children.length > 200) ul.removeChild(ul.lastChild);
+}
+function majStatEnvois() {
+  const el = $("stat-envois"); if (!el) return;
+  const n = Object.keys(lireEnvoye()).length;
+  if (n) { el.className = "badge b-good"; el.textContent = `${n} journée(s) envoyée(s) — dernier envoi : ${lsGet("pontElyx:dernier") || "—"}`; }
+  else { el.className = "badge b-warn"; el.textContent = "Aucun envoi pour l'instant"; }
+}
+
+/* ---------- lecture d'un fichier (CSV ou Excel) ---------- */
+async function lireFichier(file) {
+  const nm = (file.name || "").toLowerCase();
+  if (nm.endsWith(".csv") || file.type === "text/csv") {
+    const buf = await file.arrayBuffer();
+    let texte = new TextDecoder().decode(buf);
+    /* export Excel FR fréquent en Windows-1252 : repli si l'UTF-8 a produit des caractères de remplacement */
+    if (texte.includes(String.fromCharCode(0xFFFD))) { try { texte = new TextDecoder("windows-1252").decode(buf); } catch (e) {} }
+    return parseCSV(texte);
+  }
+  if (typeof DecompressionStream === "undefined") throw new Error("Ce navigateur ne sait pas lire les .xlsx — utilise Chrome ou Edge, ou un export CSV.");
+  return lireXlsx(await file.arrayBuffer());
+}
+
+/* ---------- envoi vers Firebase ---------- */
+async function pousserEnvois(envois) {
+  if (!envois.length) return 0;
+  const envoye = lireEnvoye();
+  let n = 0;
+  for (const e of envois) {
+    const rep = await fetch(BASE + ETAT.code + "/ventes/" + ETAT.posId + "/" + e.day + ".json", {
+      method: "PUT",
+      body: JSON.stringify({ t: Date.now(), src: e.src, lignes: e.lignes }),
+    });
+    if (rep.status === 401 || rep.status === 403) throw new Error("REGLES");
+    if (!rep.ok) throw new Error("HTTP " + rep.status);
+    envoye[e.day] = e.fp; ecrireEnvoye(envoye);
+    const total = e.lignes.reduce((s, l) => s + num(l.q), 0);
+    journal(`Envoyé : ${e.day} — ${e.lignes.length} produit(s), ${total} vente(s) (${e.src}).`, "ok");
+    n++;
+  }
+  const d = new Date();
+  lsSet("pontElyx:dernier", `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} à ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+  majStatEnvois();
+  return n;
+}
+function messageErreur(e) {
+  return (e && e.message === "REGLES")
+    ? "Firebase a refusé l'accès : les règles de la base ne sont pas publiées (guide : economat/outils/regles-firebase.json) ou le code est erroné."
+    : String((e && e.message) || e);
+}
+
+/* ---------- surveillance du dossier ---------- */
+async function analyserDossier(manuel) {
+  if (!ETAT.dossier || ETAT.occupe) return;
+  if (!ETAT.code || !ETAT.posId) { if (manuel) journal("Connecte d'abord le code de liaison et choisis l'adresse (étape 1).", "err"); return; }
+  ETAT.occupe = true;
+  try {
+    const perm = await ETAT.dossier.queryPermission({ mode: "read" });
+    if (perm !== "granted") { montrerReprise(ETAT.dossier); ETAT.occupe = false; return; }
+    const fichiers = [];
+    let nouveaux = 0;
+    for await (const entree of ETAT.dossier.values()) {
+      if (entree.kind !== "file") continue;
+      const nm = entree.name.toLowerCase();
+      if (!nm.endsWith(".csv") && !nm.endsWith(".xlsx") && !nm.endsWith(".xls")) continue;
+      let file;
+      try { file = await entree.getFile(); } catch (e) { continue; }
+      const emp = file.size + ":" + file.lastModified;
+      let c = cacheFichiers[entree.name];
+      if (!c || c.emp !== emp) {
+        c = { emp, jours: null, erreur: "" };
+        try {
+          const res = agregerLignes(await lireFichier(file));
+          c.jours = res.jours;
+          journal(`Lu : ${entree.name} — ${res.lignes} ligne(s), ${Object.keys(res.jours).length} journée(s)${res.ignorees ? `, ${res.ignorees} ligne(s) ignorée(s)` : ""}.`);
+          nouveaux++;
+        } catch (e) {
+          c.erreur = String((e && e.message) || e);
+          journal(`Fichier ignoré : ${entree.name} — ${c.erreur}`, "err");
+        }
+        cacheFichiers[entree.name] = c;
+      }
+      if (c.jours) fichiers.push({ nom: entree.name, mtime: file.lastModified, jours: c.jours });
+    }
+    if (!fichiers.length) {
+      if (manuel) journal("Aucun fichier CSV/Excel lisible dans le dossier pour l'instant.");
+    } else {
+      const envois = planifierEnvois(combinerFichiers(fichiers), lireEnvoye());
+      if (envois.length) await pousserEnvois(envois);
+      else if (manuel || nouveaux) journal("Rien de nouveau à envoyer : tout est déjà à jour.");
+    }
+    const md = $("msg-dossier"); if (md) md.textContent = "";
+  } catch (e) {
+    journal("Analyse interrompue : " + messageErreur(e), "err");
+  }
+  ETAT.occupe = false;
+}
+function armerMinuterie() {
+  if (ETAT.minuterie) clearInterval(ETAT.minuterie);
+  const ms = num(($("sel-freq") || {}).value) || 300000;
+  ETAT.minuterie = setInterval(() => analyserDossier(false), ms);
+}
+function montrerReprise(poignee) {
+  const bt = $("bt-reprendre"); if (!bt) return;
+  bt.classList.remove("masque");
+  bt.textContent = `Reprendre la surveillance de « ${poignee.name} »`;
+  bt.onclick = async () => {
+    try {
+      const p = await poignee.requestPermission({ mode: "read" });
+      if (p !== "granted") { journal("Autorisation refusée — choisis le dossier à nouveau.", "err"); return; }
+      adopterDossier(poignee, false);
+    } catch (e) { journal("Reprise impossible : " + String((e && e.message) || e), "err"); }
+  };
+}
+function adopterDossier(poignee, garder) {
+  ETAT.dossier = poignee;
+  const nd = $("nom-dossier");
+  if (nd) { nd.className = "badge b-good"; nd.textContent = `Dossier surveillé : ${poignee.name}`; }
+  const bt = $("bt-reprendre"); if (bt) bt.classList.add("masque");
+  if (garder) garderPoignee(poignee);
+  journal(`Surveillance du dossier « ${poignee.name} » activée.`);
+  armerMinuterie();
+  analyserDossier(true);
+}
+
+/* ---------- connexion (code de liaison) ---------- */
+function majBlocCode() {
+  const connecte = !!(ETAT.code && ETAT.config);
+  const b1 = $("bloc-code"), b2 = $("bloc-connecte");
+  if (b1) b1.classList.toggle("masque", connecte);
+  if (b2) b2.classList.toggle("masque", !connecte);
+  if (connecte) {
+    const ca = $("code-affiche"); if (ca) ca.textContent = ETAT.code;
+    const sel = $("sel-pos");
+    if (sel) {
+      const posObj = (ETAT.config && typeof ETAT.config.pos === "object" && ETAT.config.pos) ? ETAT.config.pos : {};
+      const ids = Object.keys(posObj);
+      sel.innerHTML = ids.map((id) => `<option value="${esc(id)}">${esc(String(posObj[id]))}</option>`).join("");
+      if (ids.length && !ids.includes(ETAT.posId)) ETAT.posId = ids[0];
+      if (ETAT.posId) sel.value = ETAT.posId;
+      lsSet("pontElyx:pos", ETAT.posId);
+    }
+  }
+  majStatEnvois();
+}
+async function connecter(code, silencieux) {
+  const msg = $("msg-code");
+  code = String(code || "").trim().toUpperCase();
+  if (!code) return;
+  if (msg) msg.textContent = "Connexion…";
+  try {
+    const rep = await fetch(BASE + code + "/config.json");
+    if (rep.status === 401 || rep.status === 403) throw new Error("REGLES");
+    if (!rep.ok) throw new Error("HTTP " + rep.status);
+    const cfg = await rep.json();
+    if (!cfg || typeof cfg !== "object" || !cfg.pos) {
+      if (msg) msg.textContent = "Code inconnu. Vérifie-le dans Économat Pro (Réglages → Liaison caisse) — l'app doit avoir synchronisé au moins une fois.";
+      return;
+    }
+    ETAT.code = code; ETAT.config = cfg;
+    lsSet("pontElyx:code", code);
+    if (msg) msg.textContent = "";
+    if (!silencieux) journal("Connecté au code " + code + ".");
+    majBlocCode();
+  } catch (e) {
+    if (msg) msg.textContent = "Connexion impossible : " + messageErreur(e);
+    if (!silencieux) journal("Connexion impossible : " + messageErreur(e), "err");
+  }
+}
+
+/* ---------- dépôt manuel ---------- */
+async function traiterFichiersManuels(liste) {
+  if (!liste || !liste.length) return;
+  if (!ETAT.code || !ETAT.posId) { journal("Connecte d'abord le code de liaison (étape 1).", "err"); return; }
+  const fichiers = [];
+  for (const file of liste) {
+    try {
+      const res = agregerLignes(await lireFichier(file));
+      journal(`Lu : ${file.name} — ${res.lignes} ligne(s), ${Object.keys(res.jours).length} journée(s).`);
+      fichiers.push({ nom: file.name, mtime: file.lastModified || 0, jours: res.jours });
+    } catch (e) {
+      journal(`Fichier ignoré : ${file.name} — ${String((e && e.message) || e)}`, "err");
+    }
+  }
+  if (!fichiers.length) return;
+  try {
+    const envois = planifierEnvois(combinerFichiers(fichiers), lireEnvoye());
+    if (envois.length) await pousserEnvois(envois);
+    else journal("Rien de nouveau à envoyer : ces journées sont déjà à jour.");
+  } catch (e) { journal("Envoi interrompu : " + messageErreur(e), "err"); }
+}
+
+/* ---------- démarrage ---------- */
+function boot() {
+  if (typeof document === "undefined" || !$("bt-connecter")) return;
+  $("bt-connecter").addEventListener("click", () => connecter(($("in-code") || {}).value, false));
+  const ic = $("in-code");
+  if (ic) ic.addEventListener("keydown", (e) => { if (e.key === "Enter") connecter(ic.value, false); });
+  $("bt-changer").addEventListener("click", () => {
+    ETAT.code = ""; ETAT.config = null; lsSet("pontElyx:code", "");
+    majBlocCode();
+  });
+  $("sel-pos").addEventListener("change", (e) => { ETAT.posId = e.target.value; lsSet("pontElyx:pos", ETAT.posId); majStatEnvois(); });
+  $("sel-freq").addEventListener("change", () => { lsSet("pontElyx:freq", ($("sel-freq") || {}).value || ""); if (ETAT.dossier) armerMinuterie(); });
+  $("bt-analyser").addEventListener("click", () => {
+    if (ETAT.dossier) analyserDossier(true);
+    else journal("Aucun dossier surveillé — choisis le dossier des exports Elyx (étape 2) ou utilise le dépôt manuel.", "err");
+  });
+  $("bt-dossier").addEventListener("click", async () => {
+    if (!("showDirectoryPicker" in window)) {
+      const md = $("msg-dossier");
+      if (md) md.textContent = "Ce navigateur ne sait pas surveiller un dossier — utilise Chrome ou Edge, ou le dépôt manuel ci-dessous.";
+      return;
+    }
+    try {
+      const p = await window.showDirectoryPicker({ mode: "read" });
+      adopterDossier(p, true);
+    } catch (e) { /* choix annulé */ }
+  });
+  const zone = $("zone-depot"), inf = $("in-fichiers");
+  if (inf) inf.addEventListener("change", () => { const l = [...(inf.files || [])]; inf.value = ""; traiterFichiersManuels(l); });
+  if (zone) {
+    ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("sur"); }));
+    ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("sur"); }));
+    zone.addEventListener("drop", (e) => { traiterFichiersManuels([...((e.dataTransfer || {}).files || [])]); });
+  }
+  /* reprise après rechargement */
+  ETAT.posId = lsGet("pontElyx:pos");
+  const freq = lsGet("pontElyx:freq");
+  if (freq && $("sel-freq")) $("sel-freq").value = freq;
+  const code = lsGet("pontElyx:code");
+  if (code) { const icc = $("in-code"); if (icc) icc.value = code; connecter(code, true); }
+  if (typeof indexedDB !== "undefined" && "showDirectoryPicker" in window) {
+    relirePoignee().then((p) => {
+      if (!p) return;
+      p.queryPermission({ mode: "read" }).then((perm) => {
+        if (perm === "granted") adopterDossier(p, false);
+        else montrerReprise(p);
+      }).catch(() => montrerReprise(p));
+    });
+  }
+  journal("Pont démarré. Laisse cette page ouverte sur le PC de la caisse.");
+}
+boot();
+</script>
+</body>
+</html>
