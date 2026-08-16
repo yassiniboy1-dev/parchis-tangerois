@@ -3,6 +3,9 @@
 Jeu de Parchís aux règles traditionnelles de **Tanger**, pour Yassine.
 Un seul fichier `index.html` (vanilla JS + SVG + CSS), déployé sur **Netlify**, multijoueur en ligne via **Firebase Realtime Database**.
 
+> Ce dépôt héberge aussi **Économat Pro** (`economat/`), l'app de food cost des deux restaurants de
+> Yassine — voir `economat/CLAUDE.md` (conventions communes, tests et déploiement séparés).
+
 ## Commandes
 
 ```bash
