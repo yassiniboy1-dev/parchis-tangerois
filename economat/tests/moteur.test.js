@@ -18,6 +18,8 @@ const EXPOSER = `;globalThis.API = {
   parseCSV, lireXlsx, demo, etatVierge, chargerEtat, assainirEtat,
   importSales, applyMap, chargerRare, chargerDemo, restaurerJSON, render,
   csvCell, groupByCat, delProduit, delPos,
+  levenshtein, suggererAssociation, analyserVeille, veilleAssocier, construireDigest,
+  importChoisir, getImportEnAttente: () => importEnAttente,
   confirmer: () => { const cb = confirmCb; fermerModals(); if (cb) cb(); },
   getS: () => S, setS: (x) => { S = x; },
   mkDate: (y, m, d, h, mi) => new Date(y, m, d, h || 0, mi || 0),
@@ -247,6 +249,71 @@ function fixtureXlsx(compresser, d1904) {
   A.delProduit('cafe1');
   ok(!A.getS().salesByDay['2026-03-16'] || !(A.getS().salesByDay['2026-03-16'].pos_rare || {}).cafe1, 'delProduit purge salesByDay');
   ok(Object.keys(A.getS().nameMap).every((k) => A.getS().nameMap[k] !== 'cafe1'), 'delProduit purge nameMap');
+
+  console.log('— le veilleur —');
+  ok(A.levenshtein('cafe noir', 'cafe noir') === 0 && A.levenshtein('cafe', 'cafes') === 1, 'distance de Levenshtein');
+  {
+    const prods = [
+      { id: 'v1', kind: 'produit', name: 'Café noir', prix: '12', rendement: '1', recipe: [] },
+      { id: 'v2', kind: 'produit', name: 'Tajine poulet', prix: '65', rendement: '1', recipe: [] },
+    ];
+    const s1 = A.suggererAssociation('CAFE NOIR', prods);
+    ok(s1 && s1.produit.id === 'v1', 'suggestion : accents et casse ignorés');
+    const s2 = A.suggererAssociation('TAJINE POULT', prods);
+    ok(s2 && s2.produit.id === 'v2', 'suggestion : faute de frappe tolérée');
+    ok(A.suggererAssociation('PIZZA 4 FROMAGES', prods) === null, 'pas de suggestion hasardeuse');
+  }
+  {
+    /* fixture : un produit à perte, un FC trop haut, un sans recette */
+    const s = A.etatVierge(); s.entered = true; s.objectifFC = 30;
+    s.matieres.push({ id: 'vm', kind: 'matiere', name: 'Bœuf', unit: 'kg', cost: '120' });
+    s.produits.push(
+      { id: 'vp1', kind: 'produit', name: 'Burger perdu', prix: '40', rendement: '1', recipe: [{ ref: 'vm', qty: '0.5' }] },   /* coût 60 > prix 40 */
+      { id: 'vp2', kind: 'produit', name: 'Steak limite', prix: '100', rendement: '1', recipe: [{ ref: 'vm', qty: '0.4' }] },  /* FC 48 % */
+      { id: 'vp3', kind: 'produit', name: 'Café mystère', prix: '15', rendement: '1', recipe: [] },                            /* sans recette */
+    );
+    s.sales = { pos_rare: { vp1: '10', vp2: '20', vp3: '30' } };
+    A.setS(s);
+    const alertes = A.analyserVeille();
+    ok(alertes.some((a) => a.niveau === 'grave' && a.titre.includes('à perte')), 'veilleur : vente à perte détectée (grave)');
+    ok(alertes.some((a) => a.titre.includes('food cost')), 'veilleur : food cost au-dessus de l\'objectif détecté');
+    ok(alertes.some((a) => a.titre.includes('sans coût matière')), 'veilleur : produit vendu sans recette détecté');
+    const dig = A.construireDigest();
+    ok(dig.global.ca_mad > 0 && Array.isArray(dig.alertes_du_veilleur) && dig.alertes_du_veilleur.length >= 3, 'digest du copilote : chiffres et alertes présents');
+    ok(!JSON.stringify(A.getS()).includes('sk-ant'), 'aucune clé API dans l\'état exportable');
+  }
+  {
+    /* association automatique par le veilleur */
+    const s = A.etatVierge(); s.entered = true;
+    s.produits.push({ id: 'va1', kind: 'produit', name: 'Jus d\'orange', prix: '20', rendement: '1', recipe: [] });
+    s.pendingRows = { pos_rare: { 'JUS D ORANGE': [{ day: '2026-03-10', qty: 4 }] } };
+    A.setS(s);
+    A.veilleAssocier('pos_rare');
+    const s2 = A.getS();
+    proche(A.num((s2.salesByDay['2026-03-10'] || { pos_rare: {} }).pos_rare.va1), 4, 'veilleur : association automatique appliquée');
+    ok(!Object.keys(s2.pendingRows.pos_rare || {}).length, 'veilleur : file d\'attente vidée après association');
+  }
+
+  console.log('— anti-double-import —');
+  {
+    const s = A.etatVierge(); s.entered = true;
+    s.produits.push({ id: 'di1', kind: 'produit', name: 'Café noir', prix: '12', fabrique: false, rendement: '1', recipe: [] });
+    A.setS(s);
+    const csv2 = 'Date;Désignation;Qté\n21/03/2026;Café noir;5\n';
+    await A.importSales(fauxFichier('ventes.csv', csv2, 'text/csv'), 'pos_rare');
+    proche(A.num(A.getS().salesByDay['2026-03-21'].pos_rare.di1), 5, 'premier import appliqué directement');
+    await A.importSales(fauxFichier('ventes.csv', csv2, 'text/csv'), 'pos_rare');
+    ok(A.getImportEnAttente() !== null, 'ré-import du même jour → choix demandé, rien d\'appliqué');
+    proche(A.num(A.getS().salesByDay['2026-03-21'].pos_rare.di1), 5, 'les quantités n\'ont pas doublé en attendant');
+    A.importChoisir('remplacer');
+    proche(A.num(A.getS().salesByDay['2026-03-21'].pos_rare.di1), 5, 'remplacer : le jour est écrasé, pas cumulé');
+    await A.importSales(fauxFichier('ventes.csv', csv2, 'text/csv'), 'pos_rare');
+    A.importChoisir('additionner');
+    proche(A.num(A.getS().salesByDay['2026-03-21'].pos_rare.di1), 10, 'additionner : cumul voulu');
+    await A.importSales(fauxFichier('ventes.csv', csv2, 'text/csv'), 'pos_rare');
+    A.importChoisir(null);
+    proche(A.num(A.getS().salesByDay['2026-03-21'].pos_rare.di1), 10, 'annuler : rien n\'est appliqué');
+  }
 
   console.log('— carte Rare (SEED) & état —');
   A.chargerRare();

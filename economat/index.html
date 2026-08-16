@@ -173,6 +173,20 @@ select.fld{cursor:pointer}
 .qcard .qd{font-size:11.5px;color:var(--soft);line-height:1.45}
 .medot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 
+/* ---- le veilleur ---- */
+.valerte{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #F1E7D5}
+.valerte:last-child{border-bottom:0}
+.vniv{flex:0 0 auto;width:10px;height:10px;border-radius:50%;margin-top:5px}
+.vniv.grave{background:var(--red)}.vniv.attention{background:#E09112}.vniv.info{background:#8A9BB0}
+.valerte .vt{font-weight:600;font-size:14px}
+.valerte .vd{font-size:12.5px;color:var(--soft);line-height:1.5;margin-top:2px}
+.valerte .vabtn{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.vok{appearance:none;border:1px solid var(--line);background:#fff;color:var(--soft);font-size:11.5px;font-weight:600;border-radius:7px;padding:6px 10px;cursor:pointer;font-family:'Work Sans',system-ui,sans-serif;min-height:32px}
+.vok:hover{border-color:var(--saf);color:var(--ink)}
+.copi{background:linear-gradient(180deg,#FFFDF8,#FAF3E4);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px}
+.copi .ct{font-size:13.5px;line-height:1.6}
+.copi .ct p{margin:0 0 8px}.copi .ct ul{margin:0 0 8px;padding-left:20px}.copi .ct li{margin-bottom:3px}
+
 /* ---- modals ---- */
 .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(36,28,22,.45)}
 .modal.on{display:flex}
@@ -220,7 +234,7 @@ select.fld{cursor:pointer}
         <p id="brand-sub">La Vue · Rare — food cost &amp; labo</p>
       </div>
     </div>
-    <span class="verchip">v4.0</span>
+    <span class="verchip">v4.1</span>
   </div>
   <div class="tabs" id="tabs" style="display:none"></div>
   <main id="vue"></main>
@@ -234,6 +248,18 @@ select.fld{cursor:pointer}
     <div class="mrow">
       <button class="btn" id="mc-non">Annuler</button>
       <button class="btn btn-d" id="mc-oui">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-import">
+  <div class="mbox">
+    <p class="mtitle">Jours déjà importés</p>
+    <p id="mi-texte" style="font-size:14px;line-height:1.55;margin:0"></p>
+    <div class="mrow">
+      <button class="btn" id="mi-annuler">Annuler</button>
+      <button class="btn" id="mi-additionner">Additionner</button>
+      <button class="btn btn-p" id="mi-remplacer">Remplacer les jours</button>
     </div>
   </div>
 </div>
@@ -253,7 +279,7 @@ select.fld{cursor:pointer}
 <script>
 'use strict';
 /* ============================================================
-   Économat Pro v4.0 — La Vue · Rare (Tanger)
+   Économat Pro v4.1 — La Vue · Rare (Tanger)
    Un seul fichier. Aucune dépendance. Données sur l'appareil.
    ============================================================ */
 
@@ -357,6 +383,209 @@ function menuEng(byId, salesMap, produits) {
   });
   rows.sort((a, b) => b.cm * b.q - a.cm * a.q);
   return { rows, n, totQ, avgCM, seuilPop };
+}
+
+/* ---------- le veilleur : détection d'anomalies ---------- */
+function levenshtein(a, b) {
+  a = String(a); b = String(b);
+  if (a === b) return 0;
+  const m = a.length, n2 = b.length;
+  if (!m) return n2; if (!n2) return m;
+  let prev = Array.from({ length: n2 + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n2; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n2];
+}
+/* meilleure correspondance produit pour un nom de caisse inconnu (sûre ou rien) */
+function suggererAssociation(nomBrut, produits) {
+  const nb = normN(nomBrut);
+  if (!nb) return null;
+  let meilleur = null, meilleurScore = Infinity;
+  produits.forEach((p) => {
+    const np = normN(p.name); if (!np) return;
+    let d;
+    if (np === nb) d = 0;
+    else if (np.includes(nb) || nb.includes(np)) d = 1;
+    else d = levenshtein(nb, np);
+    if (d < meilleurScore) { meilleurScore = d; meilleur = p; }
+  });
+  const tolerance = Math.max(1, Math.floor(nb.length / 5));
+  return (meilleur && meilleurScore <= tolerance) ? { produit: meilleur, distance: meilleurScore } : null;
+}
+/* analyse complète — retourne des alertes {cle, niveau: grave|attention|info, titre, detail, actions} */
+function analyserVeille() {
+  const alertes = [];
+  const byId = getById(), eff = effSales(), comb = combined();
+  const vendus = S.produits.filter((d) => num(comb[d.id]) > 0);
+
+  /* 1. marges négatives : on vend à perte */
+  const pertes = vendus
+    .map((d) => ({ d, q: num(comb[d.id]), pr: num(d.prix), uc: unitCost(byId, d.id) }))
+    .filter((x) => x.pr > 0 && x.uc > x.pr)
+    .sort((a, b) => (b.uc - b.pr) * b.q - (a.uc - a.pr) * a.q);
+  if (pertes.length) {
+    alertes.push({
+      cle: "pertes:" + pertes.map((x) => x.d.id).sort().join(","),
+      niveau: "grave",
+      titre: `${pertes.length} produit(s) vendu(s) à perte`,
+      detail: pertes.slice(0, 4).map((x) => `${x.d.name} : coût ${nf(x.uc)} MAD pour ${nf(x.pr)} MAD de prix (${nf(x.q)} vendus)`).join(" · ") + (pertes.length > 4 ? ` · et ${pertes.length - 4} autre(s)` : "") + ". Vérifie la recette ou monte le prix.",
+    });
+  }
+
+  /* 2. food cost bien au-dessus de l'objectif */
+  const fcHauts = vendus
+    .map((d) => ({ d, q: num(comb[d.id]), pr: num(d.prix), uc: unitCost(byId, d.id) }))
+    .filter((x) => x.pr > 0 && x.uc > 0 && x.uc <= x.pr && (x.uc / x.pr) * 100 > S.objectifFC + 10)
+    .sort((a, b) => b.q * (b.uc - b.pr * S.objectifFC / 100) - a.q * (a.uc - a.pr * S.objectifFC / 100));
+  if (fcHauts.length) {
+    alertes.push({
+      cle: "fchaut:" + fcHauts.length + ":" + (fcHauts[0] ? fcHauts[0].d.id : ""),
+      niveau: "attention",
+      titre: `${fcHauts.length} produit(s) à plus de ${nf(S.objectifFC + 10)} % de food cost`,
+      detail: fcHauts.slice(0, 4).map((x) => `${x.d.name} (${nf1(x.uc / x.pr * 100)} %)`).join(" · ") + (fcHauts.length > 4 ? "…" : "") + ` — objectif ${nf(S.objectifFC)} %. Revois portion, prix ou recette.`,
+    });
+  }
+
+  /* 3. produits vendus sans recette : le food cost affiché est sous-estimé */
+  const sansRecette = vendus
+    .filter((d) => unitCost(byId, d.id) === 0)
+    .map((d) => ({ d, ca: num(comb[d.id]) * num(d.prix) }))
+    .sort((a, b) => b.ca - a.ca);
+  if (sansRecette.length) {
+    const caManquant = sansRecette.reduce((s, x) => s + x.ca, 0);
+    alertes.push({
+      cle: "sansrecette:" + sansRecette.length,
+      niveau: "attention",
+      titre: `${sansRecette.length} produit(s) vendu(s) sans coût matière`,
+      detail: `${nf(caManquant)} MAD de CA sans recette chiffrée (${sansRecette.slice(0, 3).map((x) => x.d.name).join(", ")}${sansRecette.length > 3 ? "…" : ""}) : ton food cost réel est plus haut qu'affiché. Complète les recettes ou les coûts des matières.`,
+    });
+  }
+
+  /* 4. matières « à vérifier » parmi les plus grosses consommations */
+  const conso = computeForSales(byId, comb);
+  const topConso = Object.keys(conso.mp)
+    .map((id) => ({ m: byId[id], val: conso.mp[id] * num((byId[id] || {}).cost) }))
+    .filter((x) => x.m).sort((a, b) => b.val - a.val).slice(0, 15);
+  const flagsTop = topConso.filter((x) => x.m.verif);
+  if (flagsTop.length) {
+    alertes.push({
+      cle: "flagstop:" + flagsTop.map((x) => x.m.id).sort().join(","),
+      niveau: "attention",
+      titre: `${flagsTop.length} grosse(s) consommation(s) au prix « à vérifier »`,
+      detail: flagsTop.slice(0, 4).map((x) => `${x.m.name} (${nf(x.val)} MAD consommés)`).join(" · ") + ". Tant que ces prix ne sont pas confirmés, le food cost est incertain — onglet Économat, filtre ⚠.",
+    });
+  }
+
+  /* 5. journées anormales (au moins 7 jours importés) */
+  const jours = daysInRange();
+  if (jours.length >= 7) {
+    const stats = jours.map((j) => {
+      let rev = 0, cost = 0;
+      S.pos.forEach((P) => { const r = computeForSales(byId, (S.salesByDay[j] || {})[P.id] || {}); rev += r.revenue; cost += r.cost; });
+      return { j, rev, fc: rev > 0 ? cost / rev * 100 : null };
+    });
+    const fcs = stats.filter((x) => x.fc != null).map((x) => x.fc);
+    if (fcs.length >= 7) {
+      const moy = fcs.reduce((a, b) => a + b, 0) / fcs.length;
+      const ec = Math.sqrt(fcs.reduce((a, b) => a + (b - moy) * (b - moy), 0) / fcs.length);
+      stats.filter((x) => x.fc != null && x.fc > moy + Math.max(2 * ec, 5) && x.fc > S.objectifFC)
+        .slice(-3).forEach((x) => {
+          alertes.push({
+            cle: "jourfc:" + x.j,
+            niveau: "attention",
+            titre: `Food cost anormal le ${fmtD(x.j)} : ${nf1(x.fc)} %`,
+            detail: `La moyenne de la période est de ${nf1(moy)} %. Grosse casse, erreur de saisie ou vol ce jour-là ? Vois le détail par jour de chaque adresse.`,
+          });
+        });
+      const revs = stats.map((x) => x.rev).filter((r) => r > 0).sort((a, b) => a - b);
+      if (revs.length >= 7) {
+        const mediane = revs[Math.floor(revs.length / 2)];
+        stats.filter((x) => x.rev > 0 && x.rev < mediane * 0.4).slice(-2).forEach((x) => {
+          alertes.push({
+            cle: "jourca:" + x.j,
+            niveau: "info",
+            titre: `CA très bas le ${fmtD(x.j)} : ${nf(x.rev)} MAD`,
+            detail: `Moins de 40 % de la médiane (${nf(mediane)} MAD). Journée fermée, import incomplet ou vraie mauvaise journée ?`,
+          });
+        });
+      }
+    }
+    /* trous : jours sans aucune vente entre deux jours avec ventes */
+    const presents = new Set(jours);
+    const manquants = [];
+    if (S.dateFrom && S.dateTo) {
+      const d0 = new Date(S.dateFrom + "T12:00:00"), d1 = new Date(S.dateTo + "T12:00:00");
+      for (let d = new Date(d0); d <= d1; d.setDate(d.getDate() + 1)) {
+        const cle = fmtLocalD(d);
+        if (!presents.has(cle)) manquants.push(cle);
+      }
+    }
+    if (manquants.length && manquants.length <= 10) {
+      alertes.push({
+        cle: "trous:" + manquants.join(","),
+        niveau: "info",
+        titre: `${manquants.length} jour(s) sans ventes dans la période`,
+        detail: manquants.map(fmtD).join(", ") + ". Fermeture, ou fichier de caisse pas encore importé ?",
+      });
+    }
+  }
+
+  /* 6. écarts labo (reçu vs vendu) */
+  const pats = S.produits.filter((d) => d.fabrique);
+  if (pats.length) {
+    S.pos.forEach((P) => {
+      const v = pats.reduce((a, x) => a + (num((S.recu[P.id] || {})[x.id]) - num((eff[P.id] || {})[x.id])) * unitCost(byId, x.id), 0);
+      if (v > 100) {
+        alertes.push({
+          cle: "labo:" + P.id + ":" + Math.round(v / 50),
+          niveau: "attention",
+          titre: `Écart labo de ${nf(v)} MAD à ${P.name}`,
+          detail: "Le labo a envoyé plus que ce qui a été vendu : invendus, casse ou perte au comptoir. Détail dans l'onglet Labo.",
+        });
+      }
+    });
+  }
+
+  /* 7. écart économat théorique vs réel */
+  if (S.cmpEco) {
+    const rows = Object.keys(conso.mp).map((id) => ({ m: byId[id], qty: conso.mp[id] })).filter((r) => r.m);
+    const ecart = rows.reduce((s, r) => s + (num(S.reel[r.m.id]) - r.qty) * num(r.m.cost), 0);
+    if (conso.cost > 0 && ecart > Math.max(conso.cost * 0.05, 100)) {
+      alertes.push({
+        cle: "eco:" + Math.round(ecart / 50),
+        niveau: "grave",
+        titre: `Consommation réelle : +${nf(ecart)} MAD au-dessus des fiches`,
+        detail: `Plus de ${nf1(ecart / conso.cost * 100)} % d'écart avec la théorie : pertes, vol, sur-portions ou fiches fausses. Détail dans l'onglet Économat.`,
+      });
+    }
+  }
+
+  /* 8. produits de caisse en attente + associations automatiques sûres */
+  S.pos.forEach((P) => {
+    const noms = Object.keys(S.pendingRows[P.id] || {});
+    if (!noms.length) return;
+    const sugg = [];
+    noms.forEach((nm2) => {
+      const s2 = suggererAssociation(nm2, S.produits);
+      if (s2) sugg.push({ nom: nm2, produit: s2.produit });
+    });
+    alertes.push({
+      cle: "attente:" + P.id + ":" + noms.length,
+      niveau: "info",
+      titre: `${noms.length} produit(s) de caisse à associer (${P.name})`,
+      detail: sugg.length
+        ? `Le veilleur reconnaît ${sugg.length} nom(s) proche(s) : ${sugg.slice(0, 3).map((x) => `« ${x.nom} » → ${x.produit.name}`).join(" · ")}${sugg.length > 3 ? "…" : ""}.`
+        : "Leurs ventes ne comptent pas tant qu'ils ne sont pas associés — onglet " + P.name + ".",
+      actions: sugg.length ? [{ label: sugg.length > 1 ? `Associer les ${sugg.length} automatiquement` : "Associer automatiquement", act: "veille-assoc", pos: P.id }] : [],
+    });
+  });
+
+  return alertes;
 }
 
 /* ---------- lecture CSV ---------- */
@@ -563,7 +792,8 @@ function etatVierge() {
   return {
     v: 4, matieres: [], produits: [], pos: DEFAULT_POS.map((p) => ({ ...p })),
     sales: {}, recu: {}, reel: {}, salesByDay: {}, nameMap: {}, pendingRows: {},
-    period: "", dateFrom: "", dateTo: "", cmpEco: false, objectifFC: 30, entered: false
+    period: "", dateFrom: "", dateTo: "", cmpEco: false, objectifFC: 30, entered: false,
+    veilleVu: {}, copilote: null
   };
 }
 let S = etatVierge();
@@ -583,9 +813,10 @@ function assainirEtat() {
   S.produits.forEach((p) => { p.recipe = (Array.isArray(p.recipe) ? p.recipe : []).filter(objetValide); });
   S.pos = (Array.isArray(S.pos) ? S.pos : []).filter((x) => objetValide(x) && x.id);
   if (!S.pos.length) S.pos = DEFAULT_POS.map((p) => ({ ...p }));
-  ["sales", "recu", "reel", "salesByDay", "nameMap", "pendingRows"].forEach((k) => {
+  ["sales", "recu", "reel", "salesByDay", "nameMap", "pendingRows", "veilleVu"].forEach((k) => {
     if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = {};
   });
+  if (S.copilote && typeof S.copilote !== "object") S.copilote = null;
   if (!(num(S.objectifFC) > 0 && num(S.objectifFC) < 100)) S.objectifFC = 30;
 }
 const ecrireEtat = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) { stockageOK = false; } };
@@ -1042,6 +1273,133 @@ function vueAccueil() {
   </div>`;
 }
 
+/* ---------- le veilleur : rendu ---------- */
+function carteVeilleHTML() {
+  const toutes = analyserVeille();
+  const visibles = toutes.filter((a) => !S.veilleVu[a.cle]);
+  const masquees = toutes.length - visibles.length;
+  const graves = visibles.filter((a) => a.niveau === "grave").length;
+  const ordre = { grave: 0, attention: 1, info: 2 };
+  visibles.sort((a, b) => ordre[a.niveau] - ordre[b.niveau]);
+  if (!visibles.length) {
+    return `<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:13.5px">🛡️ <b>Le veilleur</b> — rien d'anormal sur la période.</span>
+      ${masquees ? `<button class="vok" data-act="veille-reset">Revoir ${masquees} alerte(s) masquée(s)</button>` : ""}
+    </div></div>`;
+  }
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h2 class="h" style="margin:0">🛡️ Le veilleur — ${visibles.length} alerte(s)${graves ? ` dont ${graves} grave(s)` : ""}</h2>
+      ${masquees ? `<button class="vok" data-act="veille-reset">Revoir les masquées (${masquees})</button>` : ""}
+    </div>
+    ${visibles.map((a) => `<div class="valerte">
+      <span class="vniv ${a.niveau}"></span>
+      <div style="flex:1">
+        <div class="vt">${esc(a.titre)}</div>
+        <div class="vd">${esc(a.detail)}</div>
+        <div class="vabtn">
+          ${(a.actions || []).map((ac) => `<button class="btn btn-sm btn-p" data-act="${esc(ac.act)}"${ac.pos ? ` data-pos="${esc(ac.pos)}"` : ""}>${esc(ac.label)}</button>`).join("")}
+          <button class="vok" data-act="veille-ok" data-cle="${esc(a.cle)}">OK, vu</button>
+        </div>
+      </div>
+    </div>`).join("")}
+  </div>`;
+}
+
+/* ---------- copilote Claude ---------- */
+const CLE_API = "ecoPro:cle-api";
+let copiloteBusy = false, copiloteErreur = "";
+function lireCleApi() { try { return localStorage.getItem(CLE_API) || ""; } catch (e) { return ""; } }
+function ecrireCleApi(v) { try { if (v) localStorage.setItem(CLE_API, v); else localStorage.removeItem(CLE_API); } catch (e) {} }
+function construireDigest() {
+  const byId = getById(), eff = effSales(), comb = combined();
+  const g = computeForSales(byId, comb);
+  const me = menuEng(byId, comb, S.produits);
+  const alertes = analyserVeille();
+  const conso = Object.keys(g.mp).map((id) => ({ m: byId[id], val: g.mp[id] * num((byId[id] || {}).cost) }))
+    .filter((x) => x.m).sort((a, b) => b.val - a.val).slice(0, 10);
+  return {
+    periode: periodLabel() || "toutes les ventes saisies",
+    objectif_food_cost_pct: S.objectifFC,
+    global: { ca_mad: Math.round(g.revenue), cout_matiere_mad: Math.round(g.cost), food_cost_pct: Math.round(g.foodCost * 10) / 10 },
+    par_adresse: S.pos.map((P) => { const r = computeForSales(byId, eff[P.id] || {}); return { nom: P.name, ca_mad: Math.round(r.revenue), food_cost_pct: Math.round(r.foodCost * 10) / 10 }; }),
+    top_marge: me.rows.slice(0, 10).map((r) => ({ produit: r.d.name, vendus: r.q, marge_unitaire_mad: Math.round(r.cm * 100) / 100, food_cost_pct: Math.round(r.fc * 10) / 10, classe: r.cl })),
+    pires_food_cost: me.rows.filter((r) => r.uc > 0).sort((a, b) => b.fc - a.fc).slice(0, 8).map((r) => ({ produit: r.d.name, vendus: r.q, food_cost_pct: Math.round(r.fc * 10) / 10 })),
+    menu_engineering: { etoiles: me.rows.filter((r) => r.cl === "etoile").length, chevaux: me.rows.filter((r) => r.cl === "cheval").length, enigmes: me.rows.filter((r) => r.cl === "enigme").length, poids_morts: me.rows.filter((r) => r.cl === "poids").length },
+    top_consommations: conso.map((x) => ({ matiere: x.m.name, valeur_mad: Math.round(x.val), prix_a_verifier: !!x.m.verif })),
+    alertes_du_veilleur: alertes.map((a) => ({ niveau: a.niveau, titre: a.titre })),
+  };
+}
+const SYSTEME_COPILOTE = "Tu es le copilote food cost de Yassine, qui tient deux restaurants à Tanger : La Vue (café-restaurant) et Rare (brunch-restaurant). Tu reçois un résumé chiffré de sa période (montants en dirhams MAD). Réponds en français, tutoie-le, et sois directement actionnable : commence par un diagnostic global en 2 ou 3 phrases, puis 3 à 6 recommandations concrètes en liste à puces (les plus rentables d'abord), en citant les produits et les chiffres du résumé. N'invente aucune donnée : si quelque chose manque pour conclure, dis-le en une phrase. Pas de titres, pas de tableau, maximum 250 mots.";
+async function copiloteAnalyser() {
+  const cle = lireCleApi();
+  if (!cle || copiloteBusy) return;
+  copiloteBusy = true; copiloteErreur = ""; render();
+  try {
+    const rep = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": cle,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+        "anthropic-beta": "server-side-fallback-2026-07-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-5",
+        max_tokens: 2048,
+        fallbacks: "default",
+        system: SYSTEME_COPILOTE,
+        messages: [{ role: "user", content: "Voici le résumé de la période :\n" + JSON.stringify(construireDigest()) }],
+      }),
+    });
+    if (rep.status === 401) throw new Error("clé API refusée — vérifie-la dans les Réglages.");
+    if (rep.status === 429) throw new Error("trop de demandes d'un coup — réessaie dans une minute.");
+    if (!rep.ok) throw new Error("réponse " + rep.status + " de l'API.");
+    const data = await rep.json();
+    if (data.stop_reason === "refusal") throw new Error("l'analyse a été refusée par les garde-fous du modèle — réessaie.");
+    const texte = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+    if (!texte) throw new Error("réponse vide.");
+    S.copilote = { texte, date: fmtLocalD(new Date()), periode: periodLabel() || "" };
+    save();
+  } catch (e) {
+    copiloteErreur = String((e && e.message) || e);
+    if (/fetch|network|Failed/i.test(copiloteErreur)) copiloteErreur = "impossible de joindre l'API (hors ligne, ou blocage réseau).";
+  }
+  copiloteBusy = false; render();
+}
+/* rendu simple du texte du copilote (paragraphes, puces, gras) */
+function rendreTexte(t) {
+  const lignes = esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").split("\n");
+  let html = "", enListe = false;
+  lignes.forEach((l) => {
+    const lt = l.trim();
+    if (/^[-•*] /.test(lt)) {
+      if (!enListe) { html += "<ul>"; enListe = true; }
+      html += "<li>" + lt.replace(/^[-•*] /, "") + "</li>";
+    } else {
+      if (enListe) { html += "</ul>"; enListe = false; }
+      if (lt) html += "<p>" + lt + "</p>";
+    }
+  });
+  if (enListe) html += "</ul>";
+  return html;
+}
+function carteCopiloteHTML() {
+  const cle = lireCleApi();
+  if (!cle && !S.copilote) return "";
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h2 class="h" style="margin:0">🤖 Copilote Claude</h2>
+      ${cle ? `<button class="btn btn-sm btn-p" data-act="copilote-analyser"${copiloteBusy ? " disabled" : ""}>${copiloteBusy ? "Analyse en cours…" : (S.copilote ? "Refaire l'analyse" : "Analyser la période")}</button>` : ""}
+    </div>
+    ${copiloteErreur ? `<p class="sub" style="color:var(--red);margin:8px 0 0">Analyse impossible : ${esc(copiloteErreur)}</p>` : ""}
+    ${S.copilote ? `<div class="copi"><div class="ct">${rendreTexte(S.copilote.texte)}</div>
+      <div class="tag">Analyse du ${esc(fmtD(S.copilote.date))}${S.copilote.periode ? ` — ${esc(S.copilote.periode)}` : ""} · rédigée par Claude à partir de tes chiffres.</div></div>`
+      : `<p class="sub" style="margin:8px 0 0">Claude lit le résumé chiffré de ta période (rien d'autre ne quitte l'appareil) et rédige un diagnostic avec des recommandations.</p>`}
+  </div>`;
+}
+
 /* ---------- synthèse ---------- */
 function parJourRange() {
   const byId = getById(), out = {};
@@ -1078,6 +1436,7 @@ function vueSynthese() {
   me.rows.forEach((r) => compte[r.cl]++);
 
   return `
+  ${carteVeilleHTML()}
   <div class="card">
     <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
       <h2 class="h" style="margin:0">Synthèse — les deux adresses</h2>
@@ -1125,7 +1484,8 @@ function vueSynthese() {
       <thead><tr><th>Produit</th><th class="r">Vendus</th><th class="r">Marge / u</th><th class="r">Marge totale</th><th class="r">Food cost</th><th>Classe</th></tr></thead>
       <tbody>${me.rows.map((r) => `<tr><td>${esc(r.d.name)}</td><td class="r">${nf(r.q)}</td><td class="r">${nf(r.cm)}</td><td class="r">${nf(r.cm * r.q)}</td><td class="r">${nf1(r.fc)} %</td><td><span class="badge ${CLASSES[r.cl][1]}">${CLASSES[r.cl][0].replace(/s$/, "").replace(/x$/, "")}</span></td></tr>`).join("")}</tbody>
     </table></div></details>`}
-  </div>`;
+  </div>
+  ${carteCopiloteHTML()}`;
 }
 
 /* ---------- économat ---------- */
@@ -1389,8 +1749,22 @@ function vueReglages() {
   </div>
 
   <div class="card">
+    <h2 class="h">🤖 Copilote Claude (option)</h2>
+    <p class="sub">Avec une clé API Anthropic, un bouton « Analyser la période » apparaît sur la synthèse : Claude lit le résumé chiffré (CA, food cost, top produits, alertes du veilleur — jamais tes fichiers) et rédige un diagnostic avec des recommandations. Clé à créer sur <b>console.anthropic.com</b> (facturé à l'usage par Anthropic, quelques centimes par analyse). La clé reste sur cet appareil et n'est <b>jamais incluse dans les sauvegardes</b>.</p>
+    ${lireCleApi()
+      ? `<div class="row" style="gap:10px;flex-wrap:wrap">
+          <span class="badge b-good">Clé enregistrée ✓</span>
+          <button class="btn btn-sm btn-d" data-act="copilote-cle-del">Retirer la clé</button>
+        </div>`
+      : `<div class="row" style="gap:8px;flex-wrap:wrap">
+          <input class="fld" type="password" id="cle-api-input" style="flex:1 1 220px" placeholder="sk-ant-…" autocomplete="off">
+          <button class="btn btn-p" data-act="copilote-cle-save">Enregistrer</button>
+        </div>`}
+  </div>
+
+  <div class="card">
     <h2 class="h">À propos</h2>
-    <p class="sub" style="margin:0">Économat Pro v4.0 — application autonome, sans compte ni serveur : tout est calculé et enregistré sur ton appareil. Ajoute-la à l'écran d'accueil de l'iPhone (Partager → « Sur l'écran d'accueil ») pour l'utiliser comme une app.</p>
+    <p class="sub" style="margin:0">Économat Pro v4.1 — application autonome, sans compte ni serveur : tout est calculé et enregistré sur ton appareil. Ajoute-la à l'écran d'accueil de l'iPhone (Partager → « Sur l'écran d'accueil ») pour l'utiliser comme une app.</p>
   </div>`;
 }
 
@@ -1442,29 +1816,57 @@ async function importSales(file, posId) {
       map[day] = map[day] || {}; map[day][posId] = map[day][posId] || {};
       map[day][posId][pid] = num(map[day][posId][pid]) + qty;
     });
-    if (Object.keys(pend).length) {
-      S.pendingRows[posId] = S.pendingRows[posId] || {};
-      Object.keys(pend).forEach((nm2) => {
-        const avant = Object.prototype.hasOwnProperty.call(S.pendingRows[posId], nm2) ? S.pendingRows[posId][nm2] : [];
-        poserCle(S.pendingRows[posId], nm2, [...avant, ...pend[nm2]]);
-      });
+    const charge = { map, pend, unknown: Object.keys(unknown), lines, matched: known.size, posId };
+    /* le veilleur : mêmes jours déjà importés pour cette adresse → risque de doublon */
+    const collisions = Object.keys(map).filter((d) => S.salesByDay[d] && S.salesByDay[d][posId] && Object.keys(S.salesByDay[d][posId]).length);
+    if (collisions.length) {
+      importEnAttente = charge;
+      importBusy = false;
+      const mt = $("mi-texte");
+      if (mt) mt.textContent = `${collisions.length} jour(s) du fichier (${fmtD(collisions[0])}${collisions.length > 1 ? " → " + fmtD(collisions[collisions.length - 1]) : ""}) ont déjà des ventes pour cette adresse. « Remplacer » écrase ces jours par le fichier (le bon choix pour un ré-import) ; « Additionner » cumule les deux (risque de compter double).`;
+      const m = $("modal-import"); if (m) m.classList.add("on");
+      render();
+      return;
     }
-    Object.keys(map).forEach((day) => {
-      S.salesByDay[day] = S.salesByDay[day] || {};
-      S.salesByDay[day][posId] = S.salesByDay[day][posId] || {};
-      Object.keys(map[day][posId]).forEach((pid) => {
-        S.salesByDay[day][posId][pid] = num(S.salesByDay[day][posId][pid]) + num(map[day][posId][pid]);
-      });
-    });
-    const days = Object.keys(map).sort();
-    if (days.length) { S.dateFrom = days[0]; S.dateTo = days[days.length - 1]; }
-    importInfo = { ok: true, days: days.length, firstDay: days[0] || "", lastDay: days[days.length - 1] || "", lines, matched: known.size, unknown: Object.keys(unknown) };
-    save();
+    appliquerImport(charge, "additionner");
   } catch (e) { importInfo = { error: String((e && e.message) || e) }; }
   importBusy = false; render();
 }
-function applyMap(posId, rawName, prodId) {
-  if (!prodId) return;
+let importEnAttente = null;
+function appliquerImport(charge, mode) {
+  const { map, pend, posId } = charge;
+  if (Object.keys(pend).length) {
+    S.pendingRows[posId] = S.pendingRows[posId] || {};
+    Object.keys(pend).forEach((nm2) => {
+      const avant = Object.prototype.hasOwnProperty.call(S.pendingRows[posId], nm2) ? S.pendingRows[posId][nm2] : [];
+      poserCle(S.pendingRows[posId], nm2, [...avant, ...pend[nm2]]);
+    });
+  }
+  Object.keys(map).forEach((day) => {
+    S.salesByDay[day] = S.salesByDay[day] || {};
+    if (mode === "remplacer") S.salesByDay[day][posId] = {};
+    else S.salesByDay[day][posId] = S.salesByDay[day][posId] || {};
+    Object.keys(map[day][posId]).forEach((pid) => {
+      S.salesByDay[day][posId][pid] = num(S.salesByDay[day][posId][pid]) + num(map[day][posId][pid]);
+    });
+  });
+  const days = Object.keys(map).sort();
+  if (days.length) { S.dateFrom = days[0]; S.dateTo = days[days.length - 1]; }
+  importInfo = { ok: true, days: days.length, firstDay: days[0] || "", lastDay: days[days.length - 1] || "", lines: charge.lines, matched: charge.matched, unknown: charge.unknown };
+  save();
+  const graves = analyserVeille().filter((a) => a.niveau === "grave" && !S.veilleVu[a.cle]).length;
+  if (graves) toast(`🛡️ Le veilleur a repéré ${graves} point(s) grave(s) — vois la synthèse.`);
+}
+function importChoisir(mode) {
+  const m = $("modal-import"); if (m) m.classList.remove("on");
+  if (!importEnAttente) return;
+  if (mode) appliquerImport(importEnAttente, mode);
+  importEnAttente = null;
+  importBusy = false;
+  render();
+}
+function associerCoeur(posId, rawName, prodId) {
+  if (!prodId) return false;
   poserCle(S.nameMap, normN(rawName), prodId);
   const pendPos = S.pendingRows[posId] || {};
   const entries = Object.prototype.hasOwnProperty.call(pendPos, rawName) ? pendPos[rawName] : [];
@@ -1476,7 +1878,28 @@ function applyMap(posId, rawName, prodId) {
     if (!S.dateTo || day > S.dateTo) S.dateTo = day;
   });
   if (S.pendingRows[posId]) delete S.pendingRows[posId][rawName];
+  return true;
+}
+function applyMap(posId, rawName, prodId) {
+  if (!associerCoeur(posId, rawName, prodId)) return;
   save(); render();
+}
+/* le veilleur associe lui-même les noms de caisse évidents (annulable) */
+function veilleAssocier(posId) {
+  const noms = Object.keys(S.pendingRows[posId] || {});
+  const sn = JSON.parse(JSON.stringify({ pendingRows: S.pendingRows, salesByDay: S.salesByDay, nameMap: S.nameMap, dateFrom: S.dateFrom, dateTo: S.dateTo }));
+  let n2 = 0;
+  noms.forEach((nm2) => {
+    const s2 = suggererAssociation(nm2, S.produits);
+    if (s2 && associerCoeur(posId, nm2, s2.produit.id)) n2++;
+  });
+  if (!n2) return;
+  save(); render();
+  planUndo(`${n2} produit(s) de caisse associé(s) automatiquement.`, sn, (x) => {
+    const d = JSON.parse(JSON.stringify(x));
+    S.pendingRows = d.pendingRows; S.salesByDay = d.salesByDay; S.nameMap = d.nameMap;
+    S.dateFrom = d.dateFrom; S.dateTo = d.dateTo;
+  });
 }
 
 /* ---------- exports & sauvegarde ---------- */
@@ -1755,6 +2178,16 @@ function onClick(e) {
   else if (act === "export-json") exportJSON();
   else if (act === "print-rapport") imprimer(rapportHTML());
   else if (act === "home-zero") { S.entered = true; save(); tab = "economat"; render(); }
+  else if (act === "veille-ok") { S.veilleVu[el.dataset.cle] = true; save(); render(); }
+  else if (act === "veille-reset") { S.veilleVu = {}; save(); render(); }
+  else if (act === "veille-assoc") veilleAssocier(pos);
+  else if (act === "copilote-analyser") copiloteAnalyser();
+  else if (act === "copilote-cle-save") {
+    const inp = $("cle-api-input");
+    const v = inp && inp.value ? inp.value.trim() : "";
+    if (v) { ecrireCleApi(v); toast("Clé enregistrée — le copilote est disponible sur la synthèse."); render(); }
+  }
+  else if (act === "copilote-cle-del") { ecrireCleApi(""); toast("Clé retirée."); render(); }
 }
 function onInput(e) {
   const t = e.target; if (!t || !t.dataset) return;
@@ -1877,6 +2310,11 @@ function bindGlobal() {
   const lie = (id, fn) => { const el = $(id); if (el && el.addEventListener) el.addEventListener("click", fn); };
   lie("mc-non", fermerModals);
   lie("mc-oui", () => { const cb = confirmCb; fermerModals(); if (cb) cb(); });
+  lie("mi-annuler", () => importChoisir(null));
+  lie("mi-additionner", () => importChoisir("additionner"));
+  lie("mi-remplacer", () => importChoisir("remplacer"));
+  const mimp = $("modal-import");
+  if (mimp && mimp.addEventListener) mimp.addEventListener("click", (e) => { if (e.target === mimp) importChoisir(null); });
   lie("fiche-fermer", fermerModals);
   lie("fiche-imprimer", () => {
     const d = prod(fichePid);

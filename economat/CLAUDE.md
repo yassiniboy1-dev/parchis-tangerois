@@ -1,4 +1,4 @@
-# Économat Pro — La Vue · Rare (v4.0)
+# Économat Pro — La Vue · Rare (v4.1)
 
 Application de gestion du food cost pour les deux adresses de Yassine à Tanger (**La Vue** et **Rare**) :
 économat commun, labo pâtisserie, import des ventes de la caisse, menu engineering, fiches techniques.
@@ -8,7 +8,7 @@ Successeur « pro » de l'artifact React `economatrarev3.jsx` (claude.ai) — po
 ## Commandes
 
 ```bash
-node economat/tests/moteur.test.js   # 67 tests (moteur, dates, CSV, XLSX, menu engineering, import, SEED)
+node economat/tests/moteur.test.js   # 106 tests (moteur, dates, CSV, XLSX, menu engineering, import, veilleur, SEED)
 bash economat/outils/deployer.sh     # fabrique economat-netlify.zip à glisser sur Netlify
 ```
 
@@ -49,6 +49,19 @@ bleu La Vue `#1F6FB2` — palette des séries validée daltonisme) → HTML (squ
    lisible sur iPhone. Infobulles au survol **et** au tap ; chaque graphique a son tableau jumeau.
 7. **fiches techniques & rapport** : `ficheHTML`, `rapportHTML` → `#print-zone` + `window.print`
    (feuille `@media print`).
+8. **le veilleur** (`analyserVeille`, pur et testable) : alertes en tête de synthèse — ventes à perte,
+   food cost > objectif +10 pts, produits vendus sans recette, prix « à vérifier » dans le top conso,
+   journées anormales (moyenne + 2σ), trous d'import, écarts labo/économat, produits de caisse en
+   attente. Acquittement par alerte (`S.veilleVu`, clés stables re-déclenchées si les données changent).
+   Corrections en un clic : `veilleAssocier` (associations automatiques par `suggererAssociation` —
+   normalisation + Levenshtein, seuil prudent, annulable) et l'anti-double-import (`importSales` détecte
+   les jours déjà importés → modal `modal-import` Remplacer/Additionner/Annuler via `importChoisir`).
+9. **copilote Claude** (option) : clé API Anthropic stockée dans `localStorage` `ecoPro:cle-api`
+   (**jamais dans `S` ni dans les sauvegardes**, testé). `construireDigest()` fabrique un résumé chiffré
+   compact ; `copiloteAnalyser()` appelle `POST /v1/messages` (modèle `claude-opus-5`, en-têtes
+   `anthropic-dangerous-direct-browser-access` + repli `server-side-fallback-2026-07-01`,
+   `fallbacks:"default"`, gestion de `stop_reason:"refusal"` et des erreurs 401/429/réseau).
+   Résultat persisté dans `S.copilote` et rendu par `rendreTexte` (paragraphes/puces/gras, échappé).
 
 ## Import caisse
 
