@@ -21,6 +21,8 @@ const EXPOSER = `;globalThis.API = {
   levenshtein, suggererAssociation, analyserVeille, veilleAssocier, construireDigest,
   importChoisir, getImportEnAttente: () => importEnAttente,
   genererCodeLiaison, appliquerVentesLiaison, retirerPendingJour, liaisonEtatHTML,
+  naviguer: (t, seg) => { tab = t || tab; if (seg != null) { if (t === "synthese") sousSynthese = seg; else if (t === "ventes") posVentes = seg; else if (t === "carte") sousCarte = seg; } },
+  getNav: () => ({ tab, sousSynthese, posVentes, sousCarte }),
   confirmer: () => { const cb = confirmCb; fermerModals(); if (cb) cb(); },
   getS: () => S, setS: (x) => { S = x; },
   mkDate: (y, m, d, h, mi) => new Date(y, m, d, h || 0, mi || 0),
@@ -392,6 +394,27 @@ function fixtureXlsx(compresser, d1904) {
     A.setS(Object.assign(A.etatVierge(), { liaison: { pas: 'de code' } })); A.assainirEtat();
     ok(A.getS().liaison === null, 'assainirEtat retire une liaison sans code');
     ok(typeof A.liaisonEtatHTML() === 'string', 'liaisonEtatHTML ne casse pas sans liaison');
+  }
+
+  console.log('— navigation (v4.3) —');
+  {
+    A.setS(Object.assign(A.etatVierge(), { entered: true }));
+    const rendu = (t, seg) => { A.naviguer(t, seg); A.render(); return ctx.__els.vue._html || ''; };
+    ok(rendu('synthese', 'chiffres').includes('Synthèse — les deux adresses'), 'Synthèse → Chiffres se rend');
+    ok(rendu('synthese', 'graphiques').includes('Graphiques par jour'), 'Synthèse → Graphiques se rend');
+    ok(rendu('synthese', 'menu').includes('Menu engineering'), 'Synthèse → Menu se rend');
+    ok(rendu('synthese', 'alertes').includes('Le veilleur'), 'Synthèse → Alertes se rend (veilleur + copilote)');
+    ok(rendu('ventes', 'pos_rare').includes('Ventes — Rare'), 'Ventes affiche l\'adresse choisie');
+    ok(rendu('carte', 'pos_vue').includes('Carte de La Vue'), 'Carte affiche l\'adresse choisie');
+    ok(rendu('carte', 'labo').includes('Labo pâtisserie'), 'Carte → Labo se rend');
+    ok(rendu('economat').includes('matières premières'), 'Économat se rend');
+    ok(rendu('reglages').includes('Liaison caisse'), 'Réglages se rend, liaison caisse en tête');
+    const barre = ctx.__els.tabs._html || '';
+    ok(barre.includes('data-tab="ventes"') && barre.includes('data-tab="carte"') && barre.split('data-tab=').length === 6, 'barre du bas : 5 onglets fixes (Synthèse, Ventes, Carte, Économat, Réglages)');
+    ok(!barre.includes('data-tab="labo"') && !barre.includes('data-tab="pos_'), 'plus d\'onglets Labo ni d\'adresse au premier niveau');
+    /* adresse supprimée → retombe sur la première, pas d\'écran cassé */
+    A.naviguer('ventes', 'pos_inexistant');
+    ok(rendu('ventes').includes('Ventes — La Vue'), 'adresse inconnue dans Ventes → repli sur la première adresse');
   }
 
   /* persistance via localStorage simulé */

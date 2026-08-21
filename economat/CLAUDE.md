@@ -1,4 +1,4 @@
-# Économat Pro — La Vue · Rare (v4.2)
+# Économat Pro — La Vue · Rare (v4.3)
 
 Application de gestion du food cost pour les deux adresses de Yassine à Tanger (**La Vue** et **Rare**) :
 économat commun, labo pâtisserie, ventes de la caisse (import manuel **ou liaison Elyx automatique**),
@@ -10,7 +10,7 @@ tout est en `localStorage`. Deux fichiers livrés depuis la v4.2 : `index.html` 
 ## Commandes
 
 ```bash
-node economat/tests/moteur.test.js   # 124 tests (moteur, dates, CSV, XLSX, menu engineering, import, veilleur, liaison, SEED)
+node economat/tests/moteur.test.js   # 136 tests (moteur, dates, CSV, XLSX, menu engineering, import, veilleur, liaison, navigation, SEED)
 node economat/tests/pont.test.js     # 12 tests du pont Elyx (agrégation par journée, fusion, plan d'envoi)
 bash economat/outils/deployer.sh     # fabrique economat-netlify.zip (index.html + pont-elyx.html) à glisser sur Netlify
 ```
@@ -43,10 +43,18 @@ bleu La Vue `#1F6FB2` — palette des séries validée daltonisme) → HTML (squ
 4. **état** : objet `S` unique (v4), persisté en `localStorage` (`ecoPro:v1`), `save()` débouncé,
    `assainirEtat()` au chargement (un instantané corrompu ne bloque jamais le démarrage).
    `SEED` = la vraie carte Rare (544 matières, 188 produits, ventes de référence) — ligne géante à ne pas éditer.
-5. **interface** : rendu par gabarits (`vueSynthese`, `vueEconomat`, `vueLabo`, `vuePos`, `vueReglages`,
-   `vueAccueil`), événements **délégués** sur `#vue` (`data-act` clic, `data-in` saisie, `data-ch` change).
-   Pendant la frappe on ne re-rend jamais le bloc contenant le champ actif : mises à jour ciblées
-   (`majFoot`, `majConso`, `majEcart`, `majStatsPos`, `majControle`).
+5. **interface** (navigation v4.3) : **barre d'onglets fixe en bas** (`#tabs`, `.tabbar`, 5 destinations :
+   `synthese | ventes | carte | economat | reglages` — pastille rouge = alertes du veilleur non lues).
+   Sous-navigation par segments collants (`.seg`) : Synthèse → `sousSynthese`
+   (`chiffres | graphiques | menu | alertes` — le veilleur et le copilote vivent dans « Alertes », un
+   bandeau sur « Chiffres » y renvoie) ; Ventes → `posVentes` (une adresse à la fois, pastille = noms de
+   caisse à associer) ; Carte → `sousCarte` (une adresse ou `labo`). L'ancienne `vuePos` est scindée :
+   ventes/import/à associer dans `vueVentes`, plats/recettes dans `carteAdresseHTML`, le labo est un
+   sous-onglet de Carte (`vueLabo`). Handlers de navigation : `snav`/`vseg`/`cseg`/`nav` (+ `remonter()`).
+   Rendu par gabarits, événements **délégués** sur `#vue` (`data-act` clic, `data-in` saisie, `data-ch`
+   change). Pendant la frappe on ne re-rend jamais le bloc contenant le champ actif : mises à jour
+   ciblées (`majFoot`, `majConso`, `majEcart`, `majStatsPos` — gardée par `tab==="ventes"` +
+   `posVentesActif()` —, `majControle`). Les toasts s'affichent au-dessus de la barre du bas.
 6. **graphiques SVG maison** : CA/jour (barres empilées par adresse), food cost/jour (ligne + objectif),
    matrice menu engineering. Largeur adaptée au conteneur (`majLargeurChart`) pour que le texte reste
    lisible sur iPhone. Infobulles au survol **et** au tap ; chaque graphique a son tableau jumeau.
@@ -117,7 +125,8 @@ seq/écritures du Parchís.
 ## Tests
 
 `tests/charge.js` charge le vrai script dans un contexte VM avec DOM factice (timers neutralisés,
-`fetch` absent → la synchro liaison est inerte en test). `tests/moteur.test.js` : 124 assertions, dont
+`fetch` absent → la synchro liaison est inerte en test). `tests/moteur.test.js` : 136 assertions, dont
+la navigation v4.3 (chaque onglet et sous-onglet se rend, repli sur la première adresse),
 un import CSV de bout en bout, des fixtures **XLSX générées** (zip stocké et deflate) et la liaison
 caisse (remplacement par jour, dédup, `__proto__`, veilleur). `tests/pont.test.js` : 12 assertions sur
 la logique propre au pont. Toute modification du moteur ou des parseurs doit faire passer les deux.
